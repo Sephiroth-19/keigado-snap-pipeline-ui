@@ -1231,7 +1231,7 @@ tr.row-warn td{background:var(--amber-pale)}
 <div id="p-snap" class="page">
   <div class="topbar">
     <div><div class="tb-title">スナップ・行事写真 — Snap / Event Photos</div><div class="bc">ホーム <span>›</span> スナップ写真</div></div>
-    <span class="badge b-info" style="font-size:12px">312枚読込済み</span>
+    <span class="badge b-info" style="font-size:12px" id="snap-top-loaded-badge">0枚読込済み</span>
   </div>
   <div class="pinner">
     <div class="steps">
@@ -1256,7 +1256,7 @@ tr.row-warn td{background:var(--amber-pale)}
           <div class="fm" style="margin-top:12px">
             <div class="fm-hd"><span>Uploaded Folder</span><span style="font-size:10px;color:var(--g400)">Client can delete and re-upload</span></div>
             <div class="fm-body" id="snap-upload-list">
-              <div class="fmr sel" id="snap-upload-item"><span class="fmr-icon">📁</span><div class="fmr-info"><div class="fmr-name">undokai_2026/</div><div class="fmr-meta">312 photos</div></div><button class="fmr-del" onclick="deleteSnapUpload()">🗑</button></div>
+              <div class="fmr sel" id="snap-upload-item"><span class="fmr-icon">📁</span><div class="fmr-info"><div class="fmr-name">undokai_2026/</div><div class="fmr-meta" id="snap-upload-item-meta">0 photos</div></div><button class="fmr-del" onclick="deleteSnapUpload()">🗑</button></div>
             </div>
           </div>
           <div class="btn-row" style="margin-top:12px"><button class="btn btn-danger btn-sm" onclick="deleteSnapUpload()">Delete Uploaded Folder</button><button class="btn btn-ghost btn-sm" onclick="chooseSnapInput()">Re-upload Folder</button></div>
@@ -1346,7 +1346,7 @@ tr.row-warn td{background:var(--amber-pale)}
 
       <div id="bk-best">
         <div class="card">
-          <div class="card-hd"><div><div class="card-title">Best Shot</div><div class="card-sub">Final selected photos</div></div><span style="font-size:11px;color:var(--g500)">25 / 25</span></div>
+          <div class="card-hd"><div><div class="card-title">Best Shot</div><div class="card-sub">Final selected photos</div></div><span style="font-size:11px;color:var(--g500)" id="snap-best-shot-header-count">0 / 25</span></div>
           <div class="sg">
             <div class="sth best"><div class="sth-inner"><span style="font-size:26px">🏃</span><span>競技</span></div><div class="sth-pcount">👥2</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">本01</span><span class="badge b-blue" style="font-size:9px">競技</span></div></div>
             <div class="sth best"><div class="sth-inner"><span style="font-size:26px">📣</span><span>応援</span></div><div class="sth-pcount">👥5</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">本02</span><span class="badge b-blue" style="font-size:9px">応援</span></div></div>
@@ -1419,9 +1419,9 @@ tr.row-warn td{background:var(--amber-pale)}
     <div id="snap-export" class="tc">
       <div class="card"><div class="card-hd"><div class="card-title">Export</div></div>
         <div class="three-col" style="margin-bottom:12px">
-          <div style="background:var(--green-pale);border:1px solid #86EFAC;border-radius:7px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--green)">25</div><div style="font-size:11px;color:var(--green);font-weight:800">best_shot/</div></div>
-          <div style="background:var(--blue-pale);border:1px solid #93C5FD;border-radius:7px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--blue)">148</div><div style="font-size:11px;color:var(--blue);font-weight:800">passing_pictures/</div></div>
-          <div style="background:var(--red-pale);border:1px solid #FCA5A5;border-radius:7px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--red)">12</div><div style="font-size:11px;color:var(--red);font-weight:800">ng_photos/</div></div>
+          <div style="background:var(--green-pale);border:1px solid #86EFAC;border-radius:7px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--green)" id="snap-export-best">0</div><div style="font-size:11px;color:var(--green);font-weight:800">best_shot/</div></div>
+          <div style="background:var(--blue-pale);border:1px solid #93C5FD;border-radius:7px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--blue)" id="snap-export-passing">0</div><div style="font-size:11px;color:var(--blue);font-weight:800">passing_pictures/</div></div>
+          <div style="background:var(--red-pale);border:1px solid #FCA5A5;border-radius:7px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--red)" id="snap-export-ng">0</div><div style="font-size:11px;color:var(--red);font-weight:800">ng_photos/</div></div>
         </div>
         <div class="btn-row"><button class="btn btn-primary btn-lg" onclick="downloadSnapOutputs()">▶ 書き出し実行</button></div>
       </div>
@@ -1812,19 +1812,36 @@ async function fetchSnapResult(){
 
 function applySnapSummary(data){
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=String(val);};
-  set('snap-total-input-upload',data.total_input_images ?? 0);
-  set('snap-total-clusters-upload',data.total_clusters ?? 0);
-  set('snap-representative-upload',data.total_representative_candidates ?? 0);
-  set('snap-total-clusters',data.total_clusters ?? 0);
-  set('snap-representative',data.total_representative_candidates ?? 0);
-  set('snap-final-selected',data.final_selected_count ?? 0);
-  set('snap-ng-count',data.ng_count_after_menna ?? 0);
-  set('snap-final-selected-bucket',data.final_selected_count ?? 0);
-  set('snap-other-passing',data.other_passing_count ?? 0);
-  set('snap-ng-count-bucket',data.ng_count_after_menna ?? 0);
-  set('snap-total-input-inline',data.total_input_images ?? 0);
+  const totalInput=data.total_input_images ?? 0;
+  const totalClusters=data.total_clusters ?? 0;
+  const reps=data.total_representative_candidates ?? 0;
+  const finalSel=data.final_selected_count ?? 0;
+  const ngCount=data.ng_count_after_menna ?? 0;
+  const passing=data.other_passing_count ?? 0;
+
+  set('snap-total-input-upload',totalInput);
+  set('snap-total-clusters-upload',totalClusters);
+  set('snap-representative-upload',reps);
+  set('snap-total-clusters',totalClusters);
+  set('snap-representative',reps);
+  set('snap-final-selected',finalSel);
+  set('snap-ng-count',ngCount);
+  set('snap-final-selected-bucket',finalSel);
+  set('snap-other-passing',passing);
+  set('snap-ng-count-bucket',ngCount);
+  set('snap-total-input-inline',totalInput);
   set('snap-dedup-rate-inline',data.dedup_reduction_rate ?? 0);
-  set('snap-other-passing-inline',data.other_passing_count ?? 0);
+  set('snap-other-passing-inline',passing);
+  set('snap-export-best',finalSel);
+  set('snap-export-passing',passing);
+  set('snap-export-ng',ngCount);
+
+  const badge=document.getElementById('snap-top-loaded-badge');
+  if(badge) badge.textContent=`${totalInput}枚読込済み`;
+  const uploadMeta=document.getElementById('snap-upload-item-meta');
+  if(uploadMeta) uploadMeta.textContent=`${totalInput} photos`;
+  const bestHeader=document.getElementById('snap-best-shot-header-count');
+  if(bestHeader) bestHeader.textContent=`${finalSel} / 25`;
 }
 
 function chooseSnapInput(){
