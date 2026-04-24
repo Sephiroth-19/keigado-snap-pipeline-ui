@@ -1,4 +1,4 @@
-# READ ME
+# Keigado_snap_pipeline
 
 pip install -r requirements.txt
 
