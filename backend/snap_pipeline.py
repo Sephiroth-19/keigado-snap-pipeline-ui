@@ -1,16 +1,35 @@
 from __future__ import annotations
 
 import math
+import re
 import shutil
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Optional
 
 import numpy as np
+import torch
 from openpyxl import Workbook
-from PIL import Image, ImageOps
+from PIL import ExifTags, Image, ImageOps
+from torchvision import models, transforms
 
-IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
+IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff", ".heic", ".heif"}
+
+# Client-aligned relaxed similarity rules (from Colab-tested version)
+STRICT_COMBINED_THRESHOLD = 0.88
+RELAXED_EMBED_THRESHOLD = 0.84
+RELAXED_EMBED_THRESHOLD_WITH_TIME = 0.82
+MAX_TIME_GAP_SAME_SEQUENCE = 240.0
+MAX_TIME_GAP_STRICT_RELAXED = 120.0
+MAX_SEQUENCE_GAP = 10
+
+WEIGHT_TECHNICAL = 0.30
+WEIGHT_EXPRESSION = 0.25
+WEIGHT_COMPOSITION = 0.25
+WEIGHT_RARITY = 0.20
+MIN_FINAL_PHOTOS = 20
+MAX_FINAL_PHOTOS = 25
 
 
 @dataclass
@@ -24,9 +43,28 @@ class PipelineResult:
     other_passing_count: int
 
 
+@dataclass
+class ImageRecord:
+    path: Path
+    capture_time: Optional[datetime]
+    sequence_tail: Optional[int]
+    embedding: np.ndarray
+    focus_score: float
+    brightness_score: float
+
+
 class SnapPipeline:
-    def __init__(self, cluster_threshold: float = 0.92) -> None:
-        self.cluster_threshold = cluster_threshold
+    def __init__(self) -> None:
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        weights = models.ResNet50_Weights.IMAGENET1K_V2
+        model = models.resnet50(weights=weights)
+        model.fc = torch.nn.Identity()
+        self.model = model.to(self.device).eval()
+        self.preprocess = weights.transforms()
+
+    @staticmethod
+    def _collect_images(input_dir: Path) -> list[Path]:
+        return sorted(p for p in input_dir.rglob("*") if p.suffix.lower() in IMAGE_EXTS)
 
     @staticmethod
     def _safe_open_image(path: Path) -> Image.Image:
@@ -34,190 +72,320 @@ class SnapPipeline:
             return ImageOps.exif_transpose(img).convert("RGB")
 
     @staticmethod
-    def _collect_images(input_dir: Path) -> list[Path]:
-        return sorted(p for p in input_dir.rglob("*") if p.suffix.lower() in IMAGE_EXTS)
+    def _get_capture_time(path: Path) -> Optional[datetime]:
+        try:
+            with Image.open(path) as img:
+                exif = img.getexif()
+                if exif:
+                    tag_map = {ExifTags.TAGS.get(k, k): v for k, v in exif.items()}
+                    for key in ["DateTimeOriginal", "DateTimeDigitized", "DateTime"]:
+                        if key in tag_map:
+                            try:
+                                return datetime.strptime(str(tag_map[key]), "%Y:%m:%d %H:%M:%S")
+                            except Exception:
+                                continue
+        except Exception:
+            pass
+        try:
+            return datetime.fromtimestamp(path.stat().st_mtime)
+        except Exception:
+            return None
 
     @staticmethod
-    def _embedding(img: Image.Image) -> np.ndarray:
-        arr = np.array(img.resize((32, 32)).convert("L"), dtype=np.float32).reshape(-1)
-        arr -= arr.mean()
-        n = np.linalg.norm(arr) + 1e-12
-        return arr / n
+    def _parse_filename_numeric_tail(name: str) -> Optional[int]:
+        nums = re.findall(r"(\d+)", Path(name).stem)
+        if not nums:
+            return None
+        try:
+            return int(nums[-1])
+        except Exception:
+            return None
 
     @staticmethod
-    def _focus_score(img: Image.Image) -> float:
-        arr = np.array(img.convert("L"), dtype=np.float32)
+    def _time_gap_seconds(a: Optional[datetime], b: Optional[datetime]) -> Optional[float]:
+        if a is None or b is None:
+            return None
+        return abs((a - b).total_seconds())
+
+    @staticmethod
+    def _seq_gap(a: Optional[int], b: Optional[int]) -> Optional[int]:
+        if a is None or b is None:
+            return None
+        return abs(a - b)
+
+    @staticmethod
+    def _cosine(a: np.ndarray, b: np.ndarray) -> float:
+        return float(np.dot(a, b) / ((np.linalg.norm(a) * np.linalg.norm(b)) + 1e-12))
+
+    @staticmethod
+    def _focus_score(img_rgb: Image.Image) -> float:
+        arr = np.array(img_rgb.convert("L"), dtype=np.float32)
         gy, gx = np.gradient(arr)
-        mag = np.sqrt(gx ** 2 + gy ** 2)
+        mag = np.sqrt(gx**2 + gy**2)
         return float(np.var(mag))
 
     @staticmethod
-    def _brightness_score(img: Image.Image) -> float:
-        arr = np.array(img.convert("L"), dtype=np.float32)
+    def _brightness_score(img_rgb: Image.Image) -> float:
+        arr = np.array(img_rgb.convert("L"), dtype=np.float32)
         return float(arr.mean())
 
     @staticmethod
-    def _cos(a: np.ndarray, b: np.ndarray) -> float:
-        return float(np.dot(a, b) / ((np.linalg.norm(a) * np.linalg.norm(b)) + 1e-12))
+    def _contrast_score(img_rgb: Image.Image) -> float:
+        arr = np.array(img_rgb.convert("L"), dtype=np.float32)
+        return float(arr.std())
 
-    def _cluster(self, images: list[Path]) -> tuple[list[list[Path]], dict[Path, np.ndarray], dict[Path, tuple[float, float]]]:
-        embeddings: dict[Path, np.ndarray] = {}
-        metrics: dict[Path, tuple[float, float]] = {}
-        clusters: list[list[Path]] = []
+    @staticmethod
+    def _thirds_composition_score(img_rgb: Image.Image) -> float:
+        gray = np.array(img_rgb.convert("L"), dtype=np.float32)
+        h, w = gray.shape
+        gy, gx = np.gradient(gray)
+        edge = np.sqrt(gx**2 + gy**2)
 
-        for path in images:
+        points = [
+            (h // 3, w // 3),
+            (h // 3, 2 * w // 3),
+            (2 * h // 3, w // 3),
+            (2 * h // 3, 2 * w // 3),
+        ]
+        r = max(4, min(h, w) // 12)
+        energy = 0.0
+        for py, px in points:
+            y1, y2 = max(0, py - r), min(h, py + r)
+            x1, x2 = max(0, px - r), min(w, px + r)
+            energy += float(edge[y1:y2, x1:x2].mean())
+        return energy / max(1, len(points))
+
+    def _embed(self, img: Image.Image) -> np.ndarray:
+        tensor = self.preprocess(img).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            vec = self.model(tensor).detach().cpu().numpy().reshape(-1).astype(np.float32)
+        vec /= np.linalg.norm(vec) + 1e-12
+        return vec
+
+    def _load_records(self, image_paths: list[Path]) -> list[ImageRecord]:
+        records: list[ImageRecord] = []
+        for path in image_paths:
             img = self._safe_open_image(path)
-            emb = self._embedding(img)
-            focus = self._focus_score(img)
-            bright = self._brightness_score(img)
-            embeddings[path] = emb
-            metrics[path] = (focus, bright)
+            records.append(
+                ImageRecord(
+                    path=path,
+                    capture_time=self._get_capture_time(path),
+                    sequence_tail=self._parse_filename_numeric_tail(path.name),
+                    embedding=self._embed(img),
+                    focus_score=self._focus_score(img),
+                    brightness_score=self._brightness_score(img),
+                )
+            )
 
+        records.sort(key=lambda r: (r.capture_time or datetime.min, r.path.name))
+        return records
+
+    def _is_similar(self, a: ImageRecord, b: ImageRecord) -> bool:
+        embed_sim = self._cosine(a.embedding, b.embedding)
+        tgap = self._time_gap_seconds(a.capture_time, b.capture_time)
+        sgap = self._seq_gap(a.sequence_tail, b.sequence_tail)
+
+        strict_context = (
+            (tgap is not None and tgap <= MAX_TIME_GAP_SAME_SEQUENCE)
+            or (sgap is not None and sgap <= MAX_SEQUENCE_GAP)
+        )
+        if embed_sim >= STRICT_COMBINED_THRESHOLD and strict_context:
+            return True
+
+        relaxed_context = (
+            (tgap is not None and tgap <= MAX_TIME_GAP_STRICT_RELAXED)
+            or (sgap is not None and sgap <= MAX_SEQUENCE_GAP)
+        )
+        if embed_sim >= RELAXED_EMBED_THRESHOLD and relaxed_context:
+            return True
+
+        if embed_sim >= RELAXED_EMBED_THRESHOLD_WITH_TIME and tgap is not None and tgap <= MAX_TIME_GAP_STRICT_RELAXED:
+            return True
+
+        return False
+
+    def _cluster_records(self, records: list[ImageRecord]) -> list[list[ImageRecord]]:
+        clusters: list[list[ImageRecord]] = []
+        for rec in records:
             placed = False
             for cluster in clusters:
-                centroid = np.mean([embeddings[p] for p in cluster], axis=0)
-                sim = self._cos(emb, centroid)
-                if sim >= self.cluster_threshold:
-                    cluster.append(path)
+                # Compare against cluster representative and recent members for looser grouping continuity
+                rep = max(cluster, key=lambda x: x.focus_score)
+                if self._is_similar(rec, rep) or any(self._is_similar(rec, m) for m in cluster[-3:]):
+                    cluster.append(rec)
                     placed = True
                     break
             if not placed:
-                clusters.append([path])
-
-        return clusters, embeddings, metrics
-
-    @staticmethod
-    def _pick_representatives(clusters: list[list[Path]], metrics: dict[Path, tuple[float, float]]) -> list[Path]:
-        reps: list[Path] = []
-        for cluster in clusters:
-            best = max(cluster, key=lambda p: metrics[p][0])  # focus-first representative
-            reps.append(best)
-        return reps
+                clusters.append([rec])
+        return clusters
 
     @staticmethod
-    def _normalize(values: list[float]) -> list[float]:
-        if not values:
+    def _normalize(vals: list[float]) -> list[float]:
+        if not vals:
             return []
-        low, high = min(values), max(values)
-        if math.isclose(low, high):
-            return [0.5 for _ in values]
-        return [(v - low) / (high - low) for v in values]
+        lo, hi = min(vals), max(vals)
+        if math.isclose(lo, hi):
+            return [0.5 for _ in vals]
+        return [(v - lo) / (hi - lo) for v in vals]
 
-    def _select_best_shots(self, reps: list[Path], metrics: dict[Path, tuple[float, float]]) -> tuple[list[Path], list[Path], list[Path]]:
+    def _score_representatives(self, reps: list[ImageRecord]) -> list[tuple[ImageRecord, float]]:
+        # Additional Menna-like dimensions from image content
+        contrast_vals: list[float] = []
+        composition_vals: list[float] = []
+        for r in reps:
+            img = self._safe_open_image(r.path)
+            contrast_vals.append(self._contrast_score(img))
+            composition_vals.append(self._thirds_composition_score(img))
+
+        tech = self._normalize([r.focus_score for r in reps])
+        expr = self._normalize([r.brightness_score for r in reps])
+        comp = self._normalize(composition_vals)
+
+        # rarity: distance from average embedding among representatives
+        if reps:
+            center = np.mean([r.embedding for r in reps], axis=0)
+            center /= np.linalg.norm(center) + 1e-12
+            rarity_raw = [1.0 - self._cosine(r.embedding, center) for r in reps]
+        else:
+            rarity_raw = []
+        rarity = self._normalize(rarity_raw)
+
+        scored: list[tuple[ImageRecord, float]] = []
+        for i, r in enumerate(reps):
+            # expression: prefer well-exposed but not extreme brightness
+            expr_balanced = 1.0 - abs(expr[i] - 0.55)
+            score = (
+                WEIGHT_TECHNICAL * tech[i]
+                + WEIGHT_EXPRESSION * expr_balanced
+                + WEIGHT_COMPOSITION * comp[i]
+                + WEIGHT_RARITY * rarity[i]
+            )
+            scored.append((r, float(score)))
+
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return scored
+
+    def _select_buckets(self, reps: list[ImageRecord]) -> tuple[list[ImageRecord], list[ImageRecord], list[ImageRecord]]:
         if not reps:
             return [], [], []
 
-        focus_values = [metrics[p][0] for p in reps]
-        brightness_values = [metrics[p][1] for p in reps]
-        norm_focus = self._normalize(focus_values)
-        norm_brightness = self._normalize(brightness_values)
+        scored = self._score_representatives(reps)
+        ordered = [r for r, _ in scored]
 
-        scored: list[tuple[Path, float]] = []
-        for idx, path in enumerate(reps):
-            # Menna-style simplified scoring: technical sharpness + exposure balance.
-            exposure_balance = 1.0 - abs(norm_brightness[idx] - 0.55)
-            score = (norm_focus[idx] * 0.7) + (exposure_balance * 0.3)
-            scored.append((path, score))
-        scored.sort(key=lambda x: x[1], reverse=True)
+        final_target = min(MAX_FINAL_PHOTOS, max(MIN_FINAL_PHOTOS, len(ordered)))
+        final_count = min(final_target, len(ordered))
+        final = ordered[:final_count]
 
-        ng_count = max(0, int(round(len(scored) * 0.1)))
-        ng = [p for p, _ in scored[-ng_count:]] if ng_count else []
-        passing = [p for p, _ in scored[:-ng_count]] if ng_count else [p for p, _ in scored]
+        remaining = ordered[final_count:]
+        # NG: bottom tail from remaining and also very dark/very blurry representatives
+        if remaining:
+            tail_ng_count = max(1, int(round(len(remaining) * 0.2)))
+            ng = remaining[-tail_ng_count:]
+            other = remaining[:-tail_ng_count]
+        else:
+            ng = []
+            other = []
 
-        final_target = min(25, max(20, len(passing)))
-        final_count = min(len(passing), final_target)
-        final = passing[:final_count]
-        others = passing[final_count:]
-        return final, ng, others
+        return final, ng, other
 
-    def _write_excel(
+    @staticmethod
+    def _copy(path: Path, dst: Path) -> None:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, dst)
+
+    def _write_outputs(
         self,
         output_dir: Path,
-        clusters: list[list[Path]],
-        reps: list[Path],
-        final: list[Path],
-        ng: list[Path],
-        others: list[Path],
+        clusters: list[list[ImageRecord]],
+        reps: list[ImageRecord],
+        final: list[ImageRecord],
+        ng: list[ImageRecord],
+        other: list[ImageRecord],
         summary: PipelineResult,
-    ) -> Path:
-        wb = Workbook()
-
-        ws_summary = wb.active
-        ws_summary.title = "summary"
-        ws_summary.append(["metric", "value"])
-        for k, v in summary.__dict__.items():
-            ws_summary.append([k, v])
-
-        ws_clusters = wb.create_sheet("clusters")
-        ws_clusters.append(["cluster_id", "file_name", "is_representative"])
-        rep_set = set(reps)
-        for idx, cluster in enumerate(clusters, start=1):
-            for file in cluster:
-                ws_clusters.append([idx, file.name, file in rep_set])
-
-        ws_selection = wb.create_sheet("selection")
-        ws_selection.append(["bucket", "file_name"])
-        for p in final:
-            ws_selection.append(["best_shot", p.name])
-        for p in ng:
-            ws_selection.append(["ng", p.name])
-        for p in others:
-            ws_selection.append(["passing", p.name])
-
-        excel_path = output_dir / "snap_pipeline_report.xlsx"
-        wb.save(excel_path)
-        return excel_path
-
-    def _copy_outputs(self, output_dir: Path, clusters: list[list[Path]], reps: list[Path], final: list[Path], ng: list[Path], others: list[Path]) -> None:
-        cluster_root = output_dir / "similarity_clusters"
-        dedup_root = output_dir / "dedup_candidates"
-        final_root = output_dir / "final_selected"
-        ng_root = output_dir / "ng_photos"
-        other_root = output_dir / "other_passing"
-
-        for d in [cluster_root, dedup_root, final_root, ng_root, other_root]:
+    ) -> None:
+        sim_dir = output_dir / "similarity_clusters"
+        dedup_dir = output_dir / "dedup_candidates"
+        final_dir = output_dir / "final_selected"
+        ng_dir = output_dir / "ng_photos"
+        other_dir = output_dir / "other_passing"
+        for d in [sim_dir, dedup_dir, final_dir, ng_dir, other_dir]:
             d.mkdir(parents=True, exist_ok=True)
 
-        rep_set = set(reps)
-        for idx, cluster in enumerate(clusters, start=1):
-            group_dir = cluster_root / f"cluster_{idx:03d}"
-            group_dir.mkdir(parents=True, exist_ok=True)
-            for p in cluster:
-                prefix = "REP_" if p in rep_set else ""
-                shutil.copy2(p, group_dir / f"{prefix}{p.name}")
+        rep_paths = {r.path for r in reps}
+        for i, cluster in enumerate(clusters, start=1):
+            cdir = sim_dir / f"cluster_{i:03d}"
+            cdir.mkdir(parents=True, exist_ok=True)
+            for rec in cluster:
+                prefix = "REP_" if rec.path in rep_paths else ""
+                self._copy(rec.path, cdir / f"{prefix}{rec.path.name}")
 
-        for p in reps:
-            shutil.copy2(p, dedup_root / p.name)
-        for p in final:
-            shutil.copy2(p, final_root / p.name)
-        for p in ng:
-            shutil.copy2(p, ng_root / p.name)
-        for p in others:
-            shutil.copy2(p, other_root / p.name)
+        for rec in reps:
+            self._copy(rec.path, dedup_dir / rec.path.name)
+        for rec in final:
+            self._copy(rec.path, final_dir / rec.path.name)
+        for rec in ng:
+            self._copy(rec.path, ng_dir / rec.path.name)
+        for rec in other:
+            self._copy(rec.path, other_dir / rec.path.name)
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "summary"
+        ws.append(["metric", "value"])
+        for key, val in summary.__dict__.items():
+            ws.append([key, val])
+
+        ws2 = wb.create_sheet("clusters")
+        ws2.append(["cluster_id", "file_name", "capture_time", "is_representative"])
+        for i, cluster in enumerate(clusters, start=1):
+            cluster_rep = max(cluster, key=lambda x: x.focus_score)
+            for rec in cluster:
+                ws2.append(
+                    [
+                        i,
+                        rec.path.name,
+                        rec.capture_time.isoformat() if rec.capture_time else "",
+                        rec.path == cluster_rep.path,
+                    ]
+                )
+
+        ws3 = wb.create_sheet("selection")
+        ws3.append(["bucket", "file_name"])
+        for rec in final:
+            ws3.append(["final_selected", rec.path.name])
+        for rec in ng:
+            ws3.append(["ng", rec.path.name])
+        for rec in other:
+            ws3.append(["other_passing", rec.path.name])
+
+        wb.save(output_dir / "snap_pipeline_report.xlsx")
 
     def run(self, input_dir: Path, output_dir: Path) -> PipelineResult:
-        images = self._collect_images(input_dir)
-        clusters, _emb, metrics = self._cluster(images)
-        reps = self._pick_representatives(clusters, metrics)
-        final, ng, others = self._select_best_shots(reps, metrics)
+        image_paths = self._collect_images(input_dir)
+        records = self._load_records(image_paths)
+        clusters = self._cluster_records(records)
 
-        dedup_reduction = 0.0
-        if images:
-            dedup_reduction = round((1 - (len(reps) / len(images))) * 100.0, 2)
+        reps = [max(cluster, key=lambda x: x.focus_score) for cluster in clusters]
+        final, ng, other = self._select_buckets(reps)
+
+        dedup_reduction_rate = 0.0
+        if image_paths:
+            dedup_reduction_rate = round((1.0 - (len(reps) / len(image_paths))) * 100.0, 2)
 
         summary = PipelineResult(
-            total_input_images=len(images),
+            total_input_images=len(image_paths),
             total_clusters=len(clusters),
             total_representative_candidates=len(reps),
-            dedup_reduction_rate=dedup_reduction,
+            dedup_reduction_rate=dedup_reduction_rate,
             final_selected_count=len(final),
             ng_count_after_menna=len(ng),
-            other_passing_count=len(others),
+            other_passing_count=len(other),
         )
 
+        if output_dir.exists():
+            shutil.rmtree(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
-        self._copy_outputs(output_dir, clusters, reps, final, ng, others)
-        self._write_excel(output_dir, clusters, reps, final, ng, others, summary)
+        self._write_outputs(output_dir, clusters, reps, final, ng, other, summary)
         return summary
 
 

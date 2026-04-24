@@ -4,3 +4,5 @@ python-multipart
 pillow
 numpy
 openpyxl
+torch
+torchvision
