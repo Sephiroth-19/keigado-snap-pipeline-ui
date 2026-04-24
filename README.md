@@ -1,4 +1,4 @@
-# keigado-snap-pipeline-ui
+# Read Me
 
 pip install -r requirements.txt
 
