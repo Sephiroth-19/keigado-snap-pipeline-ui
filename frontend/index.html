@@ -1425,11 +1425,24 @@ tr.row-warn td{background:var(--amber-pale)}
     <div id="snap-export" class="tc">
       <div class="card"><div class="card-hd"><div class="card-title">Export</div></div>
         <div class="three-col" style="margin-bottom:12px">
-          <div style="background:var(--green-pale);border:1px solid #86EFAC;border-radius:7px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--green)" id="snap-export-best">0</div><div style="font-size:11px;color:var(--green);font-weight:800">best_shot/</div></div>
-          <div style="background:var(--blue-pale);border:1px solid #93C5FD;border-radius:7px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--blue)" id="snap-export-passing">0</div><div style="font-size:11px;color:var(--blue);font-weight:800">passing_pictures/</div></div>
+          <div style="background:var(--green-pale);border:1px solid #86EFAC;border-radius:7px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--green)" id="snap-export-best">0</div><div style="font-size:11px;color:var(--green);font-weight:800">final_selected/</div></div>
+          <div style="background:var(--blue-pale);border:1px solid #93C5FD;border-radius:7px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--blue)" id="snap-export-other">0</div><div style="font-size:11px;color:var(--blue);font-weight:800">other_passing/</div></div>
           <div style="background:var(--red-pale);border:1px solid #FCA5A5;border-radius:7px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--red)" id="snap-export-ng">0</div><div style="font-size:11px;color:var(--red);font-weight:800">ng_photos/</div></div>
         </div>
-        <div class="btn-row"><button class="btn btn-primary btn-lg" onclick="downloadSnapOutputs()">▶ 書き出し実行</button></div>
+
+        <div class="tbl-wrap" style="margin-bottom:12px"><table>
+          <thead><tr><th>Output</th><th>Status / Count</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">snap_pipeline_report.xlsx</td><td id="snap-export-report-status"><span class="badge b-gray">未生成</span></td></tr>
+            <tr><td class="mono">similarity_clusters/</td><td id="snap-export-sim-status"><span class="badge b-gray">未生成</span></td></tr>
+            <tr><td class="mono">dedup_candidates/</td><td id="snap-export-dedup-status"><span class="badge b-gray">未生成</span></td></tr>
+            <tr><td class="mono">final_selected/</td><td><span class="badge b-ok" id="snap-export-final-count">0 files</span></td></tr>
+            <tr><td class="mono">ng_photos/</td><td><span class="badge b-err" id="snap-export-ng-count">0 files</span></td></tr>
+            <tr><td class="mono">other_passing/</td><td><span class="badge b-info" id="snap-export-other-count">0 files</span></td></tr>
+          </tbody>
+        </table></div>
+
+        <div class="btn-row"><button class="btn btn-primary btn-lg" onclick="downloadSnapOutputs()">⬇ Download All Outputs (ZIP)</button></div>
       </div>
     </div>
   </div>
@@ -1839,7 +1852,7 @@ function applySnapSummary(data){
   set('snap-dedup-rate-inline',data.dedup_reduction_rate ?? 0);
   set('snap-other-passing-inline',passing);
   set('snap-export-best',finalSel);
-  set('snap-export-passing',passing);
+  set('snap-export-other',passing);
   set('snap-export-ng',ngCount);
 
   const badge=document.getElementById('snap-top-loaded-badge');
@@ -1848,6 +1861,16 @@ function applySnapSummary(data){
   if(uploadMeta) uploadMeta.textContent=`${totalInput} photos`;
   const bestHeader=document.getElementById('snap-best-shot-header-count');
   if(bestHeader) bestHeader.textContent=`${finalSel} / 25`;
+
+  const report=document.getElementById('snap-export-report-status');
+  if(report) report.innerHTML='<span class="badge b-ok">生成済み</span>';
+  const sim=document.getElementById('snap-export-sim-status');
+  if(sim) sim.innerHTML='<span class="badge b-ok">生成済み</span>';
+  const dedup=document.getElementById('snap-export-dedup-status');
+  if(dedup) dedup.innerHTML='<span class="badge b-ok">生成済み</span>';
+  set('snap-export-final-count', `${finalSel} files`);
+  set('snap-export-ng-count', `${ngCount} files`);
+  set('snap-export-other-count', `${passing} files`);
 }
 
 let snapProgressTimer=null;
