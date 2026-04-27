@@ -1,0 +1,2004 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>恵雅堂 AI写真整理システム v2.6</title>
+<style>
+:root{
+  --navy:#1A2B4A;--navy2:#243D6A;--navy-dk:#0F1B30;
+  --teal:#0D8C8C;--teal2:#12B5B5;--teal-pale:#EAF7F7;
+  --amber:#D97706;--amber-pale:#FEF3C7;
+  --red:#DC2626;--red-pale:#FEF2F2;
+  --orange:#EA580C;
+  --green:#16A34A;--green-pale:#F0FDF4;
+  --blue:#1D4ED8;--blue-pale:#EFF6FF;
+  --purple:#7C3AED;--purple-pale:#F5F3FF;
+  --bg:#EEF2F7;--white:#FFFFFF;
+  --g50:#F8FAFC;--g100:#F1F5F9;--g200:#E2E8F0;
+  --g300:#CBD5E1;--g400:#94A3B8;--g500:#64748B;
+  --g600:#475569;--g700:#334155;--g800:#1E293B;
+  --text:#1E293B;--border:#CBD5E1;
+  --sh1:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
+  --sh2:0 4px 8px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.05);
+  --r:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic UI','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5}
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* ─── Sidebar ─── */
+.sidebar{width:228px;background:var(--navy-dk);flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;z-index:20}
+.logo{padding:14px 13px 11px;border-bottom:1px solid rgba(255,255,255,.07)}
+.logo-row{display:flex;align-items:center;gap:9px}
+.logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--teal),var(--teal2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#fff;flex-shrink:0}
+.logo-name{font-size:13.5px;font-weight:800;color:var(--teal2)}
+.logo-sub{font-size:10px;color:rgba(255,255,255,.3);margin-top:2px;padding-left:39px}
+.nav-sec{padding:10px 0 4px}
+.nav-lbl{font-size:9px;color:rgba(255,255,255,.28);letter-spacing:.1em;text-transform:uppercase;padding:0 13px 5px;font-weight:700}
+.ni{display:flex;align-items:center;gap:9px;padding:7px 13px;cursor:pointer;color:rgba(255,255,255,.58);font-size:12.5px;transition:all .15s;border-left:3px solid transparent}
+.ni:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.9)}
+.ni.active{background:rgba(13,140,140,.2);color:var(--teal2);border-left-color:var(--teal2);font-weight:700}
+.ni-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.nb{margin-left:auto;background:var(--red);color:#fff;font-size:9.5px;padding:1px 6px;border-radius:999px;font-weight:800}
+.nb.warn{background:var(--amber)}
+.sidebar-foot{margin-top:auto;padding:10px 13px;border-top:1px solid rgba(255,255,255,.06);font-size:10px;color:rgba(255,255,255,.2);text-align:center}
+
+/* ─── Main ─── */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-width:0}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 20px;height:50px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;flex-shrink:0;box-shadow:var(--sh1)}
+.tb-title{font-size:15px;font-weight:800;color:var(--navy);flex:1}
+.bc{font-size:11px;color:var(--g400)}
+.bc span{margin:0 4px}
+.page{display:none;flex-direction:column}
+.page.active{display:flex}
+.pinner{padding:16px 20px;flex:1}
+
+/* ─── Cards ─── */
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:15px;margin-bottom:12px;box-shadow:var(--sh1)}
+.card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px}
+.card-title{font-size:13.5px;font-weight:800;color:var(--navy)}
+.card-sub{font-size:11px;color:var(--g500);margin-top:1px}
+
+/* ─── Stats ─── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.stat{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;box-shadow:var(--sh1)}
+.stat-val{font-size:26px;font-weight:900;color:var(--navy);font-variant-numeric:tabular-nums}
+.stat-lbl{font-size:10.5px;color:var(--g500);margin-top:2px}
+.stat-en{font-size:9.5px;color:var(--g400)}
+.stat.err .stat-val{color:var(--red)}.stat.act .stat-val{color:var(--teal)}.stat.ok .stat-val{color:var(--green)}
+
+/* ─── Steps ─── */
+.steps{display:flex;align-items:center;margin-bottom:15px}
+.step{display:flex;align-items:center;gap:5px}
+.sc{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
+.step.done .sc{background:var(--green);color:#fff}
+.step.active .sc{background:var(--teal);color:#fff;box-shadow:0 0 0 3px rgba(13,140,140,.2)}
+.step.pending .sc{background:var(--g200);color:var(--g500)}
+.sn{font-size:11px;color:var(--g500);white-space:nowrap}
+.step.active .sn{color:var(--teal);font-weight:700}.step.done .sn{color:var(--green)}
+.sl{flex:1;height:2px;background:var(--g200);min-width:12px}
+.sl.done{background:var(--green)}
+
+/* ─── WF Tabs ─── */
+.wf-tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:14px;flex-wrap:wrap}
+.wf-tab{padding:8px 14px;cursor:pointer;font-size:12px;color:var(--g500);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.wf-tab:hover{color:var(--navy)}.wf-tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+.tbb{font-size:9.5px;padding:1px 5px;border-radius:999px;font-weight:800;background:var(--red);color:#fff}
+.tbb.ok{background:var(--green)}.tbb.warn{background:var(--amber)}
+
+/* ─── Tab content ─── */
+.tc{display:none}.tc.on{display:block}
+
+/* ─── Forms ─── */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ff{display:flex;flex-direction:column;gap:4px}
+.fl{font-size:11.5px;font-weight:700;color:var(--g700)}.req{color:var(--red)}
+.fi{border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:12.5px;color:var(--text);background:var(--white);outline:none;transition:border-color .15s;font-family:inherit}
+.fi:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,140,140,.1)}
+select.fi{cursor:pointer}
+
+/* ─── File Drop ─── */
+.fdrop{border:2px dashed var(--border);border-radius:var(--r);padding:16px;text-align:center;cursor:pointer;transition:all .15s;background:var(--g50)}
+.fdrop:hover{border-color:var(--teal);background:var(--teal-pale)}
+.fdrop.filled{background:var(--green-pale);border-color:var(--green);border-style:solid}
+.fdrop-icon{font-size:22px;display:block;margin-bottom:5px}
+.fdrop-txt{font-size:11.5px;color:var(--g500)}.fdrop.filled .fdrop-txt{color:var(--green);font-weight:700}
+
+/* ─── File Manager ─── */
+.fm{border:1px solid var(--border);border-radius:var(--r);background:var(--white);overflow:hidden}
+.fm-hd{background:var(--g50);padding:7px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:11.5px;font-weight:700;color:var(--g700)}
+.fm-body{max-height:148px;overflow-y:auto}
+.fmr{display:flex;align-items:center;gap:9px;padding:7px 12px;border-bottom:1px solid var(--g100);font-size:12px;cursor:pointer;transition:background .1s}
+.fmr:hover{background:var(--g50)}.fmr:last-child{border-bottom:none}.fmr.sel{background:var(--teal-pale)}
+.fmr-icon{font-size:14px;flex-shrink:0}
+.fmr-info{flex:1;min-width:0}
+.fmr-name{font-weight:700;color:var(--g800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fmr-meta{font-size:10px;color:var(--g400)}
+.fmr-del{background:none;border:none;cursor:pointer;color:var(--g400);font-size:13px;padding:2px 5px;border-radius:4px}
+.fmr-del:hover{background:var(--red-pale);color:var(--red)}
+
+/* ─── School / Class Builder ─── */
+.school-block{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px;box-shadow:var(--sh1)}
+.school-hd{display:flex;align-items:center;gap:9px;padding:9px 13px;background:var(--navy);cursor:pointer;user-select:none}
+.school-hd-name{font-size:12.5px;font-weight:800;color:#fff;flex:1}
+.school-hd-count{font-size:11px;color:rgba(255,255,255,.55)}
+.school-body{padding:10px 13px;background:var(--white)}
+.cls-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.cls-item{display:flex;align-items:center;gap:9px;background:var(--g50);border:1px solid var(--border);border-radius:6px;padding:8px 11px;transition:border-color .15s}
+.cls-item.sep{background:var(--blue-pale);border-color:#BFDBFE}
+.cls-item:hover{border-color:var(--teal)}
+.cls-name{font-size:12px;font-weight:800;color:var(--navy);flex:1}
+.cls-teacher{font-size:11px;color:var(--g500);background:var(--g100);padding:2px 8px;border-radius:999px}
+.cls-count{font-size:11px;color:var(--g400)}
+.cls-tag{font-size:9px;color:var(--blue);background:var(--blue-pale);padding:2px 7px;border-radius:999px;font-weight:700}
+.cls-del{background:none;border:none;cursor:pointer;color:var(--g400);font-size:13px}
+.cls-del:hover{color:var(--red)}
+.add-cls{display:flex;align-items:center;gap:7px;padding:7px 11px;border:2px dashed var(--teal);border-radius:6px;background:none;cursor:pointer;color:var(--teal);font-size:12px;font-weight:700;font-family:inherit;transition:all .15s;width:100%}
+.add-cls:hover{background:var(--teal-pale)}
+.add-school{display:flex;align-items:center;gap:7px;padding:8px 12px;border:2px dashed var(--g300);border-radius:var(--r);background:none;cursor:pointer;color:var(--g500);font-size:12px;font-weight:700;font-family:inherit;transition:all .15s;width:100%;margin-top:8px}
+.add-school:hover{background:var(--g100);border-color:var(--navy);color:var(--navy)}
+
+/* ─── Buttons ─── */
+.btn{border:none;padding:7px 14px;border-radius:6px;font-size:12.5px;font-weight:700;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;font-family:inherit;white-space:nowrap}
+.btn-sm{padding:5px 10px;font-size:11.5px}.btn-lg{padding:9px 20px;font-size:13.5px}
+.btn-primary{background:var(--teal);color:#fff}.btn-primary:hover{background:#0a7070}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#b91c1c}
+.btn-ghost{background:transparent;color:var(--g500);border:1px solid var(--border)}.btn-ghost:hover{background:var(--g50);color:var(--g700)}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover{background:#15803d}
+.btn-warn{background:var(--amber);color:#fff}
+.btn:disabled{opacity:.38;cursor:not-allowed!important}
+.btn-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center}
+
+/* ─── Tables ─── */
+.tbl-wrap{overflow-x:auto;border-radius:6px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead{background:var(--g50)}
+th{color:var(--g400);font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:7px 11px;text-align:left;border-bottom:1px solid var(--border);font-weight:800;white-space:nowrap}
+td{padding:8px 11px;border-bottom:1px solid var(--g100);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--g50)}
+td.mono{font-family:monospace;font-size:11px;color:var(--g600)}
+tr.row-err td{background:var(--red-pale)}
+tr.row-warn td{background:var(--amber-pale)}
+
+
+/* ─── AI Check specific table ─── */
+.ai-check-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px}
+.ai-check-table{width:100%;min-width:860px;table-layout:fixed;border-collapse:collapse;font-size:12px}
+.ai-check-table th,.ai-check-table td{white-space:nowrap}
+.ai-check-table th:nth-child(1){width:72px}
+.ai-check-table th:nth-child(2){width:120px}
+.ai-check-table th:nth-child(3){width:90px}
+.ai-check-table th:nth-child(4){width:80px}
+.ai-check-table th:nth-child(5){width:110px}
+.ai-check-table th:nth-child(6){width:140px}
+
+/* ─── Badges ─── */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:999px;font-size:10.5px;font-weight:800}
+.b-ok{background:var(--green-pale);color:var(--green)}.b-err{background:var(--red-pale);color:var(--red)}
+.b-warn{background:var(--amber-pale);color:var(--amber)}.b-info{background:var(--teal-pale);color:var(--teal)}
+.b-blue{background:var(--blue-pale);color:var(--blue)}.b-purple{background:var(--purple-pale);color:var(--purple)}
+.b-gray{background:var(--g100);color:var(--g500)}.b-navy{background:var(--navy);color:#fff}
+/* Light quality flag for eye-closing — not an error */
+.b-qflag{background:#F0F9FF;color:#0369A1;border:1px solid #BAE6FD;font-size:9.5px;padding:1px 6px;border-radius:999px;font-weight:700}
+/* Person count badge */
+.pcount{display:inline-flex;align-items:center;gap:3px;background:var(--purple-pale);color:var(--purple);font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:999px;cursor:default}
+.pcount.warn{background:#FEF3C7;color:var(--amber)}
+
+/* ─── Alerts ─── */
+.alert{border-radius:var(--r);padding:10px 13px;margin-bottom:12px;font-size:12.5px;display:flex;align-items:flex-start;gap:9px;border-width:1px;border-style:solid}
+.alert-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.a-warn{background:var(--amber-pale);border-color:#FCD34D;color:#78350F}
+.a-err{background:var(--red-pale);border-color:#FCA5A5;color:#991B1B}
+.a-ok{background:var(--green-pale);border-color:#86EFAC;color:#14532D}
+.a-info{background:var(--teal-pale);border-color:#67E8F9;color:#155E75}
+.a-blue{background:var(--blue-pale);border-color:#93C5FD;color:#1E3A8A}
+
+/* ─── Review Card ─── */
+.rv-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);margin-bottom:11px;overflow:hidden;box-shadow:var(--sh1)}
+.rv-card-hd{display:flex;align-items:center;gap:9px;padding:9px 13px;border-bottom:1px solid var(--border);background:var(--g50)}
+.rv-card-title{font-size:12.5px;font-weight:800;color:var(--g800);flex:1}
+.rv-body{padding:13px}
+.rv-3col{display:grid;grid-template-columns:105px 165px 1fr;gap:13px;align-items:start}
+.rv-3col-wide{display:grid;grid-template-columns:150px 1fr 1fr;gap:13px;align-items:start}
+
+/* ─── Photo Thumbnails ─── */
+.ph-thumb{background:var(--g200);border-radius:7px;position:relative;overflow:hidden;cursor:pointer;border:2.5px solid transparent;transition:all .15s;flex-shrink:0}
+.ph-img{width:100%;aspect-ratio:3/4;background:var(--g200);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;color:var(--g400);font-size:10px}
+.ph-thumb.best{border-color:var(--green)}.ph-thumb.warn{border-color:var(--amber)}
+.ph-lbl{background:rgba(15,27,48,.88);color:#fff;font-size:9.5px;padding:3px 6px;text-align:center}
+.ph-badges{position:absolute;top:4px;left:4px;display:flex;flex-direction:column;gap:2px}
+.pb{font-size:9px;padding:1px 5px;border-radius:999px;font-weight:800;display:inline-block}
+.pb-best{background:var(--green);color:#fff}.pb-card{background:var(--navy);color:#fff}
+.ph-star{position:absolute;top:4px;right:4px;background:var(--teal);color:#fff;font-size:9px;padding:1px 5px;border-radius:999px;font-weight:900}
+.ph-pcount{position:absolute;bottom:26px;right:4px;background:rgba(124,58,237,.9);color:#fff;font-size:8.5px;padding:1px 5px;border-radius:999px;font-weight:700}
+.ph-pcount.warn{background:rgba(217,119,6,.9)}
+/* Light quality flag on photo */
+.ph-qflag{position:absolute;top:4px;left:50%;transform:translateX(-50%);background:rgba(3,105,161,.88);color:#fff;font-size:8px;padding:1px 5px;border-radius:999px;font-weight:700;white-space:nowrap}
+
+/* ─── Person Group ─── */
+.pg{margin-bottom:16px}
+.pg-hd{display:flex;align-items:center;gap:9px;padding:8px 13px;background:var(--g50);border:1px solid var(--border);border-radius:6px 6px 0 0;border-bottom:none}
+.pg-name{font-size:12.5px;font-weight:800;color:var(--navy);flex:1}
+.pg-body{border:1px solid var(--border);border-radius:0 0 6px 6px;padding:11px;background:var(--white);display:flex;gap:9px;flex-wrap:wrap;align-items:flex-start}
+
+/* ─── Teacher Story Flow ─── */
+.teacher-flow{display:flex;align-items:stretch;gap:0;margin-bottom:16px;overflow-x:auto;padding-bottom:4px}
+.tf-step{display:flex;flex-direction:column;align-items:center;min-width:150px;max-width:180px;padding:12px 10px;background:var(--white);border:1.5px solid var(--border);border-radius:var(--r);box-shadow:var(--sh1);flex-shrink:0;position:relative}
+.tf-step.highlight{background:var(--teal-pale);border-color:var(--teal)}
+.tf-step.done-step{background:var(--green-pale);border-color:var(--green)}
+.tf-step-num{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--teal);color:#fff;font-size:9px;font-weight:900;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.tf-step.done-step .tf-step-num{background:var(--green)}
+.tf-icon{font-size:28px;margin:6px 0 5px}
+.tf-lbl{font-size:9.5px;font-weight:800;color:var(--g400);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;text-align:center}
+.tf-val{font-size:11.5px;font-weight:800;color:var(--navy);text-align:center;line-height:1.4}
+.tf-sub{font-size:10px;color:var(--g400);text-align:center;margin-top:3px}
+.tf-arrow{display:flex;align-items:center;padding:0 6px;color:var(--teal);font-size:18px;font-weight:900;align-self:center;flex-shrink:0}
+
+/* ─── Candidates ─── */
+.cand-list{display:flex;flex-direction:column;gap:5px}
+.cand{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;border:1.5px solid var(--border);background:var(--white);transition:all .12s}
+.cand:hover,.cand.sel{border-color:var(--teal);background:var(--teal-pale)}
+.cand-score{min-width:38px;text-align:center;font-size:11px;font-weight:800;color:var(--teal)}
+.cand-name{flex:1;font-size:12.5px;font-weight:700}
+.cand-meta{font-size:10.5px;color:var(--g500)}
+
+/* ─── Confidence Bar ─── */
+.conf-box{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:5px;margin-top:6px}
+.conf-box.high{background:var(--green-pale);color:var(--green)}.conf-box.mid{background:var(--amber-pale);color:var(--amber)}.conf-box.low{background:var(--red-pale);color:var(--red)}
+.conf-bar{flex:1;height:5px;background:var(--g200);border-radius:999px;overflow:hidden}
+.conf-fill{height:100%;border-radius:999px}
+
+/* ─── Naming Preview ─── */
+.np{background:var(--g50);border:1px solid var(--border);border-radius:7px;padding:10px 12px}
+.np-lbl{font-size:10px;color:var(--g400);font-weight:800;text-transform:uppercase;margin-bottom:5px;letter-spacing:.04em}
+.np-row{font-family:monospace;font-size:11.5px;color:var(--navy);background:var(--white);border:1px solid var(--border);border-radius:5px;padding:5px 9px;margin-bottom:4px;word-break:break-all}
+.np-row span{color:var(--teal)}.np-tag{display:inline-block;background:var(--teal-pale);color:var(--teal);font-size:10px;padding:1px 5px;border-radius:3px;margin-left:3px}
+
+/* ─── OCR Box ─── */
+.ocr-box{background:var(--g50);border:1px solid var(--border);border-radius:6px;padding:9px 11px}
+.ocr-row{display:flex;justify-content:space-between;margin-bottom:5px;align-items:baseline}
+.ocr-k{color:var(--g500);font-size:10.5px}.ocr-v{font-weight:800;color:var(--g800);font-size:12px}
+
+/* ─── PERSON SEARCH WIZARD ─── */
+.swiz{background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:13px;box-shadow:var(--sh1)}
+.swiz-steps{display:flex;background:var(--g50);border-bottom:2px solid var(--border)}
+.swiz-step{flex:1;padding:10px 6px;text-align:center;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;font-size:11px;font-weight:700;color:var(--g500);display:flex;flex-direction:column;align-items:center;gap:2px}
+.swiz-step:hover{color:var(--navy)}
+.swiz-step.active{color:var(--teal);border-bottom-color:var(--teal);background:var(--white)}
+.swiz-step.done{color:var(--green)}
+.swiz-step-num{font-size:17px;font-weight:900;display:block}
+.swiz-panel{display:none;padding:16px}.swiz-panel.active{display:block}
+
+/* Scope chips for search */
+.scope-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.scope-chip{padding:10px 8px;border-radius:var(--r);font-size:11.5px;font-weight:700;cursor:pointer;border:2px solid var(--border);background:var(--white);color:var(--g600);transition:all .15s;text-align:center;display:flex;flex-direction:column;gap:4px;align-items:center}
+.scope-chip:hover{border-color:var(--teal);color:var(--teal)}
+.scope-chip.on{background:var(--teal);border-color:var(--teal);color:#fff}
+.scope-chip-icon{font-size:20px}
+
+/* Search source items */
+.src-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.src-item{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:var(--r);border:2px solid var(--border);background:var(--white);cursor:pointer;transition:all .15s;font-weight:600;font-size:12.5px}
+.src-item:hover{border-color:var(--teal)}.src-item.on{border-color:var(--teal);background:var(--teal-pale);color:var(--teal)}
+.src-item input[type=checkbox]{accent-color:var(--teal)}
+.src-icon{font-size:18px;flex-shrink:0}
+
+/* Mode buttons */
+.mode-btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.mode-btn{flex:1;min-width:130px;padding:12px;border-radius:var(--r);border:2px solid var(--border);background:var(--white);cursor:pointer;font-family:inherit;text-align:center;transition:all .15s}
+.mode-btn:hover{border-color:var(--teal)}.mode-btn.on{border-color:var(--teal);background:var(--teal-pale)}
+.mode-btn-icon{font-size:22px;display:block;margin-bottom:4px}
+.mode-btn-lbl{font-size:12px;font-weight:800;color:var(--navy)}
+.mode-btn-sub{font-size:10px;color:var(--g500);margin-top:2px}
+
+/* Search summary bar */
+.search-summary-bar{display:flex;gap:20px;flex-wrap:wrap;background:var(--g50);border:1px solid var(--border);border-radius:var(--r);padding:11px 14px;margin-bottom:12px}
+.ssb-item{display:flex;flex-direction:column;gap:2px}
+.ssb-lbl{font-size:9.5px;color:var(--g400);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.ssb-val{font-size:12.5px;font-weight:800;color:var(--navy)}
+
+/* Search result sections */
+.src-section{margin-bottom:14px}
+.src-section-hd{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--navy);border-radius:6px 6px 0 0;font-size:12.5px;font-weight:800;color:#fff}
+.src-section-body{border:1px solid var(--border);border-top:none;border-radius:0 0 6px 6px;padding:12px;background:var(--white)}
+.src-section-empty{border:1px solid var(--border);border-top:none;border-radius:0 0 6px 6px;padding:14px;background:var(--white);font-size:11.5px;color:var(--g400);text-align:center}
+
+/* ─── Snap / buckets ─── */
+.buckets{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap}
+.bk{display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:800;border:2px solid var(--border);background:var(--white);color:var(--g500);transition:all .15s}
+.bk-cnt{font-size:10px;padding:1px 6px;border-radius:999px;background:var(--border);color:var(--g500);font-weight:900}
+.bk.best{color:var(--green)}.bk.best.on{background:var(--green-pale);border-color:var(--green)}.bk.best.on .bk-cnt{background:var(--green);color:#fff}
+.bk.other{color:var(--blue)}.bk.other.on{background:var(--blue-pale);border-color:var(--blue)}.bk.other.on .bk-cnt{background:var(--blue);color:#fff}
+.bk.ng{color:var(--red)}.bk.ng.on{background:var(--red-pale);border-color:var(--red)}.bk.ng.on .bk-cnt{background:var(--red);color:#fff}
+
+/* ─── Snap Grid ─── */
+.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:9px}
+.sth{background:var(--g200);border-radius:7px;position:relative;overflow:hidden;cursor:pointer;border:2.5px solid transparent;transition:all .15s;aspect-ratio:4/3}
+.sth-inner{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--g200);flex-direction:column;gap:3px;color:var(--g400);font-size:10px}
+.sth.best{border-color:var(--green)}.sth.ng-snap{border-color:var(--red);opacity:.65}.sth.sel{border-color:var(--teal)}
+.sth-btm{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(15,27,48,.9));padding:14px 6px 5px;display:flex;gap:3px;flex-wrap:wrap}
+.fbox{position:absolute;border:2px solid var(--green);border-radius:2px}
+.fbox.eye{border-color:var(--amber)}
+.fbox-lbl{position:absolute;top:-15px;left:-1px;font-size:8px;padding:1px 4px;border-radius:3px 3px 0 0;white-space:nowrap;color:#fff;background:var(--green)}
+.fbox.eye .fbox-lbl{background:var(--amber);color:var(--g800)}
+.sth-pcount{position:absolute;top:4px;right:4px;background:rgba(124,58,237,.88);color:#fff;font-size:9px;padding:1px 6px;border-radius:999px;font-weight:700}
+
+/* ─── Snap Summary Cards ─── */
+.snap-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:13px}
+.ss-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;box-shadow:var(--sh1);text-align:center}
+.ss-val{font-size:24px;font-weight:900;font-variant-numeric:tabular-nums}
+.ss-lbl{font-size:10px;color:var(--g500);margin-top:3px}
+
+/* ─── Coverage ─── */
+.cov-row{display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px solid var(--g100);font-size:12px}
+.cov-name{min-width:95px;font-weight:600}.cov-bar-w{flex:1;height:6px;background:var(--g200);border-radius:999px;overflow:hidden}
+.cov-bar{height:100%;border-radius:999px}.cov-n{min-width:40px;text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
+.cov-row.zero .cov-name{color:var(--red);font-weight:800}.cov-row.zero .cov-n{color:var(--red)}
+
+/* ─── Layout helpers ─── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* ─── Club metadata callout ─── */
+.meta-callout{background:var(--g50);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;margin-bottom:12px}
+.meta-row{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--g100);font-size:12px}
+.meta-row:last-child{border-bottom:none}
+.meta-key{min-width:110px;font-weight:700;color:var(--g600);font-size:11px}
+.meta-val{flex:1;color:var(--g800)}
+.meta-auto{color:var(--green);font-weight:700;font-size:11px}
+.meta-manual{color:var(--amber);font-weight:700;font-size:11px}
+
+/* ─── Toast ─── */
+.toast{position:fixed;bottom:18px;right:18px;background:var(--navy);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:700;box-shadow:var(--sh2);z-index:9999;display:none;align-items:center;gap:8px}
+.toast.show{display:flex;animation:tst .25s ease}
+@keyframes tst{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--g300);border-radius:999px}
+
+@media(max-width:860px){
+  .sidebar{width:50px}
+  .logo-name,.logo-sub,.ni span:not(.ni-icon),.nav-lbl,.nb{display:none}
+  .stats,.snap-summary{grid-template-columns:1fr 1fr}
+  .fg,.two-col,.scope-grid{grid-template-columns:1fr}
+  .rv-3col,.rv-3col-wide{grid-template-columns:1fr}
+  .src-grid{grid-template-columns:1fr}
+  .teacher-flow{flex-direction:column}
+  .tf-arrow{transform:rotate(90deg);padding:6px 0}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-row"><div class="logo-icon">K</div><div class="logo-name">KEIGADO AI</div></div>
+    <div class="logo-sub">AI Album System v2.6</div>
+  </div>
+  <nav>
+    <div class="nav-sec">
+      <div class="nav-lbl">メイン</div>
+      <div class="ni active" onclick="go('dash')"><span class="ni-icon">🏠</span><span>ダッシュボード</span></div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-lbl">ワークフロー</div>
+      <div class="ni" onclick="go('ind')"><span class="ni-icon">👤</span><span>個人写真</span><span class="nb">2</span></div>
+      <div class="ni" onclick="go('tea')"><span class="ni-icon">🎓</span><span>先生写真</span><span class="nb warn">1</span></div>
+      <div class="ni" onclick="go('club')"><span class="ni-icon">🏆</span><span>クラブ写真</span></div>
+      <div class="ni" onclick="go('snap')"><span class="ni-icon">📸</span><span>スナップ写真</span></div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-lbl">検索・確認ツール</div>
+      <div class="ni" onclick="go('search')"><span class="ni-icon">🔍</span><span>人物検索</span></div>
+      <div class="ni" onclick="go('aicheck')"><span class="ni-icon">🤖</span><span>AI検出チェック</span></div>
+    </div>
+  </nav>
+  <div class="sidebar-foot">v2.6 · 恵雅堂</div>
+</aside>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<div class="main">
+
+<!-- ══════════ DASHBOARD ══════════ -->
+<div id="p-dash" class="page active">
+  <div class="topbar">
+    <div><div class="tb-title">ダッシュボード</div><div class="bc">ホーム</div></div>
+    <button class="btn btn-primary" onclick="go('ind')">＋ 新規ジョブ</button>
+  </div>
+  <div class="pinner">
+    <div class="stats">
+      <div class="stat ok"><div class="stat-val">523</div><div class="stat-lbl">処理済み写真</div><div class="stat-en">Processed Photos</div></div>
+      <div class="stat err"><div class="stat-val">3</div><div class="stat-lbl">未解決エラー</div><div class="stat-en">Unresolved Errors</div></div>
+      <div class="stat act"><div class="stat-val">2</div><div class="stat-lbl">処理中ジョブ</div><div class="stat-en">Active Jobs</div></div>
+      <div class="stat ok"><div class="stat-val">8</div><div class="stat-lbl">完了クラス</div><div class="stat-en">Completed Classes</div></div>
+    </div>
+    <div class="alert a-err"><span class="alert-icon">🚫</span><div><strong>3件のエラー・未照合があります</strong> — 各ワークフローのレビュータブで解決してください。解決するまでファイル出力は実行できません。</div></div>
+    <div class="card">
+      <div class="card-hd"><div><div class="card-title">最近のジョブ — Recent Jobs</div></div><button class="btn btn-ghost btn-sm">すべて見る</button></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>ジョブ名</th><th>種別</th><th>学校</th><th>写真数</th><th>人物数</th><th>ステータス</th><th>更新</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><div style="font-weight:800">3年A組・3年B組 個人</div><div style="font-size:10.5px;color:var(--g500)">2クラス一括</div></td><td><span class="badge b-info">個人写真</span></td><td>上水高校</td><td>89</td><td><span class="pcount">👥89名</span></td><td><span class="badge b-ok">✓ 完了</span></td><td>04-14 14:22</td><td><button class="btn btn-ghost btn-sm" onclick="go('ind')">詳細</button></td></tr>
+          <tr class="row-err"><td><div style="font-weight:800">サッカー部</div></td><td><span class="badge b-purple">クラブ写真</span></td><td>上水高校</td><td>18</td><td><span class="pcount">👥〜15名</span></td><td><span class="badge b-err">⚠ 要確認</span></td><td>04-14 13:05</td><td><button class="btn btn-danger btn-sm" onclick="go('club')">確認</button></td></tr>
+          <tr class="row-warn"><td><div style="font-weight:800">渡辺 三郎（新任）</div></td><td><span class="badge b-warn">先生写真</span></td><td>上水高校</td><td>5</td><td><span class="pcount">👥1名</span></td><td><span class="badge b-warn">🔄 未照合</span></td><td>04-14 11:30</td><td><button class="btn btn-warn btn-sm" onclick="go('tea')">確認</button></td></tr>
+          <tr><td><div style="font-weight:800">運動会スナップ</div></td><td><span class="badge b-blue">スナップ</span></td><td>上水高校</td><td>312</td><td><span class="pcount">👥延べ247名</span></td><td><span class="badge b-info">⚙ 処理中</span></td><td>04-14 10:00</td><td><button class="btn btn-ghost btn-sm" onclick="go('snap')">詳細</button></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ INDIVIDUAL PHOTO ══════════ -->
+<div id="p-ind" class="page">
+  <div class="topbar">
+    <div><div class="tb-title">個人写真ワークフロー — Individual Photos</div><div class="bc">ホーム <span>›</span> 個人写真</div></div>
+    <span class="badge b-err" style="font-size:12px">エラー 2件</span>
+  </div>
+  <div class="pinner">
+    <div class="steps">
+      <div class="step done"><div class="sc">✓</div><span class="sn">①アップロード</span></div><div class="sl done"></div>
+      <div class="step done"><div class="sc">✓</div><span class="sn">②OCR照合</span></div><div class="sl done"></div>
+      <div class="step active"><div class="sc">3</div><span class="sn">③エラーレビュー</span></div><div class="sl"></div>
+      <div class="step pending"><div class="sc">4</div><span class="sn">④ベスト選択</span></div><div class="sl"></div>
+      <div class="step pending"><div class="sc">5</div><span class="sn">⑤出力</span></div>
+    </div>
+    <div class="wf-tabs" id="ind-tabs">
+      <div class="wf-tab" onclick="swTab('ind','upload',this)">アップロード <span class="tbb ok">✓</span></div>
+      <div class="wf-tab" onclick="swTab('ind','ocr',this)">OCR照合 <span class="tbb ok">✓</span></div>
+      <div class="wf-tab active" onclick="swTab('ind','error',this)">⚠ エラーレビュー <span class="tbb">2</span></div>
+      <div class="wf-tab" onclick="swTab('ind','best',this)">ベスト選択</div>
+      <div class="wf-tab" onclick="swTab('ind','export',this)">ファイル出力</div>
+    </div>
+
+    <!-- Upload -->
+    <div id="ind-upload" class="tc">
+      <div class="alert a-blue"><span class="alert-icon">🏫</span><div><strong>処理スコープ設定</strong> — 1校 or 複数校。クラスを＋ボタンで追加。1フォルダ複数クラスのセパレーター自動検出対応。</div></div>
+      <div class="two-col">
+        <div>
+          <div id="school-list">
+            <div class="school-block">
+              <div class="school-hd" onclick="toggleSchool(this)">
+                <span style="font-size:14px">🏫</span><div class="school-hd-name">上水高校</div>
+                <span class="school-hd-count">2クラス · 89枚</span>
+                <span class="badge" style="background:rgba(255,255,255,.15);color:#fff;font-size:10px;margin-left:4px">2026年度</span>
+                <span style="color:rgba(255,255,255,.5);font-size:12px;margin-left:4px">▼</span>
+              </div>
+              <div class="school-body">
+                <div class="fg" style="margin-bottom:10px">
+                  <div class="ff"><label class="fl">年度 <span class="req">*</span></label><select class="fi"><option>2026年度</option><option>2025年度</option></select></div>
+                  <div class="ff"><label class="fl">学校名 <span class="req">*</span></label><input class="fi" value="上水高校"></div>
+                  <div class="ff"><label class="fl">名簿 Excel <span class="req">*</span></label><div class="fdrop filled" style="padding:8px" onclick="toast('roster.xlsx を再選択')"><span style="font-size:15px">📄</span> <span style="font-size:11px;font-weight:700;color:var(--green)">roster_上水高.xlsx ✓</span></div></div>
+                  <div class="ff"><label class="fl">カメラマン</label><input class="fi" placeholder="任意"></div>
+                </div>
+                <div class="cls-list" id="cls-list-1">
+                  <div class="cls-item"><div class="cls-name">3年A組</div><div class="cls-teacher">👤 山田先生（担任）</div><div class="cls-count">47枚</div><span class="cls-tag">自動検出</span><button class="cls-del" onclick="this.closest('.cls-item').remove()">✕</button></div>
+                  <div class="cls-item sep"><div class="cls-name">3年B組</div><div class="cls-teacher">👤 鈴木先生（担任）</div><div class="cls-count">42枚</div><span class="cls-tag">自動検出</span><button class="cls-del" onclick="this.closest('.cls-item').remove()">✕</button></div>
+                </div>
+                <button class="add-cls" onclick="addCls('cls-list-1')">＋ クラスを追加</button>
+              </div>
+            </div>
+          </div>
+          <button class="add-school" onclick="addSchool()">＋ 別の学校を追加（複数校処理）</button>
+          <div class="card" style="margin-top:12px">
+            <div class="card-hd"><div class="card-title">📁 アップロード済みファイル</div><button class="btn btn-ghost btn-sm" onclick="toast('全選択')">全選択</button></div>
+            <div class="fm"><div class="fm-body">
+              <div class="fmr sel"><span class="fmr-icon">📁</span><div class="fmr-info"><div class="fmr-name">photos_3A/</div><div class="fmr-meta">47枚 · 2026-04-14 · 上水高校</div></div><button class="fmr-del" onclick="toast('削除しますか？')">🗑</button></div>
+              <div class="fmr sel"><span class="fmr-icon">📁</span><div class="fmr-info"><div class="fmr-name">photos_3B/</div><div class="fmr-meta">42枚 · 2026-04-14 · 上水高校</div></div><button class="fmr-del" onclick="toast('削除')">🗑</button></div>
+              <div class="fmr"><span class="fmr-icon">📄</span><div class="fmr-info"><div class="fmr-name">roster_上水高.xlsx</div><div class="fmr-meta">名簿 · 89名</div></div><button class="fmr-del" onclick="toast('削除')">🗑</button></div>
+            </div></div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-hd"><div class="card-title">📁 写真フォルダ選択</div></div>
+            <div class="fdrop filled" onclick="toast('フォルダを再選択')"><span class="fdrop-icon">📁</span><div class="fdrop-txt">/photos/3A-3B/ — 89枚選択済</div></div>
+          </div>
+          <div class="card">
+            <div class="card-hd"><div class="card-title">📝 命名規則プレビュー</div></div>
+            <div class="np"><div class="np-lbl">出力ファイル名プレビュー</div>
+              <div class="np-row"><span>26</span>_<span>上水高</span>_<span>IMG_2337</span>_<span>3105</span>_<span class="np-tag">札01</span>.jpg</div>
+              <div class="np-row"><span>26</span>_<span>上水高</span>_<span>IMG_2338</span>_<span>3105</span>_<span class="np-tag">本01</span>.jpg</div>
+              <div style="font-size:10px;color:var(--g400);margin-top:5px">[年度]_[学校名]_[元ファイル名]_[学年クラス番号]_[タグ]</div>
+            </div>
+            <div class="btn-row" style="margin-top:11px">
+              <button class="btn btn-primary btn-lg" onclick="swTab('ind','ocr',null);toast('アップロードを開始しました')">▶ アップロード開始</button>
+              <button class="btn btn-ghost" onclick="toast('リセットしました')">✕ リセット</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OCR -->
+    <div id="ind-ocr" class="tc">
+      <div class="alert a-warn"><span class="alert-icon">⚠️</span><div><strong>45件照合済み / 2件エラー</strong> — エラーレビュータブで解決してください。<br><span style="font-size:11.5px">📌 目つむりはエラーではありません。内部ランキングシグナルとして使用されます（UI上に表示なし）。</span></div></div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">OCR読取・名簿照合結果</div><div style="display:flex;gap:7px"><button class="btn btn-ghost btn-sm" onclick="toast('再実行')">↺ 再実行</button><button class="btn btn-primary btn-sm" onclick="swTab('ind','error',null)">エラーレビューへ →</button></div></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>写真ファイル</th><th>OCR番号</th><th>氏名</th><th>クラス</th><th>学校</th><th>人物数</th><th>ステータス</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">IMG_0001.jpg</td><td>01</td><td>山田 太郎</td><td>3年A組</td><td>上水高校</td><td><span class="pcount">👥 1</span></td><td><span class="badge b-ok">✓ OK</span></td></tr>
+            <tr><td class="mono">IMG_0002.jpg</td><td>02</td><td>鈴木 花子</td><td>3年A組</td><td>上水高校</td><td><span class="pcount">👥 1</span></td><td><span class="badge b-ok">✓ OK</span></td></tr>
+            <tr><td class="mono">IMG_0003.jpg</td><td>03</td><td>田中 一郎</td><td>3年A組</td><td>上水高校</td><td><span class="pcount">👥 1</span></td><td><span class="badge b-ok">✓ OK</span></td></tr>
+            <tr class="row-err"><td class="mono">IMG_0042.jpg</td><td>—</td><td>—</td><td>3年A組</td><td>上水高校</td><td><span class="pcount warn">👥 2 ⚠</span></td><td><span class="badge b-err">⚠ 札未検出</span></td></tr>
+            <tr class="row-err"><td class="mono">IMG_0079.jpg</td><td>複数</td><td>—</td><td>3年B組</td><td>上水高校</td><td><span class="pcount warn">👥 2</span></td><td><span class="badge b-err">⚠ 複数人</span></td></tr>
+            <tr><td class="mono">IMG_0080.jpg</td><td>05</td><td>佐藤 次郎</td><td>3年B組</td><td>上水高校</td><td><span class="pcount">👥 1</span></td><td><span class="badge b-ok">✓ OK</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- Error Review -->
+    <div id="ind-error" class="tc on">
+      <div class="alert a-err"><span class="alert-icon">🚫</span><div><strong>2件の未解決エラー。</strong>「札未検出」「複数人検出」のみがハードエラーです。<br><span style="font-size:11.5px">📌 目つむりはエラーではありません。続行中 → 通常通りに命名・ランキングされます。</span></div></div>
+
+      <div class="rv-card">
+        <div class="rv-card-hd"><span class="badge b-err">ERR-01</span><div class="rv-card-title">IMG_0042.jpg — 番号札が未検出 (Card Not Detected)</div><span class="badge b-gray">3年A組 · 上水高校</span><span class="pcount warn" style="margin-left:auto">👥 2名 ⚠</span></div>
+        <div class="rv-body">
+          <div class="rv-3col">
+            <div>
+              <div style="background:var(--g200);border-radius:7px;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;color:var(--g400);border:2px solid var(--border)"><span style="font-size:32px">👤</span><span style="font-size:10px">写真プレビュー</span></div>
+              <div style="text-align:center;margin-top:5px"><span class="pcount warn">👥 2名（参考）</span></div>
+              <div style="text-align:center;font-size:10px;color:var(--g400);margin-top:3px">複数人が写っている可能性</div>
+            </div>
+            <div>
+              <div class="ocr-box">
+                <div style="font-size:12px;color:var(--red);font-weight:800;margin-bottom:6px">番号札を検出できませんでした</div>
+                <div class="ocr-row"><span class="ocr-k">エラー種別</span><span class="ocr-v">札未検出</span></div>
+                <div class="ocr-row"><span class="ocr-k">人物数（参考）</span><span class="ocr-v"><span class="pcount warn">👥 2</span></span></div>
+              </div>
+              <div style="margin-top:8px;font-size:11px;color:var(--g500);background:var(--g50);border-radius:6px;padding:7px 9px">📌 人物数2名は参考情報です。エラーの原因は「札未検出」のみです。</div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:800;color:var(--g700);margin-bottom:7px">手動で番号を入力</div>
+              <div class="ff" style="margin-bottom:7px"><label class="fl">出席番号 <span class="req">*</span></label><input class="fi" placeholder="例：07" id="e1n" oninput="updP()"></div>
+              <div class="ff" style="margin-bottom:7px"><label class="fl">氏名（確認）</label><input class="fi" placeholder="名簿から自動補完" id="e1nm"></div>
+              <div class="np"><div class="np-lbl">確定後のファイル名</div><div class="np-row" style="font-size:11px">26_上水高_IMG_0042_31<span id="e1p" style="color:var(--teal)">__</span>_<span class="np-tag">札01</span>.jpg</div></div>
+              <div class="btn-row"><button class="btn btn-success btn-sm" onclick="resolveErr(this)">✓ 確定</button><button class="btn btn-ghost btn-sm" onclick="toast('再照合を実行')">↻ 再照合</button><button class="btn btn-danger btn-sm" onclick="toast('写真を削除しました')">🗑 削除</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rv-card">
+        <div class="rv-card-hd"><span class="badge b-err">ERR-02</span><div class="rv-card-title">IMG_0079.jpg — 複数人が番号札を持っている (Multiple Card Holders)</div><span class="badge b-gray">3年B組 · 上水高校</span><span class="pcount warn" style="margin-left:auto">👥 2名</span></div>
+        <div class="rv-body">
+          <div class="rv-3col">
+            <div>
+              <div style="background:var(--g200);border-radius:7px;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;color:var(--g400);border:2px solid var(--border)"><span style="font-size:32px">👥</span><span style="font-size:10px">2人検出</span></div>
+              <div style="text-align:center;margin-top:5px"><span class="pcount warn">👥 2名</span></div>
+            </div>
+            <div>
+              <div class="ocr-box">
+                <div style="font-size:12px;color:var(--orange);font-weight:800;margin-bottom:6px">複数の番号札を検出</div>
+                <div class="ocr-row"><span class="ocr-k">推定番号A</span><span class="ocr-v">12</span></div>
+                <div class="ocr-row"><span class="ocr-k">推定番号B</span><span class="ocr-v">13</span></div>
+                <div class="ocr-row"><span class="ocr-k">人物数</span><span class="ocr-v"><span class="pcount warn">👥 2</span></span></div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:800;color:var(--g700);margin-bottom:7px">正しい人物を選択</div>
+              <div class="cand-list">
+                <div class="cand sel" onclick="selCand(this)"><div class="cand-score">98%</div><div><div class="cand-name">👤 人物A — 出席番号 12</div><div class="cand-meta">中村 健太 · 3年B組</div></div><span class="badge b-info">推奨</span></div>
+                <div class="cand" onclick="selCand(this)"><div class="cand-score">61%</div><div><div class="cand-name">👤 人物B — 出席番号 13</div><div class="cand-meta">小林 美咲 · 3年B組</div></div></div>
+              </div>
+              <div class="btn-row"><button class="btn btn-success btn-sm" onclick="resolveErr(this)">✓ 選択確定</button><button class="btn btn-danger btn-sm" onclick="toast('削除')">🗑 削除</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Best Shot -->
+    <div id="ind-best" class="tc">
+      <div class="alert a-ok"><span class="alert-icon">✅</span><div><strong>AIがベストショットを選定しました。</strong>緑枠=推奨ベスト（本01）。サムネイルをクリックして変更できます。<br><span style="font-size:11.5px">📌 紫バッジ <span class="pcount">👥</span> は人物数（参考情報）。目つむりは内部処理のみ → UIには表示しません。</span></div></div>
+      <div class="btn-row" style="margin-bottom:13px;align-items:center">
+        <button class="btn btn-success" onclick="toast('全件を確定しました')">✓ 全件確定</button>
+        <button class="btn btn-ghost" onclick="toast('AI再選定')">↺ AI再選定</button>
+        <div style="margin-left:auto;font-size:11px;color:var(--g500)"><span class="badge b-ok" style="margin-right:4px">■ 本01（ベスト）</span><span class="badge b-gray">■ 本02,03</span></div>
+      </div>
+      <div class="pg">
+        <div class="pg-hd"><div class="pg-name">担任 山田先生 · 3年A組 · 上水高校</div><span class="badge b-info">担任写真</span><span style="font-size:10.5px;color:var(--g500);margin-left:8px">カード写真(①特定) → 本番カット(③グループ化) → ④ベスト選定</span></div>
+        <div class="pg-body">
+          <div class="ph-thumb" style="width:90px"><div class="ph-img"><span style="font-size:24px">🪪</span><span>① カード</span></div><div class="ph-badges"><span class="pb pb-card">① 特定</span></div><div class="ph-pcount">👥1</div><div class="ph-lbl">IMG_T_3A.jpg</div></div>
+          <div style="display:flex;align-items:center;padding:0 4px;color:var(--teal);font-size:16px;font-weight:900;align-self:center">→</div>
+          <div class="ph-thumb best" style="width:90px" onclick="pickBest(this)"><div class="ph-img"><span style="font-size:24px">🎓</span><span>本01</span></div><div class="ph-badges"><span class="pb pb-best">④ ベスト</span></div><div class="ph-star">★</div><div class="ph-pcount">👥1</div><div class="ph-lbl">IMG_T_3A2.jpg</div></div>
+          <div class="ph-thumb" style="width:90px" onclick="pickBest(this)"><div class="ph-img"><span style="font-size:24px">🎓</span><span>本02</span></div><div class="ph-pcount">👥1</div><div class="ph-lbl">IMG_T_3A3.jpg</div></div>
+        </div>
+      </div>
+      <div class="pg">
+        <div class="pg-hd"><div class="pg-name">01 山田 太郎 · 3年A組 · 上水高校</div><span class="badge b-ok">✓ 確定済み</span></div>
+        <div class="pg-body">
+          <div class="ph-thumb best" style="width:90px" onclick="pickBest(this)"><div class="ph-img"><span style="font-size:24px">👤</span><span>本01</span></div><div class="ph-badges"><span class="pb pb-best">本01</span></div><div class="ph-star">★</div><div class="ph-pcount">👥1</div><div class="ph-lbl">IMG_0010.jpg</div></div>
+          <div class="ph-thumb" style="width:90px" onclick="pickBest(this)"><div class="ph-img"><span style="font-size:24px">👤</span><span>本02</span></div><div class="ph-pcount">👥1</div><div class="ph-lbl">IMG_0011.jpg</div></div>
+          <div class="ph-thumb" style="width:90px" onclick="pickBest(this)"><div class="ph-img"><span style="font-size:24px">👤</span><span>本03</span></div><div class="ph-pcount warn">👥2⚠</div><div class="ph-lbl">IMG_0012.jpg</div></div>
+          <div class="ph-thumb" style="width:90px"><div class="ph-img"><span style="font-size:24px">🪪</span><span>札</span></div><div class="ph-badges"><span class="pb pb-card">札</span></div><div class="ph-pcount">👥1</div><div class="ph-lbl">IMG_0009.jpg</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export -->
+    <div id="ind-export" class="tc">
+      <div class="alert a-err"><span class="alert-icon">🚫</span><div><strong>エラーが2件未解決です。</strong>エラーレビュータブで解決するまで出力できません。</div></div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">ファイル出力 — File Export</div></div>
+        <div class="ff" style="margin-bottom:11px"><label class="fl">出力先フォルダ <span class="req">*</span></label><div class="fdrop" style="padding:11px" onclick="toast('フォルダを選択')"><span class="fdrop-icon">📂</span><div class="fdrop-txt">クリックしてフォルダを選択</div></div></div>
+        <div class="np"><div class="np-lbl">出力ファイル名プレビュー（クラス別グループ）</div>
+          <div class="np-row" style="font-size:11px">【3年A組】26_上水高_IMG_0009_3101_<span class="np-tag">札01</span>.jpg</div>
+          <div class="np-row" style="font-size:11px">【3年A組】26_上水高_IMG_0010_3101_<span class="np-tag">本01</span>.jpg</div>
+          <div class="np-row" style="font-size:11px">【3年B組】26_上水高_IMG_0080_3205_<span class="np-tag">本01</span>.jpg</div>
+        </div>
+        <div class="btn-row"><button class="btn btn-primary btn-lg" disabled>▶ 書き出し実行（エラー解決後）</button><button class="btn btn-ghost" onclick="toast('ファイルリストを確認')">📋 リスト確認</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ TEACHER PHOTO ══════════ -->
+<div id="p-tea" class="page">
+  <div class="topbar">
+    <div><div class="tb-title">先生写真ワークフロー — Teacher Photos</div><div class="bc">ホーム <span>›</span> 先生写真</div></div>
+    <span class="badge b-warn" style="font-size:12px">未照合 1件</span>
+  </div>
+  <div class="pinner">
+    <div class="steps">
+      <div class="step done"><div class="sc">✓</div><span class="sn">①アップロード</span></div><div class="sl done"></div>
+      <div class="step done"><div class="sc">✓</div><span class="sn">②カード検出・OCR</span></div><div class="sl done"></div>
+      <div class="step active"><div class="sc">3</div><span class="sn">③未照合レビュー</span></div><div class="sl"></div>
+      <div class="step pending"><div class="sc">4</div><span class="sn">④ベスト選択</span></div><div class="sl"></div>
+      <div class="step pending"><div class="sc">5</div><span class="sn">⑤出力</span></div>
+    </div>
+    <div class="wf-tabs" id="tea-tabs">
+      <div class="wf-tab" onclick="swTab('tea','upload',this)">アップロード <span class="tbb ok">✓</span></div>
+      <div class="wf-tab" onclick="swTab('tea','ocr',this)">OCR照合結果 <span class="tbb ok">✓</span></div>
+      <div class="wf-tab active" onclick="swTab('tea','unmatch',this)">未照合レビュー <span class="tbb warn">1</span></div>
+      <div class="wf-tab" onclick="swTab('tea','best',this)">ベスト選択</div>
+      <div class="wf-tab" onclick="swTab('tea','export',this)">出力</div>
+    </div>
+
+    <div id="tea-upload" class="tc">
+      <div class="alert a-info"><span class="alert-icon">ℹ️</span><div><strong>対象：今年度新任の先生のみ。</strong>1名=1フォルダ。カード持ち写真1枚+本番カット複数枚を同フォルダに入れてください。前年継続の先生は不要です。</div></div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title">先生写真フォルダ</div></div>
+          <div class="fdrop filled" style="padding:18px" onclick="toast('フォルダを再選択')"><span class="fdrop-icon">📁</span><div class="fdrop-txt">teacher_watanabe/ — 5枚読込済</div></div>
+          <div style="font-size:11px;color:var(--g500);margin-top:8px;padding:8px 10px;background:var(--g50);border-radius:6px">
+            📌 <strong>フォルダ構成：</strong><br>・IMG_T003.jpg — <strong>カード持ち写真 1枚</strong>（先生特定に使用）<br>・IMG_T003_2〜5.jpg — <strong>本番カット 4枚</strong>（ベスト選定対象）
+          </div>
+          <div class="fm" style="margin-top:8px"><div class="fm-hd">アップロード済み</div><div class="fm-body">
+            <div class="fmr sel"><span class="fmr-icon">📁</span><div class="fmr-info"><div class="fmr-name">teacher_watanabe/</div><div class="fmr-meta">5枚 · カード1枚+本番4枚</div></div><button class="fmr-del" onclick="toast('削除')">🗑</button></div>
+          </div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title">先生名簿 PDF / Excel</div></div>
+          <div class="fdrop filled" style="padding:18px"><span class="fdrop-icon">📄</span><div class="fdrop-txt">teacher_list_2026.xlsx 読込済</div></div>
+          <div class="btn-row" style="margin-top:11px"><button class="btn btn-primary btn-lg" onclick="swTab('tea','ocr',null);toast('OCRを実行中...')">▶ OCR 実行</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tea-ocr" class="tc">
+      <div class="alert a-warn"><span class="alert-icon">⚠️</span><div>2件照合済み / 1件未照合。</div></div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">OCR照合結果</div><button class="btn btn-primary btn-sm" onclick="swTab('tea','unmatch',null)">未照合レビューへ →</button></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>写真</th><th>OCR氏名</th><th>OCR教科</th><th>照合先</th><th>信頼度</th><th>ステータス</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">IMG_T001.jpg</td><td>田中 花子</td><td>数学</td><td>田中 花子 / 数学</td><td>98%</td><td><span class="badge b-ok">✓ OK</span></td></tr>
+            <tr><td class="mono">IMG_T002.jpg</td><td>佐藤 次郎</td><td>英語</td><td>佐藤 次郎 / 英語</td><td>95%</td><td><span class="badge b-ok">✓ OK</span></td></tr>
+            <tr class="row-warn"><td class="mono">IMG_T003.jpg</td><td>渡辺 ？？</td><td>理科</td><td>—</td><td>42%</td><td><span class="badge b-warn">⚠ 未照合</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- UNMATCHED REVIEW -->
+    <div id="tea-unmatch" class="tc on">
+      <div class="alert a-warn"><span class="alert-icon">⚠️</span><div><strong>1件の未照合。</strong>OCR信頼度が低いか、名簿に一致する先生が見つかりません。カード写真を確認し、名簿候補から氏名・教科を確認・修正してください。</div></div>
+      <!-- 3-column detail review -->
+      <div class="rv-card">
+        <div class="rv-card-hd"><span class="badge b-warn">未照合 01</span><div class="rv-card-title">IMG_T003.jpg — OCR信頼度 42% · 名簿不一致</div></div>
+        <div class="rv-body">
+          <div class="rv-3col-wide">
+            <!-- Col 1: Photos -->
+            <div>
+              <div style="font-size:10px;font-weight:800;color:var(--g400);text-transform:uppercase;margin-bottom:7px;letter-spacing:.04em">① カード写真 → 本番カット</div>
+              <!-- Card photo -->
+              <div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:9px">
+                <div style="background:var(--g200);border-radius:7px;width:80px;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;color:var(--g400);border:2.5px solid var(--navy);flex-shrink:0;position:relative">
+                  <span style="font-size:28px">🎓</span>
+                  <div style="position:absolute;bottom:0;left:0;right:0;background:var(--navy);color:#fff;font-size:9px;padding:2px 4px;text-align:center">カード写真</div>
+                  <div style="position:absolute;top:3px;left:3px"><span class="pcount">👥1</span></div>
+                </div>
+                <div style="font-size:11px;color:var(--g600);padding-top:4px">
+                  <div style="font-weight:800;color:var(--navy);margin-bottom:3px">IMG_T003.jpg</div>
+                  <div>→ カード読み取り</div>
+                  <div>→ 先生特定に使用</div>
+                </div>
+              </div>
+              <!-- Grouped non-card photos -->
+              <div style="font-size:10.5px;font-weight:800;color:var(--g600);margin-bottom:5px">同一先生の本番カット（4枚グループ化）</div>
+              <div style="display:flex;gap:5px;flex-wrap:wrap">
+                <div class="ph-thumb best" style="width:56px" onclick="pickBest(this)"><div class="ph-img" style="aspect-ratio:3/4;font-size:16px">🎓</div><div class="ph-badges"><span class="pb pb-best">本01</span></div><div class="ph-star">★</div><div class="ph-pcount">👥1</div></div>
+                <div class="ph-thumb" style="width:56px" onclick="pickBest(this)"><div class="ph-img" style="aspect-ratio:3/4;font-size:16px">🎓</div><div class="ph-pcount">👥1</div></div>
+                <div class="ph-thumb" style="width:56px" onclick="pickBest(this)"><div class="ph-img" style="aspect-ratio:3/4;font-size:16px">🎓</div><div class="ph-pcount warn">👥2⚠</div></div>
+                <div class="ph-thumb" style="width:56px" onclick="pickBest(this)"><div class="ph-img" style="aspect-ratio:3/4;font-size:16px">🎓</div><div class="ph-pcount">👥1</div></div>
+              </div>
+              <div style="font-size:10px;color:var(--g400);margin-top:5px">📌 👥2⚠は参考情報。エラーではありません。</div>
+            </div>
+            <!-- Col 2: OCR + Candidates -->
+            <div>
+              <div style="font-size:10px;font-weight:800;color:var(--g400);text-transform:uppercase;margin-bottom:7px;letter-spacing:.04em">② OCR読取・名簿候補</div>
+              <div class="ocr-box" style="margin-bottom:9px">
+                <div class="ocr-row"><span class="ocr-k">読取氏名</span><span class="ocr-v">渡辺 ？？</span></div>
+                <div class="ocr-row"><span class="ocr-k">読取教科</span><span class="ocr-v">理科</span></div>
+                <div class="conf-box low"><div class="conf-bar"><div class="conf-fill" style="width:42%;background:var(--red)"></div></div><span style="font-size:11px;font-weight:800">42%</span><span style="font-size:10px">低信頼度</span></div>
+              </div>
+              <div style="font-size:11px;font-weight:800;color:var(--g600);margin-bottom:6px">名簿候補（クリックで選択）</div>
+              <div class="cand-list">
+                <div class="cand sel" onclick="selCand(this)"><div class="cand-score">78%</div><div><div class="cand-name">渡辺 三郎</div><div class="cand-meta">理科 · ID: T-018</div></div><span class="badge b-info">推奨</span></div>
+                <div class="cand" onclick="selCand(this)"><div class="cand-score">52%</div><div><div class="cand-name">渡辺 次郎</div><div class="cand-meta">理科 · ID: T-021</div></div></div>
+                <div class="cand" onclick="selCand(this)"><div class="cand-score">31%</div><div><div class="cand-name">渡辺 花子</div><div class="cand-meta">数学 · ID: T-005</div></div></div>
+              </div>
+            </div>
+            <!-- Col 3: Edit + Preview -->
+            <div>
+              <div style="font-size:10px;font-weight:800;color:var(--g400);text-transform:uppercase;margin-bottom:7px;letter-spacing:.04em">③ 手動確認・修正</div>
+              <div class="ff" style="margin-bottom:8px"><label class="fl">教科 <span class="req">*</span></label><select class="fi"><option>理科</option><option>数学</option><option>英語</option><option>国語</option><option>社会</option><option>体育</option></select></div>
+              <div class="ff" style="margin-bottom:8px"><label class="fl">氏名 <span class="req">*</span></label><input class="fi" value="渡辺 三郎"></div>
+              <div class="np" style="margin-bottom:10px">
+                <div class="np-lbl">出力ファイル名プレビュー</div>
+                <div class="np-row" style="font-size:11px">理科_渡辺三郎_IMG_T003_<span class="np-tag">本01</span>.jpg</div>
+                <div class="np-row" style="font-size:11px">理科_渡辺三郎_IMG_T003_2_<span class="np-tag">本02</span>.jpg</div>
+              </div>
+              <div class="btn-row"><button class="btn btn-success" onclick="toast('渡辺 三郎 / 理科 として確定しました')">✓ 確定</button><button class="btn btn-danger btn-sm" onclick="toast('削除')">🗑 削除</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tea-best" class="tc">
+      <div class="alert a-ok"><span class="alert-icon">✅</span><div>AIがベストショットを選定しました。<br><span style="font-size:11.5px">📌 紫バッジ <span class="pcount">👥</span> は人物数（参考情報）。目つむりは内部処理のみ、UIに表示しません。</span></div></div>
+      <!-- Teacher grouping story inside normal UI -->
+      <div class="pg">
+        <div class="pg-hd">
+          <div class="pg-name">田中 花子 · 数学科</div>
+          <span class="badge b-ok">✓ 照合済み</span>
+          <span style="font-size:10.5px;color:var(--g500);margin-left:8px">① カード写真で特定 → ② OCR照合済み → ③ 本番カット2枚グループ化 → ④ ベスト選定</span>
+        </div>
+        <div class="pg-body">
+          <div class="ph-thumb" style="width:90px"><div class="ph-img"><span style="font-size:24px">🪪</span><span>カード</span></div><div class="ph-badges"><span class="pb pb-card">① 特定</span></div><div class="ph-pcount">👥 1</div><div class="ph-lbl">IMG_T001.jpg</div></div>
+          <div style="display:flex;align-items:center;padding:0 4px;color:var(--teal);font-size:16px;font-weight:900;align-self:center">→</div>
+          <div class="ph-thumb best" style="width:90px" onclick="pickBest(this)"><div class="ph-img"><span style="font-size:24px">🎓</span><span>本01</span></div><div class="ph-badges"><span class="pb pb-best">④ ベスト</span></div><div class="ph-star">★</div><div class="ph-pcount">👥 1</div><div class="ph-lbl">IMG_T001_2.jpg</div></div>
+          <div class="ph-thumb" style="width:90px" onclick="pickBest(this)"><div class="ph-img"><span style="font-size:24px">🎓</span><span>本02</span></div><div class="ph-pcount">👥 1</div><div class="ph-lbl">IMG_T001_3.jpg</div></div>
+        </div>
+      </div>
+      <div class="btn-row"><button class="btn btn-success" onclick="toast('全件確定')">✓ 全件確定</button><button class="btn btn-ghost" onclick="toast('AI再選定')">↺ AI再選定</button></div>
+    </div>
+
+    <div id="tea-export" class="tc">
+      <div class="card"><div class="card-hd"><div class="card-title">先生写真 出力</div></div>
+        <div class="np"><div class="np-lbl">命名規則: [教科]_[氏名]_[元ファイル名]_[タグ].jpg</div>
+          <div class="np-row">理科_渡辺三郎_IMG_T003_<span class="np-tag">本01</span>.jpg</div>
+          <div class="np-row">数学科_田中花子_IMG_T001_<span class="np-tag">本01</span>.jpg</div>
+        </div>
+        <div class="btn-row" style="margin-top:11px"><button class="btn btn-primary btn-lg" onclick="toast('書き出しを実行しました')">▶ 書き出し実行</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ CLUB PHOTO ══════════ -->
+<div id="p-club" class="page">
+  <div class="topbar">
+    <div><div class="tb-title">クラブ写真ワークフロー — Club Photos</div><div class="bc">ホーム <span>›</span> クラブ写真</div></div>
+  </div>
+  <div class="pinner">
+    <div class="steps">
+      <div class="step done"><div class="sc">✓</div><span class="sn">①アップロード</span></div><div class="sl done"></div>
+      <div class="step active"><div class="sc">2</div><span class="sn">②フォルダ・命名確認</span></div><div class="sl"></div>
+      <div class="step pending"><div class="sc">3</div><span class="sn">③ベスト選択</span></div><div class="sl"></div>
+      <div class="step pending"><div class="sc">4</div><span class="sn">④出力</span></div>
+    </div>
+    <div class="wf-tabs" id="club-tabs">
+      <div class="wf-tab" onclick="swTab('club','upload',this)">アップロード <span class="tbb ok">✓</span></div>
+      <div class="wf-tab active" onclick="swTab('club','naming',this)">フォルダ・命名確認 <span class="tbb warn">1</span></div>
+      <div class="wf-tab" onclick="swTab('club','best',this)">ベスト選択</div>
+      <div class="wf-tab" onclick="swTab('club','export',this)">出力</div>
+    </div>
+
+    <div id="club-upload" class="tc">
+<div class="two-col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title">クラブ写真フォルダ</div></div>
+          <div class="fdrop filled" onclick="toast('フォルダを再選択')"><span class="fdrop-icon">📁</span><div class="fdrop-txt">/photos/clubs/ — 3クラブ · 54枚</div></div>
+          <div class="fm" style="margin-top:9px"><div class="fm-hd">検出されたフォルダ（クラブ）</div><div class="fm-body">
+            <div class="fmr sel"><span class="fmr-icon">📁</span><div class="fmr-info"><div class="fmr-name">サッカー部/</div><div class="fmr-meta">18枚 · 撮影日: 2026-04-03（メタデータ自動取得）</div></div><button class="fmr-del" onclick="toast('削除')">🗑</button></div>
+            <div class="fmr sel"><span class="fmr-icon">📁</span><div class="fmr-info"><div class="fmr-name">バスケ部/</div><div class="fmr-meta">16枚 · 撮影日: 2026-04-03（メタデータ自動取得）</div></div><button class="fmr-del" onclick="toast('削除')">🗑</button></div>
+            <div class="fmr"><span class="fmr-icon">📁</span><div class="fmr-info"><div class="fmr-name">吹奏楽部/</div><div class="fmr-meta">20枚 · ⚠ 撮影日メタデータなし → 手動入力必要</div></div><button class="fmr-del" onclick="toast('削除')">🗑</button></div>
+          </div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title">📝 命名規則プレビュー</div></div>
+          <div class="np"><div class="np-lbl">出力ファイル名プレビュー</div>
+            <div class="np-row"><span>バドミントン部</span>_<span>20260403</span>_<span>IMG0045</span>_<span class="np-tag">本01</span>.jpg</div>
+            <div style="font-size:10px;color:var(--g400);margin-top:5px">
+              ▸ フォルダ名 = クラブ名（自動）<br>
+              ▸ 撮影日 = メタデータから自動取得<br>
+              ▸ 手動入力はメタデータ不明時のみ
+            </div>
+          </div>
+          <div class="btn-row" style="margin-top:11px"><button class="btn btn-primary btn-lg" onclick="swTab('club','naming',null);toast('処理を開始しました')">▶ 処理開始</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="club-naming" class="tc on">
+      <div class="alert a-warn"><span class="alert-icon">⚠️</span><div><strong>1件：撮影日メタデータが取得できませんでした。</strong>手動で日付を入力してください。他のフォルダは正常です。<br><span style="font-size:11.5px">📌 クラブ名はフォルダ名を自動使用。目つむりはエラーではなく、命名・ランキングは通常通り続行されます。</span></div></div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">フォルダ・命名確認</div><div style="font-size:11px;color:var(--g500)">クラブ名（フォルダ名）· 撮影日（メタデータ）· 人物数 · 命名プレビュー</div></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>フォルダ名<br><small style="text-transform:none">→ クラブ名</small></th><th>撮影日<br><small style="text-transform:none">→ メタデータ自動取得</small></th><th>写真数</th><th>人物数<br><small style="text-transform:none">（参考）</small></th><th>命名プレビュー（例）</th><th>ステータス</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>サッカー部</strong><div style="font-size:10px;color:var(--g400)">フォルダ名を使用</div></td>
+              <td><span class="meta-auto">2026-04-03 ✓自動</span></td>
+              <td>18</td>
+              <td><span class="pcount">👥 〜15名</span></td>
+              <td class="mono" style="font-size:10px">サッカー部_20260403_IMG0001_本01.jpg</td>
+              <td><span class="badge b-ok">✓ OK</span></td>
+            </tr>
+            <tr>
+              <td><strong>バスケ部</strong><div style="font-size:10px;color:var(--g400)">フォルダ名を使用</div></td>
+              <td><span class="meta-auto">2026-04-03 ✓自動</span></td>
+              <td>16</td>
+              <td><span class="pcount">👥 〜12名</span></td>
+              <td class="mono" style="font-size:10px">バスケ部_20260403_IMG0001_本01.jpg</td>
+              <td><span class="badge b-ok">✓ OK</span></td>
+            </tr>
+            <tr class="row-warn">
+              <td><strong>吹奏楽部</strong><div style="font-size:10px;color:var(--g400)">フォルダ名を使用</div></td>
+              <td><span class="meta-manual">⚠ 未取得 → 手動入力：</span><input class="fi" style="width:110px;font-size:11.5px;margin-top:3px" placeholder="2026-04-04" value=""></td>
+              <td>20</td>
+              <td><span class="pcount">👥 〜40名</span></td>
+              <td class="mono" style="font-size:10px;color:var(--g400)">吹奏楽部_????????_IMG0001_本01.jpg</td>
+              <td><span class="badge b-warn">⚠ 日付未入力</span></td>
+            </tr>
+          </tbody>
+        </table></div>
+        <div class="btn-row" style="margin-top:9px"><button class="btn btn-primary" onclick="toast('日付を確定して次へ進みます')">✓ 確定して次へ</button></div>
+      </div>
+    </div>
+
+    <div id="club-best" class="tc">
+      <div class="alert a-ok"><span class="alert-icon">✅</span><div>AIがベストショットを選定しました。<br><span style="font-size:11.5px">📌 紫バッジは人物数（参考情報）。目つむりは内部処理のみ。命名・ランキングは通常通り続行。</span></div></div>
+      <div class="pg">
+        <div class="pg-hd"><div class="pg-name">サッカー部</div><span class="badge b-ok">✓ 自動選定済み</span><span class="pcount" style="margin-left:4px">👥 〜15名/枚</span></div>
+        <div class="pg-body">
+          <div class="ph-thumb best" style="width:90px" onclick="pickBest(this)"><div class="ph-img" style="aspect-ratio:4/3"><span style="font-size:24px">⚽</span><span>本01</span></div><div class="ph-badges"><span class="pb pb-best">本01</span></div><div class="ph-star">★</div><div class="ph-pcount">👥15</div><div class="ph-lbl">IMG_0031.jpg</div></div>
+          <div class="ph-thumb" style="width:90px" onclick="pickBest(this)"><div class="ph-img" style="aspect-ratio:4/3"><span style="font-size:24px">⚽</span><span>本02</span></div><div class="ph-pcount">👥15</div><div class="ph-lbl">IMG_0032.jpg</div></div>
+          <div class="ph-thumb" style="width:90px" onclick="pickBest(this)"><div class="ph-img" style="aspect-ratio:4/3"><span style="font-size:24px">⚽</span><span>本03</span></div><div class="ph-pcount">👥14</div><div class="ph-lbl">IMG_0033.jpg</div></div>
+        </div>
+      </div>
+      <div class="btn-row"><button class="btn btn-success" onclick="toast('全件確定')">✓ 全件確定</button><button class="btn btn-ghost" onclick="toast('AI再選定')">↺ AI再選定</button></div>
+    </div>
+
+    <div id="club-export" class="tc">
+      <div class="card"><div class="card-hd"><div class="card-title">クラブ写真 出力</div></div>
+        <div class="np"><div class="np-lbl">命名規則: [フォルダ名（=クラブ名）]_[撮影日（メタデータ自動取得）]_[元ファイル名]_[タグ]</div>
+          <div class="np-row">サッカー部_20260403_IMG0031_<span class="np-tag">本01</span>.jpg</div>
+          <div class="np-row">バスケ部_20260403_IMG0048_<span class="np-tag">本01</span>.jpg</div>
+          <div style="font-size:10px;color:var(--g400);margin-top:5px">
+            ▸ フォルダ名 = クラブ名（自動 · 手動入力不要）<br>
+            ▸ 撮影日 = 写真メタデータから自動取得（メタデータなし時のみ手動入力）
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:11px"><button class="btn btn-primary btn-lg" onclick="toast('書き出し実行中...')">▶ 書き出し実行</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PERSON SEARCH ══════════ -->
+<div id="p-search" class="page">
+  <div class="topbar">
+    <div><div class="tb-title">人物検索 — Person Search</div><div class="bc">ホーム <span>›</span> 人物検索</div></div>
+    <button class="btn btn-ghost btn-sm" onclick="resetSearch()">↺ リセット</button>
+  </div>
+  <div class="pinner">
+
+    <!-- Intro note -->
+    <div class="alert a-blue" style="margin-bottom:13px"><span class="alert-icon">🔍</span><div><strong>人物検索は複数ソースを横断して検索できます。</strong> スナップ写真・クラブ写真・集合写真・PDFをまとめて一度に検索できます。PDFはソースのひとつです。</div></div>
+
+    <!-- ── Step 1 + 2 + 3 in one clean card layout ── -->
+    <div class="two-col" style="align-items:start">
+
+      <!-- LEFT: Input + Source + Scope -->
+      <div>
+        <div class="card">
+          <div class="card-hd"><div><div class="card-title">① 検索入力</div><div class="card-sub">名前・番号・キーワードで探す / 教科で探す / または写真で探す</div></div></div>
+
+          <!-- Method toggle -->
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <button id="btn-txt" class="btn btn-primary btn-sm" onclick="srchMode('txt')">🔤 名前・番号で探す</button>
+            <button id="btn-subject" class="btn btn-ghost btn-sm" onclick="srchMode('subject')">📚 教科で探す</button>
+            <button id="btn-face" class="btn btn-ghost btn-sm" onclick="srchMode('face')">👤 写真で探す</button>
+          </div>
+
+          <!-- Text input -->
+          <div id="s-txt-area">
+            <div class="ff">
+              <label class="fl">キーワード <span style="font-size:10px;color:var(--g400);font-weight:400">（部分一致OK · あいまい検索対応）</span></label>
+              <input class="fi" id="search-text" placeholder="例：山田、やまだ、3105、理科、3年A組" value="山田">
+            </div>
+            <div style="font-size:10.5px;color:var(--g400);margin-top:5px">氏名（フルネームでも一部でも可）· 出席番号 · 学校名 · クラス名 · 教科など</div>
+          </div>
+
+          <!-- Subject input -->
+          <div id="s-subject-area" style="display:none">
+            <div class="ff">
+              <label class="fl">教科</label>
+              <select class="fi" id="search-subject">
+                <option value="数学">数学</option>
+                <option value="理科">理科</option>
+                <option value="体育">体育</option>
+                <option value="英語">英語</option>
+                <option value="国語">国語</option>
+                <option value="社会">社会</option>
+                <option value="音楽">音楽</option>
+                <option value="美術">美術</option>
+              </select>
+            </div>
+            <div style="font-size:10.5px;color:var(--g400);margin-top:5px">教科名から先生写真・PDF・関連画像を検索します。</div>
+          </div>
+
+          <!-- Face input -->
+          <div id="s-face-area" style="display:none">
+            <div class="ff" style="margin-bottom:8px">
+              <label class="fl">個人写真から選択</label>
+              <select class="fi" onchange="updRef(this.value)">
+                <option value="y">01_山田 太郎 (3年A組 · 上水高校)</option>
+                <option value="s">02_鈴木 花子 (3年A組 · 上水高校)</option>
+                <option value="t">03_田中 一郎 (3年A組 · 上水高校)</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="background:var(--g200);border-radius:7px;width:58px;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;color:var(--g400);border:2.5px solid var(--teal);flex-shrink:0"><span style="font-size:20px">👤</span><span style="font-size:9px" id="ref-nm">山田</span></div>
+              <div style="font-size:10.5px;color:var(--g400)">この顔をもとに、選択したソースから同一人物を検索します。</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd"><div><div class="card-title">② 検索ソース</div><div class="card-sub">どこを検索するか（複数選択可）</div></div></div>
+          <div class="src-grid" id="src-grid">
+            <div class="src-item on" onclick="toggleSrc(this)"><input type="checkbox" checked><span class="src-icon">📸</span><div><div style="font-weight:700;font-size:12px">スナップ写真</div><div style="font-size:10px;color:var(--g400)">行事・イベント写真</div></div></div>
+            <div class="src-item on" onclick="toggleSrc(this)"><input type="checkbox" checked><span class="src-icon">🏆</span><div><div style="font-weight:700;font-size:12px">クラブ写真</div><div style="font-size:10px;color:var(--g400)">部活動・クラブ写真</div></div></div>
+            <div class="src-item" onclick="toggleSrc(this)"><input type="checkbox"><span class="src-icon">👥</span><div><div style="font-weight:700;font-size:12px">集合写真</div><div style="font-size:10px;color:var(--g400)">グループ・集合写真</div></div></div>
+            <div class="src-item" onclick="toggleSrc(this)"><input type="checkbox"><span class="src-icon">📄</span><div><div style="font-weight:700;font-size:12px">PDFファイル</div><div style="font-size:10px;color:var(--g400)">テキスト・顔検索対応</div></div></div>
+          </div>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="addPDF()">＋ PDF アップロード</button>
+            <span id="pdf-list" style="font-size:11px;color:var(--g500)"></span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd"><div><div class="card-title">③ 検索スコープ</div><div class="card-sub">どの範囲の人物か（省略可）</div></div></div>
+          <div class="scope-grid" id="scope-grid" style="grid-template-columns:repeat(2,1fr)">
+            <div class="scope-chip on" onclick="scopePick(this,'現在のクラス','3年A組')"><div class="scope-chip-icon">👤</div><div style="font-size:11px;font-weight:700">現在のクラス</div><div style="font-size:9px;opacity:.8">3年A組</div></div>
+            <div class="scope-chip" onclick="scopePick(this,'この学校の全クラス','上水高校')"><div class="scope-chip-icon">🏫</div><div style="font-size:11px;font-weight:700">学校全クラス</div><div style="font-size:9px;opacity:.8">上水高校</div></div>
+            <div class="scope-chip" onclick="scopePick(this,'選択した学校','カスタム選択')"><div class="scope-chip-icon">📋</div><div style="font-size:11px;font-weight:700">選択した学校</div><div style="font-size:9px;opacity:.8">カスタム選択</div></div>
+            <div class="scope-chip" onclick="scopePick(this,'全登録校','全ての学校')"><div class="scope-chip-icon">🏫🏫</div><div style="font-size:11px;font-weight:700">全登録校</div><div style="font-size:9px;opacity:.8">全ての学校</div></div>
+          </div>
+          <div class="btn-row" style="margin-top:13px">
+            <button class="btn btn-primary btn-lg" onclick="doSearch()">🔍 検索実行</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Results -->
+      <div id="search-results-panel">
+        <div id="search-empty-state" style="padding:40px 20px;text-align:center;color:var(--g400);background:var(--white);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh1)">
+          <div style="font-size:36px;margin-bottom:10px">🔍</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:5px">検索条件を設定して実行してください</div>
+          <div style="font-size:11.5px">左パネルで入力・ソース・スコープを設定し、「検索実行」をクリックします。</div>
+        </div>
+
+        <div id="search-result-body" style="display:none">
+          <!-- Summary bar -->
+          <div style="background:var(--g50);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+            <div><div style="font-size:10px;font-weight:800;color:var(--g400);text-transform:uppercase;letter-spacing:.04em">検索ワード</div><div style="font-size:13px;font-weight:800;color:var(--navy)" id="r-kw">「山田」</div></div>
+            <div><div style="font-size:10px;font-weight:800;color:var(--g400);text-transform:uppercase;letter-spacing:.04em">スコープ</div><div style="font-size:12.5px;font-weight:700;color:var(--navy)" id="r-scope">3年A組</div></div>
+            <div style="margin-left:auto"><span class="badge b-info" id="r-badge">12件一致</span></div>
+            <button class="btn btn-ghost btn-sm" onclick="clearResults()">↺ 条件を変更</button>
+          </div>
+
+          <!-- Source count chips -->
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+            <span class="badge b-gray" style="font-size:11px;padding:4px 10px">📄 PDF: <strong>1件</strong></span>
+            <span class="badge b-gray" style="font-size:11px;padding:4px 10px">👥 集合写真: <strong>0件</strong></span>
+            <span class="badge b-purple" style="font-size:11px;padding:4px 10px">🏆 クラブ写真: <strong>3件</strong></span>
+            <span class="badge b-blue" style="font-size:11px;padding:4px 10px">📸 スナップ写真: <strong>8件</strong></span>
+          </div>
+
+          <!-- PDF results -->
+          <div class="src-section">
+            <div class="src-section-hd"><span>📄</span><span>PDF</span><span class="badge" style="background:rgba(255,255,255,.2);color:#fff;margin-left:auto;font-size:10px">1件</span></div>
+            <div class="src-section-body">
+              <div style="display:flex;align-items:center;gap:12px;padding:7px 0">
+                <span style="font-size:22px;flex-shrink:0">📄</span>
+                <div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--navy)">年鑑_2025.pdf — p.14</div><div style="font-size:10.5px;color:var(--g400)">「山田 太郎 3年A組」テキスト一致</div></div>
+                <span class="badge b-ok">一致</span>
+                <button class="btn btn-ghost btn-sm" onclick="toast('PDFをプレビュー')">プレビュー</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Group photos -->
+          <div class="src-section">
+            <div class="src-section-hd"><span>👥</span><span>集合写真</span><span class="badge" style="background:rgba(255,255,255,.2);color:#fff;margin-left:auto;font-size:10px">0件</span></div>
+            <div class="src-section-empty">集合写真の検索結果はありません</div>
+          </div>
+
+          <!-- Club photos -->
+          <div class="src-section">
+            <div class="src-section-hd"><span>🏆</span><span>クラブ写真</span><span class="badge" style="background:rgba(255,255,255,.2);color:#fff;margin-left:auto;font-size:10px">3件</span></div>
+            <div class="src-section-body">
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
+                <div class="sth" style="aspect-ratio:4/3" onclick="this.classList.toggle('sel')">
+                  <div class="sth-inner"><span style="font-size:24px">⚽</span><span>サッカー部</span></div>
+                  <div class="fbox" style="top:22%;left:28%;width:30%;height:40%"><div class="fbox-lbl">山田·76%</div></div>
+                  <div class="sth-pcount">👥15</div>
+                  <div class="sth-btm"><span class="badge b-ok" style="font-size:9px">76%</span><span class="badge b-purple" style="font-size:9px">サッカー部</span></div>
+                </div>
+                <div class="sth" style="aspect-ratio:4/3" onclick="this.classList.toggle('sel')">
+                  <div class="sth-inner"><span style="font-size:24px">⚽</span><span>サッカー部</span></div>
+                  <div class="sth-pcount">👥15</div>
+                  <div class="sth-btm"><span class="badge b-warn" style="font-size:9px">71%</span></div>
+                </div>
+                <div class="sth" style="aspect-ratio:4/3" onclick="this.classList.toggle('sel')">
+                  <div class="sth-inner"><span style="font-size:24px">🏀</span><span>バスケ部</span></div>
+                  <div class="sth-pcount">👥12</div>
+                  <div class="sth-btm"><span class="badge b-warn" style="font-size:9px">68%</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Snap photos -->
+          <div class="src-section">
+            <div class="src-section-hd"><span>📸</span><span>スナップ写真</span><span class="badge" style="background:rgba(255,255,255,.2);color:#fff;margin-left:auto;font-size:10px">8件</span></div>
+            <div class="src-section-body">
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
+                <div class="sth best" style="aspect-ratio:4/3" onclick="this.classList.toggle('sel')">
+                  <div class="sth-inner"><span style="font-size:24px">📸</span><span>運動会</span></div>
+                  <div class="fbox" style="top:22%;left:28%;width:32%;height:40%"><div class="fbox-lbl">山田·92%</div></div>
+                  <div class="sth-pcount">👥5</div>
+                  <div class="sth-btm"><span class="badge b-ok" style="font-size:9px">92%</span><span class="badge b-blue" style="font-size:9px">運動会</span></div>
+                </div>
+                <div class="sth" style="aspect-ratio:4/3" onclick="this.classList.toggle('sel')">
+                  <div class="sth-inner"><span style="font-size:24px">📸</span><span>修学旅行</span></div>
+                  <div class="sth-pcount">👥3</div>
+                  <div class="sth-btm"><span class="badge b-ok" style="font-size:9px">87%</span><span class="badge b-blue" style="font-size:9px">修学旅行</span></div>
+                </div>
+                <div class="sth" style="aspect-ratio:4/3" onclick="this.classList.toggle('sel')">
+                  <div class="sth-inner"><span style="font-size:24px">📸</span><span>入学式</span></div>
+                  <div class="sth-pcount">👥20</div>
+                  <div class="sth-btm"><span class="badge b-warn" style="font-size:9px">74%</span><span class="badge b-blue" style="font-size:9px">入学式</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Coverage -->
+          <div class="card" style="margin-top:12px">
+            <div class="card-hd"><div><div class="card-title">カバレッジ確認</div><div class="card-sub">全生徒が1回以上写っているか</div></div><button class="btn btn-ghost btn-sm" onclick="toast('CSVをダウンロード')">📊 全件CSV</button></div>
+            <div class="cov-row zero"><div class="cov-name">⚠ 佐々木 結衣</div><div class="cov-bar-w"><div class="cov-bar" style="width:0%;background:var(--red)"></div></div><div class="cov-n" style="color:var(--red)">0回</div></div>
+            <div class="cov-row"><div class="cov-name">山田 太郎</div><div class="cov-bar-w"><div class="cov-bar" style="width:80%;background:var(--teal)"></div></div><div class="cov-n">8回</div></div>
+            <div class="cov-row"><div class="cov-name">鈴木 花子</div><div class="cov-bar-w"><div class="cov-bar" style="width:50%;background:var(--teal)"></div></div><div class="cov-n">5回</div></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-ghost btn-sm" onclick="toast('マーキングデータを出力')">📋 マーキング出力</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ AI検出チェック ══════════ -->
+<div id="p-aicheck" class="page">
+  <div class="topbar">
+    <div><div class="tb-title">AI検出チェック — AI Detection Check</div><div class="bc">ホーム <span>›</span> AI検出チェック</div></div>
+    <span class="badge b-gray" style="font-size:12px">確認ツール</span>
+  </div>
+  <div class="pinner">
+
+    <div class="alert a-ok"><span class="alert-icon">✅</span><div><strong>目閉じはエラーではありません。</strong>個人・先生・クラブ写真では目閉じはAIランキングの内部シグナルのみ。命名・処理は通常どおり続行されます。スナップ写真のみ参考表示します。</div></div>
+
+    <div class="two-col" style="align-items:start">
+
+      <!-- LEFT: Upload + Mode -->
+      <div>
+        <div class="card">
+          <div class="card-hd"><div><div class="card-title">① 写真をアップロード</div><div class="card-sub">1枚・複数枚・フォルダをまとめて確認できます</div></div></div>
+          <div class="fdrop filled" style="margin-bottom:10px" onclick="toast('ファイルを再選択')">
+            <span class="fdrop-icon">📁</span>
+            <div class="fdrop-txt">3枚選択済（IMG_0001.jpg · IMG_0015.jpg · IMG_T001_3.jpg）</div>
+          </div>
+          <div class="fdrop" onclick="toast('フォルダを選択')">
+            <span class="fdrop-icon">📂</span>
+            <div class="fdrop-txt">またはフォルダをドロップ / クリックしてフォルダ選択</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd"><div><div class="card-title">② 確認モードを選択</div></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px solid var(--teal);border-radius:var(--r);cursor:pointer;background:var(--teal-pale)">
+              <input type="radio" name="aimode" value="eye" checked onchange="setAIMode(this.value)" style="accent-color:var(--teal)">
+              <div><div style="font-size:12.5px;font-weight:800;color:var(--navy)">👁 目閉じ検出</div><div style="font-size:10.5px;color:var(--g500)">各写真に目閉じが写っているか確認</div></div>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px solid var(--border);border-radius:var(--r);cursor:pointer;background:var(--white)">
+              <input type="radio" name="aimode" value="pcount" onchange="setAIMode(this.value)" style="accent-color:var(--teal)">
+              <div><div style="font-size:12.5px;font-weight:800;color:var(--navy)">👥 人物数確認</div><div style="font-size:10.5px;color:var(--g500)">各写真に何人が写っているか確認</div></div>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px solid var(--border);border-radius:var(--r);cursor:pointer;background:var(--white)">
+              <input type="radio" name="aimode" value="both" onchange="setAIMode(this.value)" style="accent-color:var(--teal)">
+              <div><div style="font-size:12.5px;font-weight:800;color:var(--navy)">👁👥 両方</div><div style="font-size:10.5px;color:var(--g500)">目閉じ検出と人物数確認をまとめて実施</div></div>
+            </label>
+          </div>
+          <div class="btn-row" style="margin-top:13px">
+            <button class="btn btn-primary btn-lg" onclick="runAICheck()">▶ チェック実行</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Results -->
+      <div>
+        <div id="aicheck-empty" style="padding:40px 20px;text-align:center;color:var(--g400);background:var(--white);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh1)">
+          <div style="font-size:36px;margin-bottom:10px">🤖</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:5px">写真をアップロードしてチェックを実行してください</div>
+          <div style="font-size:11.5px">目閉じ検出・人物数確認の結果が写真ごとに表示されます。</div>
+        </div>
+
+        <div id="aicheck-results" style="display:none">
+          <!-- Summary stats -->
+          <div id="aicheck-stats-eye" class="three-col" style="margin-bottom:13px">
+            <div class="stat ok"><div class="stat-val">2</div><div class="stat-lbl">目閉じなし</div><div class="stat-en">No Eye-Close</div></div>
+            <div class="stat"><div class="stat-val" style="color:var(--amber)">1</div><div class="stat-lbl">目閉じあり（参考）</div><div class="stat-en">Eye-Close Detected</div></div>
+            <div class="stat ok"><div class="stat-val">3</div><div class="stat-lbl">処理続行（全件）</div><div class="stat-en">All Continue</div></div>
+          </div>
+          <div id="aicheck-stats-pcount" class="two-col" style="margin-bottom:13px;display:none">
+            <div class="stat ok"><div class="stat-val">2</div><div class="stat-lbl">1名検出（通常）</div></div>
+            <div class="stat"><div class="stat-val" style="color:var(--amber)">1</div><div class="stat-lbl">2名以上（参考）</div></div>
+          </div>
+
+          <!-- Result table -->
+          <div class="card">
+            <div class="card-hd"><div class="card-title">チェック結果</div></div>
+            <div class="ai-check-wrap"><table class="ai-check-table">
+              <thead>
+                <tr>
+                  <th>プレビュー</th>
+                  <th>ファイル名</th>
+                  <th id="col-eye">目閉じ</th>
+                  <th id="col-pcount">人物数</th>
+                  <th>処理への影響</th>
+                  <th>備考</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><div style="width:44px;aspect-ratio:3/4;background:var(--g200);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:18px">👤</div></td>
+                  <td class="mono">IMG_0001.jpg</td>
+                  <td><span class="badge b-ok">目閉じなし</span></td>
+                  <td><span class="pcount">👥 1</span></td>
+                  <td><span class="badge b-ok" style="font-size:9.5px">通常続行</span></td>
+                  <td></td>
+                </tr>
+                <tr class="row-warn">
+                  <td><div style="width:44px;aspect-ratio:3/4;background:var(--g200);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:18px">👤</div></td>
+                  <td class="mono">IMG_0015.jpg</td>
+                  <td><span class="b-qflag">目閉じあり</span></td>
+                  <td><span class="pcount">👥 1</span></td>
+                  <td><span class="badge b-ok" style="font-size:9.5px">通常続行</span></td>
+                  <td><span style="font-size:10px;color:var(--g400)">AIランキングのみ参照</span></td>
+                </tr>
+                <tr>
+                  <td><div style="width:44px;aspect-ratio:3/4;background:var(--g200);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:18px">🎓</div></td>
+                  <td class="mono">IMG_T001_3.jpg</td>
+                  <td><span class="badge b-ok">目閉じなし</span></td>
+                  <td><span class="pcount warn">👥 2 ⚠</span></td>
+                  <td><span class="badge b-ok" style="font-size:9.5px">通常続行</span></td>
+                  <td><span style="font-size:10px;color:var(--g400)">人物数は参考</span></td>
+                </tr>
+              </tbody>
+            </table></div>
+            <div style="font-size:10.5px;color:var(--g500);padding:8px 11px 4px">📌 目閉じ・人物数はどちらもエラーではありません。命名・出力は通常どおり続行されます。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SNAP / EVENT PHOTO ══════════ -->
+<div id="p-snap" class="page">
+  <div class="topbar">
+    <div><div class="tb-title">スナップ・行事写真 — Snap / Event Photos</div><div class="bc">ホーム <span>›</span> スナップ写真</div></div>
+    <span class="badge b-info" style="font-size:12px" id="snap-top-loaded-badge">0枚読込済み</span>
+  </div>
+  <div class="pinner">
+    <div class="steps">
+      <div class="step done"><div class="sc">✓</div><span class="sn">① Upload</span></div><div class="sl done"></div>
+      <div class="step active"><div class="sc">2</div><span class="sn">② Similarity Review</span></div><div class="sl"></div>
+      <div class="step pending"><div class="sc">3</div><span class="sn">③ Best Shot Selection</span></div><div class="sl"></div>
+      <div class="step pending"><div class="sc">4</div><span class="sn">④ Export</span></div>
+    </div>
+
+    <div class="wf-tabs" id="snap-tabs">
+      <div class="wf-tab" onclick="swTab('snap','upload',this)">Upload</div>
+      <div class="wf-tab active" onclick="swTab('snap','similarity',this)">Similarity Review</div>
+      <div class="wf-tab" onclick="swTab('snap','selection',this)">Best Shot Selection</div>
+      <div class="wf-tab" onclick="swTab('snap','export',this)">Export</div>
+    </div>
+
+    <div id="snap-upload" class="tc">
+      <div class="two-col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Upload Folder</div></div>
+          <div id="snap-upload-drop" class="fdrop filled" style="padding:18px"><span class="fdrop-icon">📁</span><div class="fdrop-txt" id="snap-upload-path">/photos/undokai/ — 312 photos</div></div>
+          <div class="fm" style="margin-top:12px">
+            <div class="fm-hd"><span>Uploaded Folder</span><span style="font-size:10px;color:var(--g400)">Client can delete and re-upload</span></div>
+            <div class="fm-body" id="snap-upload-list">
+              <div class="fmr sel" id="snap-upload-item"><span class="fmr-icon">📁</span><div class="fmr-info"><div class="fmr-name">undokai_2026/</div><div class="fmr-meta" id="snap-upload-item-meta">0 photos</div></div><button class="fmr-del" onclick="deleteSnapUpload()">🗑</button></div>
+            </div>
+          </div>
+          <div class="btn-row" style="margin-top:12px"><button class="btn btn-danger btn-sm" onclick="deleteSnapUpload()">Delete Uploaded Folder</button><button class="btn btn-ghost btn-sm" onclick="chooseSnapInput()">Re-upload Folder</button></div>
+          <input id="snap-file-input" type="file" multiple accept="image/*,.zip" style="display:none">
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Upload Status</div></div>
+          <div class="snap-summary" style="grid-template-columns:repeat(3,1fr);margin-bottom:0">
+            <div class="ss-card"><div class="ss-val" id="snap-total-input-upload" style="color:var(--navy)">0</div><div class="ss-lbl">Photos</div></div>
+            <div class="ss-card"><div class="ss-val" id="snap-total-clusters-upload" style="color:var(--purple)">0</div><div class="ss-lbl">Similar Groups</div></div>
+            <div class="ss-card"><div class="ss-val" id="snap-representative-upload" style="color:var(--blue)">0</div><div class="ss-lbl">Representative Candidates</div></div>
+          </div>
+          <div class="btn-row" style="margin-top:14px"><button class="btn btn-primary btn-lg" onclick="runSnapPipeline()">Open Similarity Review</button></div>
+          <div id="snap-run-status" style="font-size:11px;color:var(--g500);margin-top:8px">No backend run yet.</div>
+          <div id="snap-progress-wrap" style="margin-top:10px">
+            <div style="height:8px;background:var(--g200);border-radius:999px;overflow:hidden">
+              <div id="snap-progress-bar" style="height:100%;width:0%;background:var(--teal);transition:width .35s ease, background-color .2s ease"></div>
+            </div>
+            <div id="snap-progress-text" style="font-size:11px;color:var(--g500);margin-top:6px">Idle</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="snap-similarity" class="tc on">
+      <div class="snap-summary">
+        <div class="ss-card"><div class="ss-val" id="snap-total-clusters" style="color:var(--purple)">0</div><div class="ss-lbl">Similar Groups</div></div>
+        <div class="ss-card"><div class="ss-val" id="snap-representative" style="color:var(--blue)">0</div><div class="ss-lbl">Representative Candidates</div></div>
+        <div class="ss-card"><div class="ss-val" id="snap-final-selected" style="color:var(--green)">0</div><div class="ss-lbl">Best Shot Selected</div></div>
+        <div class="ss-card"><div class="ss-val" id="snap-ng-count" style="color:var(--amber)">0</div><div class="ss-lbl">NG after Menna</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--g500);margin:-4px 0 10px" id="snap-metrics-inline">
+        input: <span id="snap-total-input-inline">0</span> / reduction: <span id="snap-dedup-rate-inline">0</span>% / passing: <span id="snap-other-passing-inline">0</span>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><div><div class="card-title">Similar Groups</div><div class="card-sub">類似写真ごとに確認</div></div><button class="btn btn-ghost btn-sm" onclick="toast('すべてのグループを表示')">全グループ表示</button></div>
+
+        <div class="pg">
+          <div class="pg-hd"><div class="pg-name">Group 01 — 徒競走 連写</div><span class="badge b-blue">5 photos</span><span class="badge b-ok">1枚残す</span></div>
+          <div class="pg-body">
+            <div class="sth best" style="width:118px"><div class="sth-inner"><span style="font-size:24px">🏃</span><span>IMG_1012</span></div><div class="sth-pcount">👥2</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">残す</span></div></div>
+            <div class="sth" style="width:118px"><div class="sth-inner"><span style="font-size:24px">🏃</span><span>IMG_1013</span></div><div class="sth-pcount">👥2</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">類似</span></div></div>
+            <div class="sth" style="width:118px"><div class="sth-inner"><span style="font-size:24px">🏃</span><span>IMG_1014</span></div><div class="sth-pcount">👥2</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">類似</span></div></div>
+            <div class="sth" style="width:118px"><div class="sth-inner"><span style="font-size:24px">🏃</span><span>IMG_1015</span></div><div class="sth-pcount">👥2</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">類似</span></div></div>
+            <div class="sth" style="width:118px"><div class="sth-inner"><span style="font-size:24px">🏃</span><span>IMG_1016</span></div><div class="sth-pcount">👥2</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">類似</span></div></div>
+          </div>
+        </div>
+
+        <div class="pg">
+          <div class="pg-hd"><div class="pg-name">Group 02 — 応援席 近接カット</div><span class="badge b-blue">4 photos</span><span class="badge b-ok">1枚残す</span></div>
+          <div class="pg-body">
+            <div class="sth" style="width:118px"><div class="sth-inner"><span style="font-size:24px">📣</span><span>IMG_1451</span></div><div class="sth-pcount">👥5</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">類似</span></div></div>
+            <div class="sth best" style="width:118px"><div class="sth-inner"><span style="font-size:24px">📣</span><span>IMG_1452</span></div><div class="sth-pcount">👥5</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">残す</span></div></div>
+            <div class="sth" style="width:118px"><div class="sth-inner"><span style="font-size:24px">📣</span><span>IMG_1453</span></div><div class="sth-pcount">👥4</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">類似</span></div></div>
+            <div class="sth" style="width:118px"><div class="sth-inner"><span style="font-size:24px">📣</span><span>IMG_1454</span></div><div class="sth-pcount">👥4</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">類似</span></div></div>
+          </div>
+        </div>
+
+        <div class="pg">
+          <div class="pg-hd"><div class="pg-name">Group 03 — 表彰シーン</div><span class="badge b-blue">3 photos</span><span class="badge b-warn">要確認</span></div>
+          <div class="pg-body">
+            <div class="sth" style="width:118px"><div class="sth-inner"><span style="font-size:24px">🏅</span><span>IMG_1880</span></div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">候補</span></div></div>
+            <div class="sth" style="width:118px"><div class="sth-inner"><span style="font-size:24px">🏅</span><span>IMG_1881</span></div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">候補</span></div></div>
+            <div class="sth" style="width:118px"><div class="sth-inner"><span style="font-size:24px">🏅</span><span>IMG_1882</span></div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">候補</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><div><div class="card-title">Non-Similar Photos</div><div class="card-sub">そのまま次へ残す写真</div></div><button class="btn btn-ghost btn-sm" onclick="toast('一覧を開く')">一覧表示</button></div>
+        <div class="sg">
+          <div class="sth best"><div class="sth-inner"><span style="font-size:26px">👥</span><span>IMG_2104</span></div><div class="sth-pcount">👥8</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">残す</span><span class="badge b-blue" style="font-size:9px">集合</span></div></div>
+          <div class="sth best"><div class="sth-inner"><span style="font-size:26px">🎌</span><span>IMG_2148</span></div><div class="sth-pcount">👥3</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">残す</span><span class="badge b-blue" style="font-size:9px">行進</span></div></div>
+          <div class="sth best"><div class="sth-inner"><span style="font-size:26px">🏃</span><span>IMG_2192</span></div><div class="sth-pcount">👥1</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">残す</span><span class="badge b-blue" style="font-size:9px">競技</span></div></div>
+          <div class="sth best"><div class="sth-inner"><span style="font-size:26px">📣</span><span>IMG_2260</span></div><div class="sth-pcount">👥6</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">残す</span><span class="badge b-blue" style="font-size:9px">応援</span></div></div>
+        </div>
+        <div class="btn-row" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-primary" onclick="swTab('snap','selection',null);toast('Best Shot Selection を開きました')">Best Shot Selectionへ</button></div>
+      </div>
+    </div>
+
+    <div id="snap-selection" class="tc">
+      <div class="btn-row" style="margin-bottom:12px">
+        <button class="btn btn-ghost btn-sm" id="toggle-sel-similar" onclick="toggleSnapPanel('selection-similar-wrap','toggle-sel-similar','Show Similar Groups','Hide Similar Groups')">Show Similar Groups</button>
+        <button class="btn btn-ghost btn-sm" id="toggle-sel-nonsimilar" onclick="toggleSnapPanel('selection-nonsimilar-wrap','toggle-sel-nonsimilar','Show Non-Similar Photos','Hide Non-Similar Photos')">Show Non-Similar Photos</button>
+      </div>
+
+      <div class="buckets">
+        <div class="bk best on" onclick="setBk(this)">⭐ Best Shot <span class="bk-cnt" id="snap-final-selected-bucket">0</span></div>
+        <div class="bk other" onclick="setBk(this)">📷 Passing Pictures <span class="bk-cnt" id="snap-other-passing">0</span></div>
+        <div class="bk ng" onclick="setBk(this)">✖ NG Photos <span class="bk-cnt" id="snap-ng-count-bucket">0</span></div>
+      </div>
+
+      <div id="bk-best">
+        <div class="card">
+          <div class="card-hd"><div><div class="card-title">Best Shot</div><div class="card-sub">Final selected photos</div></div><span style="font-size:11px;color:var(--g500)" id="snap-best-shot-header-count">0 / 25</span></div>
+          <div class="sg">
+            <div class="sth best"><div class="sth-inner"><span style="font-size:26px">🏃</span><span>競技</span></div><div class="sth-pcount">👥2</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">本01</span><span class="badge b-blue" style="font-size:9px">競技</span></div></div>
+            <div class="sth best"><div class="sth-inner"><span style="font-size:26px">📣</span><span>応援</span></div><div class="sth-pcount">👥5</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">本02</span><span class="badge b-blue" style="font-size:9px">応援</span></div></div>
+            <div class="sth best"><div class="sth-inner"><span style="font-size:26px">🏅</span><span>表彰</span></div><div class="sth-pcount">👥3</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">本03</span><span class="badge b-blue" style="font-size:9px">表彰</span></div></div>
+            <div class="sth best"><div class="sth-inner"><span style="font-size:26px">👥</span><span>集合</span></div><div class="sth-pcount">👥8</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">本04</span><span class="badge b-blue" style="font-size:9px">集合</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="bk-other" style="display:none">
+        <div class="card">
+          <div class="card-hd"><div><div class="card-title">Passing Pictures</div><div class="card-sub">Passed but not selected as Best Shot</div></div></div>
+          <div class="sg">
+            <div class="sth"><div class="sth-inner"><span style="font-size:26px">🏃</span><span>IMG_1013</span></div><div class="sth-pcount">👥2</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">類似</span></div></div>
+            <div class="sth"><div class="sth-inner"><span style="font-size:26px">📣</span><span>IMG_1453</span></div><div class="sth-pcount">👥4</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">通過</span></div></div>
+            <div class="sth"><div class="sth-inner"><span style="font-size:26px">🎌</span><span>IMG_2149</span></div><div class="sth-pcount">👥3</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">通過</span></div></div>
+            <div class="sth"><div class="sth-inner"><span style="font-size:26px">👥</span><span>IMG_2263</span></div><div class="sth-pcount">👥7</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">通過</span></div></div>
+          </div>
+          <div class="btn-row" style="margin-top:9px"><button class="btn btn-success btn-sm" onclick="toast('Best Shotへ移動')">Move to Best Shot</button><button class="btn btn-danger btn-sm" onclick="toast('NG Photosへ移動')">Move to NG Photos</button></div>
+        </div>
+      </div>
+
+      <div id="bk-ng" style="display:none">
+        <div class="card">
+          <div class="card-hd"><div><div class="card-title">NG Photos</div><div class="card-sub">Excluded photos</div></div></div>
+          <div class="sg">
+            <div class="sth ng-snap"><div class="sth-inner"><span style="font-size:24px">💨</span><span>IMG_3001</span></div><div class="sth-btm"><span class="badge b-err" style="font-size:9px">ブレ</span></div></div>
+            <div class="sth ng-snap"><div class="sth-inner"><span style="font-size:24px">😶</span><span>IMG_3002</span></div><div class="sth-btm"><span class="badge b-err" style="font-size:9px">NG</span></div></div>
+            <div class="sth ng-snap"><div class="sth-inner"><span style="font-size:24px">🌑</span><span>IMG_3003</span></div><div class="sth-btm"><span class="badge b-err" style="font-size:9px">露出不足</span></div></div>
+          </div>
+          <div class="btn-row" style="margin-top:9px"><button class="btn btn-ghost btn-sm" onclick="toast('Passing Picturesへ戻す')">Back to Passing Pictures</button></div>
+        </div>
+      </div>
+
+      <div id="selection-similar-wrap" style="display:none">
+        <div class="card">
+          <div class="card-hd"><div><div class="card-title">Similar Groups</div><div class="card-sub">Reference view</div></div></div>
+          <div class="pg">
+            <div class="pg-hd"><div class="pg-name">Group 01 — 徒競走 連写</div><span class="badge b-blue">5 photos</span><span class="badge b-ok">1 kept</span></div>
+            <div class="pg-body">
+              <div class="sth best" style="width:118px"><div class="sth-inner"><span style="font-size:24px">🏃</span><span>IMG_1012</span></div><div class="sth-pcount">👥2</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">残す</span></div></div>
+              <div class="sth" style="width:118px"><div class="sth-inner"><span style="font-size:24px">🏃</span><span>IMG_1013</span></div><div class="sth-pcount">👥2</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">類似</span></div></div>
+              <div class="sth" style="width:118px"><div class="sth-inner"><span style="font-size:24px">🏃</span><span>IMG_1014</span></div><div class="sth-pcount">👥2</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">類似</span></div></div>
+            </div>
+          </div>
+          <div class="pg" style="margin-bottom:0">
+            <div class="pg-hd"><div class="pg-name">Group 02 — 応援席 近接カット</div><span class="badge b-blue">4 photos</span><span class="badge b-ok">1 kept</span></div>
+            <div class="pg-body">
+              <div class="sth" style="width:118px"><div class="sth-inner"><span style="font-size:24px">📣</span><span>IMG_1451</span></div><div class="sth-pcount">👥5</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">類似</span></div></div>
+              <div class="sth best" style="width:118px"><div class="sth-inner"><span style="font-size:24px">📣</span><span>IMG_1452</span></div><div class="sth-pcount">👥5</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">残す</span></div></div>
+              <div class="sth" style="width:118px"><div class="sth-inner"><span style="font-size:24px">📣</span><span>IMG_1453</span></div><div class="sth-pcount">👥4</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">類似</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="selection-nonsimilar-wrap" style="display:none">
+        <div class="card">
+          <div class="card-hd"><div><div class="card-title">Non-Similar Photos</div><div class="card-sub">Reference view</div></div></div>
+          <div class="sg">
+            <div class="sth best"><div class="sth-inner"><span style="font-size:26px">👥</span><span>IMG_2104</span></div><div class="sth-pcount">👥8</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">残す</span><span class="badge b-blue" style="font-size:9px">集合</span></div></div>
+            <div class="sth best"><div class="sth-inner"><span style="font-size:26px">🎌</span><span>IMG_2148</span></div><div class="sth-pcount">👥3</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">残す</span><span class="badge b-blue" style="font-size:9px">行進</span></div></div>
+            <div class="sth best"><div class="sth-inner"><span style="font-size:26px">🏃</span><span>IMG_2192</span></div><div class="sth-pcount">👥1</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">残す</span><span class="badge b-blue" style="font-size:9px">競技</span></div></div>
+            <div class="sth best"><div class="sth-inner"><span style="font-size:26px">📣</span><span>IMG_2260</span></div><div class="sth-pcount">👥6</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">残す</span><span class="badge b-blue" style="font-size:9px">応援</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="snap-export" class="tc">
+      <div class="card"><div class="card-hd"><div class="card-title">Export</div></div>
+        <div class="three-col" style="margin-bottom:12px">
+          <div style="background:var(--green-pale);border:1px solid #86EFAC;border-radius:7px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--green)" id="snap-export-best">0</div><div style="font-size:11px;color:var(--green);font-weight:800">final_selected/</div></div>
+          <div style="background:var(--blue-pale);border:1px solid #93C5FD;border-radius:7px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--blue)" id="snap-export-other">0</div><div style="font-size:11px;color:var(--blue);font-weight:800">other_passing/</div></div>
+          <div style="background:var(--red-pale);border:1px solid #FCA5A5;border-radius:7px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--red)" id="snap-export-ng">0</div><div style="font-size:11px;color:var(--red);font-weight:800">ng_photos/</div></div>
+        </div>
+
+        <div class="tbl-wrap" style="margin-bottom:12px"><table>
+          <thead><tr><th>Output</th><th>Status / Count</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">snap_pipeline_report.xlsx</td><td id="snap-export-report-status"><span class="badge b-gray">未生成</span></td></tr>
+            <tr><td class="mono">similarity_clusters/</td><td id="snap-export-sim-status"><span class="badge b-gray">未生成</span></td></tr>
+            <tr><td class="mono">dedup_candidates/</td><td id="snap-export-dedup-status"><span class="badge b-gray">未生成</span></td></tr>
+            <tr><td class="mono">final_selected/</td><td><span class="badge b-ok" id="snap-export-final-count">0 files</span></td></tr>
+            <tr><td class="mono">ng_photos/</td><td><span class="badge b-err" id="snap-export-ng-count">0 files</span></td></tr>
+            <tr><td class="mono">other_passing/</td><td><span class="badge b-info" id="snap-export-other-count">0 files</span></td></tr>
+          </tbody>
+        </table></div>
+
+        <div class="btn-row"><button class="btn btn-primary btn-lg" onclick="downloadSnapOutputs()">⬇ Download All Outputs (ZIP)</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ 人物数確認 ══════════ -->
+<div id="p-pcount" class="page">
+  <div class="topbar">
+    <div><div class="tb-title">人物数確認 — Person Count Review</div><div class="bc">ホーム <span>›</span> 人物数確認</div></div>
+    <span class="badge b-info" style="font-size:12px">全ワークフロー横断</span>
+  </div>
+  <div class="pinner">
+    <div class="alert a-info"><span class="alert-icon">ℹ️</span><div><strong>このタブは全ワークフローの人物数検出結果を一覧確認するための軽量レビュータブです。</strong>人物数は参考情報です。要確認フラグ（👥2⚠）はエラーではありません。</div></div>
+
+    <!-- Filter bar -->
+    <div class="card" style="margin-bottom:13px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <select class="fi" style="min-width:130px" onchange="pcFilter(this.value)">
+          <option value="all">すべてのワークフロー</option>
+          <option value="ind">個人写真</option>
+          <option value="tea">先生写真</option>
+          <option value="club">クラブ写真</option>
+          <option value="snap">スナップ写真</option>
+        </select>
+        <select class="fi" style="min-width:130px" onchange="toast('絞り込み適用')">
+          <option>すべての人物数</option>
+          <option>1名のみ</option>
+          <option>2名以上（要確認）</option>
+          <option>0名（未検出）</option>
+        </select>
+        <select class="fi" style="min-width:120px" onchange="toast('絞り込み適用')">
+          <option>全ステータス</option>
+          <option>正常</option>
+          <option>要確認</option>
+        </select>
+        <span style="font-size:11.5px;color:var(--g500);margin-left:auto">全 <strong>523</strong> 枚 · 要確認 <strong style="color:var(--amber)">8</strong> 枚</span>
+      </div>
+    </div>
+
+    <!-- Summary stats -->
+    <div class="stats" style="margin-bottom:14px">
+      <div class="stat ok"><div class="stat-val">512</div><div class="stat-lbl">1名検出（正常）</div><div class="stat-en">Normal (1 person)</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--amber)">8</div><div class="stat-lbl">要確認（2名以上）</div><div class="stat-en">Review Needed</div></div>
+      <div class="stat err"><div class="stat-val">3</div><div class="stat-lbl">0名（未検出）</div><div class="stat-en">Not Detected</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--purple)">247</div><div class="stat-lbl">延べ人物数（スナップ）</div><div class="stat-en">Total Detections (Snap)</div></div>
+    </div>
+
+    <!-- Photo grid by workflow -->
+    <div class="card">
+      <div class="card-hd">
+        <div><div class="card-title">個人写真 — 人物数一覧</div><div class="card-sub">人物数が1名でない場合のみフラグ表示</div></div>
+        <span class="badge b-warn">要確認 2件</span>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>ファイル名</th><th>ワークフロー</th><th>クラス</th><th>人物数</th><th>ステータス</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="mono">IMG_0001.jpg</td><td><span class="badge b-info">個人写真</span></td><td>3年A組</td><td><span class="pcount">👥 1</span></td><td><span class="badge b-ok">正常</span></td><td></td></tr>
+          <tr><td class="mono">IMG_0002.jpg</td><td><span class="badge b-info">個人写真</span></td><td>3年A組</td><td><span class="pcount">👥 1</span></td><td><span class="badge b-ok">正常</span></td><td></td></tr>
+          <tr class="row-warn"><td class="mono">IMG_0042.jpg</td><td><span class="badge b-info">個人写真</span></td><td>3年A組</td><td><span class="pcount warn">👥 2 ⚠</span></td><td><span class="badge b-warn">要確認（参考）</span></td><td><button class="btn btn-ghost btn-sm" onclick="go('ind')">詳細 →</button></td></tr>
+          <tr class="row-warn"><td class="mono">IMG_0079.jpg</td><td><span class="badge b-info">個人写真</span></td><td>3年B組</td><td><span class="pcount warn">👥 2 ⚠</span></td><td><span class="badge b-warn">要確認（参考）</span></td><td><button class="btn btn-ghost btn-sm" onclick="go('ind')">詳細 →</button></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div><div class="card-title">先生写真 — 人物数一覧</div><div class="card-sub">カード写真・本番カット別に表示</div></div>
+        <span class="badge b-warn">要確認 1件</span>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>ファイル名</th><th>種別</th><th>先生名</th><th>人物数</th><th>ステータス</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="mono">IMG_T001.jpg</td><td><span class="badge b-navy" style="font-size:9px">カード写真</span></td><td>田中 花子</td><td><span class="pcount">👥 1</span></td><td><span class="badge b-ok">正常</span></td><td></td></tr>
+          <tr><td class="mono">IMG_T001_2.jpg</td><td><span class="badge b-gray">本番カット</span></td><td>田中 花子</td><td><span class="pcount">👥 1</span></td><td><span class="badge b-ok">正常</span></td><td></td></tr>
+          <tr class="row-warn"><td class="mono">IMG_T003_3.jpg</td><td><span class="badge b-gray">本番カット</span></td><td>渡辺 三郎</td><td><span class="pcount warn">👥 2 ⚠</span></td><td><span class="badge b-warn">要確認（参考）</span></td><td><button class="btn btn-ghost btn-sm" onclick="go('tea')">詳細 →</button></td></tr>
+        </tbody>
+      </table></div>
+      <div style="font-size:10.5px;color:var(--g500);padding:7px 11px 0">📌 人物数2名は参考情報です。エラーではなく、処理は通常どおり続行されます。</div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div><div class="card-title">クラブ写真 — 人物数一覧</div><div class="card-sub">クラブごとの検出人数</div></div>
+        <span class="badge b-ok">すべて正常</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:9px;padding:4px 2px">
+        <div style="border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;background:var(--white)">
+          <div style="font-size:12px;font-weight:800;color:var(--navy);margin-bottom:5px">⚽ サッカー部</div>
+          <div style="font-size:11px;color:var(--g500)">18枚</div>
+          <div style="margin-top:5px"><span class="pcount">👥 〜15名/枚</span></div>
+        </div>
+        <div style="border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;background:var(--white)">
+          <div style="font-size:12px;font-weight:800;color:var(--navy);margin-bottom:5px">🏀 バスケ部</div>
+          <div style="font-size:11px;color:var(--g500)">16枚</div>
+          <div style="margin-top:5px"><span class="pcount">👥 〜12名/枚</span></div>
+        </div>
+        <div style="border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;background:var(--white)">
+          <div style="font-size:12px;font-weight:800;color:var(--navy);margin-bottom:5px">🎶 吹奏楽部</div>
+          <div style="font-size:11px;color:var(--g500)">20枚</div>
+          <div style="margin-top:5px"><span class="pcount">👥 〜40名/枚</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div><div class="card-title">スナップ写真 — 人物数サマリー</div><div class="card-sub">スナップ写真では人物数が最も詳細に使用されます</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="go('snap')">スナップ詳細 →</button>
+      </div>
+      <div class="three-col">
+        <div class="stat"><div class="stat-val" style="color:var(--purple)">247</div><div class="stat-lbl">延べ人物検出数</div></div>
+        <div class="stat"><div class="stat-val" style="color:var(--purple)">5.9</div><div class="stat-lbl">平均人物数 / 枚</div></div>
+        <div class="stat err"><div class="stat-val">3</div><div class="stat-lbl">人物未検出枚数</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ 目閉じ検出 ══════════ -->
+<div id="p-eyecheck" class="page">
+  <div class="topbar">
+    <div><div class="tb-title">目閉じ検出 — Eye-Closing Detection Review</div><div class="bc">ホーム <span>›</span> 目閉じ検出</div></div>
+    <span class="badge b-info" style="font-size:12px">軽量レビュー</span>
+  </div>
+  <div class="pinner">
+    <div class="alert a-ok"><span class="alert-icon">✅</span><div><strong>目閉じはエラーではありません。</strong>個人写真・先生写真・クラブ写真では、目閉じ検出はAIランキングの内部シグナルとして使用されます。命名・リネーム・処理は通常どおり続行されます。スナップ写真のみ、参考としてオレンジ枠で表示します。</div></div>
+
+    <!-- Filter bar -->
+    <div class="card" style="margin-bottom:13px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <select class="fi" style="min-width:130px" onchange="toast('フィルター適用')">
+          <option>すべてのワークフロー</option>
+          <option>個人写真</option>
+          <option>先生写真</option>
+          <option>クラブ写真</option>
+          <option>スナップ写真</option>
+        </select>
+        <select class="fi" style="min-width:140px" onchange="toast('フィルター適用')">
+          <option>すべての結果</option>
+          <option>目閉じなし</option>
+          <option>目閉じあり</option>
+        </select>
+        <span style="font-size:11.5px;color:var(--g500);margin-left:auto">全 <strong>523</strong> 枚 · 目閉じ検出 <strong style="color:var(--amber)">12</strong> 枚</span>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="three-col" style="margin-bottom:14px">
+      <div class="stat ok"><div class="stat-val">511</div><div class="stat-lbl">目閉じなし</div><div class="stat-en">No Eye-Close</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--amber)">12</div><div class="stat-lbl">目閉じあり（参考）</div><div class="stat-en">Eye-Close Detected</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--green)">523</div><div class="stat-lbl">処理続行（全件）</div><div class="stat-en">Processing Continues</div></div>
+    </div>
+
+    <!-- Per-workflow sections -->
+    <div class="card" style="margin-bottom:13px">
+      <div class="card-hd">
+        <div><div class="card-title">個人写真 / 先生写真 / クラブ写真</div><div class="card-sub">目閉じはAIランキングの内部シグナルのみ。UIには表示しません。処理は通常どおり続行。</div></div>
+        <span class="b-qflag">非表示（内部処理のみ）</span>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>ファイル名</th><th>ワークフロー</th><th>目閉じ結果</th><th>処理への影響</th><th>備考</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">IMG_0001.jpg</td><td><span class="badge b-info">個人写真</span></td><td><span class="badge b-ok">目閉じなし</span></td><td>通常どおり続行</td><td></td></tr>
+          <tr><td class="mono">IMG_0015.jpg</td><td><span class="badge b-info">個人写真</span></td><td><span class="b-qflag">目閉じあり</span></td><td>通常どおり続行（AIランキングのみ参照）</td><td>他のカットをベストとして選定</td></tr>
+          <tr><td class="mono">IMG_T001_3.jpg</td><td><span class="badge b-warn">先生写真</span></td><td><span class="b-qflag">目閉じあり</span></td><td>通常どおり続行（AIランキングのみ参照）</td><td>本02・本03で代替</td></tr>
+          <tr><td class="mono">IMG_0031.jpg</td><td><span class="badge b-purple">クラブ写真</span></td><td><span class="badge b-ok">目閉じなし</span></td><td>通常どおり続行</td><td></td></tr>
+        </tbody>
+      </table></div>
+      <div style="font-size:10.5px;color:var(--g500);padding:7px 11px 0">📌 個人・先生・クラブ写真では、目閉じはUIに表示されません。ランキングシグナルとして内部的に使用されます。</div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div><div class="card-title">スナップ写真 — 目閉じ参考表示</div><div class="card-sub">スナップ写真のみ、橙枠（⚠目）で参考表示。処理・出力は通常どおり続行。</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="go('snap')">スナップ詳細 →</button>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>ファイル名</th><th>イベント</th><th>目閉じ</th><th>人数 / 目閉じ人数</th><th>処理</th></tr></thead>
+        <tbody>
+          <tr class="row-warn"><td class="mono">IMG_S043.jpg</td><td>運動会 / 集合</td><td><span class="b-qflag">目閉じあり</span></td><td><span class="pcount">👥 8</span> / <span style="color:var(--amber);font-weight:800">1名</span></td><td>処理続行 <span class="badge b-ok" style="font-size:9px">出力可</span></td></tr>
+          <tr class="row-warn"><td class="mono">IMG_S107.jpg</td><td>運動会 / 応援</td><td><span class="b-qflag">目閉じあり</span></td><td><span class="pcount">👥 2</span> / <span style="color:var(--amber);font-weight:800">1名</span></td><td>処理続行 <span class="badge b-ok" style="font-size:9px">出力可</span></td></tr>
+          <tr><td class="mono">IMG_S201.jpg</td><td>運動会 / 競技</td><td><span class="badge b-ok">目閉じなし</span></td><td><span class="pcount">👥 2</span> / 0名</td><td>処理続行 <span class="badge b-ok" style="font-size:9px">出力可</span></td></tr>
+        </tbody>
+      </table></div>
+      <div style="font-size:10.5px;color:var(--g500);padding:7px 11px 0">📌 目閉じが検出された写真もすべて通常どおり出力されます。スコアへの影響のみです。</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Navigation ──
+function go(n){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.ni').forEach(i=>i.classList.remove('active'));const p=document.getElementById('p-'+n);if(p)p.classList.add('active');document.querySelectorAll('.ni').forEach(i=>{if((i.getAttribute('onclick')||'').includes("'"+n+"'"))i.classList.add('active');});window.scrollTo(0,0);}
+
+// ── Tab config ──
+const TABS={ind:['upload','ocr','error','best','export'],tea:['upload','ocr','unmatch','best','export'],club:['upload','naming','best','export'],snap:['upload','similarity','selection','export']};
+const PMAP={ind:'p-ind',tea:'p-tea',club:'p-club',snap:'p-snap'};
+
+function swTab(prefix,name,el){
+  TABS[prefix].forEach(t=>{const e=document.getElementById(prefix+'-'+t);if(e){e.classList.remove('on');e.style.display='none';}});
+  const t=document.getElementById(prefix+'-'+name);if(t){t.classList.add('on');t.style.display='block';}
+  const pg=document.getElementById(PMAP[prefix]);
+  if(pg){pg.querySelectorAll('.wf-tab').forEach(w=>w.classList.remove('active'));if(el)el.classList.add('active');else pg.querySelectorAll('.wf-tab').forEach(w=>{if((w.getAttribute('onclick')||'').includes("'"+name+"'"))w.classList.add('active');});}
+}
+
+// Init
+window.addEventListener('DOMContentLoaded',()=>{Object.keys(TABS).forEach(prefix=>TABS[prefix].forEach(t=>{const e=document.getElementById(prefix+'-'+t);if(!e)return;e.style.display=e.classList.contains('on')?'block':'none';}));});
+
+// ── Person Search ──
+let currentScopeDetail='3年A組';
+
+function scopePick(el,label,detail){
+  const grid=document.getElementById('scope-grid');
+  if(grid)grid.querySelectorAll('.scope-chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  currentScopeDetail=detail;
+  toast('スコープ: '+label);
+}
+
+function toggleSrc(el){el.classList.toggle('on');const cb=el.querySelector('input[type=checkbox]');if(cb)cb.checked=el.classList.contains('on');}
+
+function srchMode(mode){
+  document.getElementById('s-txt-area').style.display=mode==='txt'?'block':'none';
+  document.getElementById('s-subject-area').style.display=mode==='subject'?'block':'none';
+  document.getElementById('s-face-area').style.display=mode==='face'?'block':'none';
+  document.getElementById('btn-txt').className=mode==='txt'?'btn btn-primary btn-sm':'btn btn-ghost btn-sm';
+  document.getElementById('btn-subject').className=mode==='subject'?'btn btn-primary btn-sm':'btn btn-ghost btn-sm';
+  document.getElementById('btn-face').className=mode==='face'?'btn btn-primary btn-sm':'btn btn-ghost btn-sm';
+}
+
+function doSearch(){
+  const mode=document.getElementById('btn-subject').className.includes('btn-primary')?'subject':(document.getElementById('btn-face').className.includes('btn-primary')?'face':'txt');
+  const kw=(document.getElementById('search-text')||{}).value||'山田';
+  const subject=(document.getElementById('search-subject')||{}).value||'数学';
+  const label=mode==='subject'?subject:(mode==='face'?'顔写真検索':kw);
+  const rkw=document.getElementById('r-kw');
+  const rscope=document.getElementById('r-scope');
+  const rbadge=document.getElementById('r-badge');
+  if(rkw)rkw.textContent='「'+label+'」';
+  if(rscope)rscope.textContent=currentScopeDetail;
+  if(rbadge)rbadge.textContent='12件一致';
+  const empty=document.getElementById('search-empty-state');
+  const body=document.getElementById('search-result-body');
+  if(empty)empty.style.display='none';
+  if(body)body.style.display='block';
+  toast('12件の結果が見つかりました');
+}
+
+function clearResults(){
+  const empty=document.getElementById('search-empty-state');
+  const body=document.getElementById('search-result-body');
+  if(empty)empty.style.display='block';
+  if(body)body.style.display='none';
+  toast('検索条件をリセットしました');
+}
+
+function resetSearch(){
+  clearResults();
+  const grid=document.getElementById('scope-grid');
+  if(grid)grid.querySelectorAll('.scope-chip').forEach((c,i)=>{c.classList.remove('on');if(i===0)c.classList.add('on');});
+  currentScopeDetail='3年A組';
+  srchMode('txt');
+  toast('リセットしました');
+}
+
+function addPDF(){
+  const list=document.getElementById('pdf-list');
+  if(list)list.textContent='年鑑_2025.pdf 追加済';
+  document.querySelectorAll('#src-grid .src-item').forEach(s=>{if(s.textContent.includes('PDF')){s.classList.add('on');const cb=s.querySelector('input[type=checkbox]');if(cb)cb.checked=true;}});
+  toast('PDFをアップロードしました');
+}
+
+// ── AI Check ──
+let currentAIMode='eye';
+
+function setAIMode(mode){
+  currentAIMode=mode;
+  // Update radio label borders
+  document.querySelectorAll('#p-aicheck label').forEach(l=>{
+    const inp=l.querySelector('input[type=radio]');
+    if(inp){l.style.borderColor=inp.value===mode?'var(--teal)':'var(--border)';l.style.background=inp.value===mode?'var(--teal-pale)':'var(--white)';}
+  });
+}
+
+function runAICheck(){
+  const empty=document.getElementById('aicheck-empty');
+  const results=document.getElementById('aicheck-results');
+  const statsEye=document.getElementById('aicheck-stats-eye');
+  const statsPcount=document.getElementById('aicheck-stats-pcount');
+  const colEye=document.getElementById('col-eye');
+  const colPcount=document.getElementById('col-pcount');
+  if(empty)empty.style.display='none';
+  if(results)results.style.display='block';
+  const showEye=currentAIMode==='eye'||currentAIMode==='both';
+  const showPcount=currentAIMode==='pcount'||currentAIMode==='both';
+  if(statsEye)statsEye.style.display=showEye?'':'none';
+  if(statsPcount)statsPcount.style.display=showPcount?'':'none';
+  /* Keep result table columns always visible so headers stay complete */
+  if(colEye)colEye.style.display='';
+  if(colPcount)colPcount.style.display='';
+  document.querySelectorAll('.ai-check-table tbody tr').forEach(tr=>{
+    const tds=tr.querySelectorAll('td');
+    if(tds[2]) tds[2].style.display='';
+    if(tds[3]) tds[3].style.display='';
+  });
+  toast('チェックを実行しました（3枚）');
+}
+
+// ── School / Class ──
+let clsN=2,schoolN=1;
+function addCls(listId){
+  const ls=['A','B','C','D','E'];const ts=['高橋先生','伊藤先生','渡辺先生','中村先生'];
+  clsN++;const g=Math.min(3,Math.ceil(clsN/2));const l=ls[clsN%5];const t=ts[clsN%4];
+  const d=document.createElement('div');d.className='cls-item';
+  d.innerHTML=`<div class="cls-name">${g}年${l}組</div><div class="cls-teacher">👤 ${t}（担任）</div><div class="cls-count">0枚</div><button class="cls-del" onclick="this.closest('.cls-item').remove()">✕</button>`;
+  document.getElementById(listId).appendChild(d);toast(g+'年'+l+'組を追加しました');
+}
+function addSchool(){
+  schoolN++;const names=['東山高校','北城高校','南陽学園'];const sn=names[schoolN%3];const lid='cls-list-'+schoolN;
+  const d=document.createElement('div');d.className='school-block';
+  d.innerHTML=`<div class="school-hd" onclick="toggleSchool(this)"><span style="font-size:14px">🏫</span><div class="school-hd-name">${sn}</div><span class="school-hd-count">0クラス</span><span style="color:rgba(255,255,255,.5);font-size:12px;margin-left:4px">▼</span></div><div class="school-body"><div class="fg" style="margin-bottom:10px"><div class="ff"><label class="fl">年度</label><select class="fi"><option>2026年度</option></select></div><div class="ff"><label class="fl">学校名</label><input class="fi" value="${sn}"></div><div class="ff"><label class="fl">名簿 Excel</label><div class="fdrop" style="padding:7px" onclick="toast('名簿を選択')"><span style="font-size:14px">📄</span> <span style="font-size:11px;color:var(--g400)">クリックして選択</span></div></div><div class="ff"><label class="fl">カメラマン</label><input class="fi" placeholder="任意"></div></div><div class="cls-list" id="${lid}"></div><button class="add-cls" onclick="addCls('${lid}')">＋ クラスを追加</button></div>`;
+  document.getElementById('school-list').appendChild(d);toast(sn+'を追加しました（複数校処理）');
+}
+function toggleSchool(hd){const b=hd.nextElementSibling;if(b)b.style.display=b.style.display==='none'?'':'none';}
+
+// ── Error resolve ──
+function resolveErr(btn){const c=btn.closest('.rv-card');if(c){c.style.opacity='.45';c.style.pointerEvents='none';const t=c.querySelector('.rv-card-title');if(t)t.innerHTML+=' <span class="badge b-ok" style="font-size:10px">✓ 解決済み</span>';}toast('エラーを解決しました');}
+
+// ── Pick best shot ──
+function pickBest(th){const b=th.closest('.pg-body');if(!b)return;b.querySelectorAll('.ph-thumb').forEach(t=>{t.classList.remove('best');const s=t.querySelector('.ph-star');if(s)s.remove();t.querySelectorAll('.pb-best').forEach(p=>p.remove());});th.classList.add('best');const s=document.createElement('div');s.className='ph-star';s.textContent='★';th.appendChild(s);const bg=th.querySelector('.ph-badges');if(bg){const n=document.createElement('span');n.className='pb pb-best';n.textContent='本01';bg.prepend(n);}toast('ベストショットを変更しました');}
+
+// ── Candidate select ──
+function selCand(el){el.closest('.cand-list').querySelectorAll('.cand').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');}
+
+// ── Update ref photo ──
+function updRef(v){const m={y:'山田',s:'鈴木',t:'田中'};const e=document.getElementById('ref-nm');if(e)e.textContent=m[v]||'—';}
+
+// ── Snap buckets ──
+function setBk(bk){bk.closest('.buckets').querySelectorAll('.bk').forEach(b=>b.classList.remove('on'));bk.classList.add('on');['bk-best','bk-other','bk-ng'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});if(bk.classList.contains('best'))document.getElementById('bk-best').style.display='block';if(bk.classList.contains('other'))document.getElementById('bk-other').style.display='block';if(bk.classList.contains('ng'))document.getElementById('bk-ng').style.display='block';}
+
+function toggleSnapPanel(panelId,btnId,showText,hideText){
+  const panel=document.getElementById(panelId);const btn=document.getElementById(btnId);if(!panel||!btn)return;
+  const willShow=panel.style.display==='none'||panel.style.display==='';
+  panel.style.display=willShow?'block':'none';
+  btn.textContent=willShow?hideText:showText;
+  btn.className=willShow?'btn btn-primary btn-sm':'btn btn-ghost btn-sm';
+}
+function deleteSnapUpload(){
+  const item=document.getElementById('snap-upload-item');
+  const path=document.getElementById('snap-upload-path');
+  if(item)item.remove();
+  if(path)path.textContent='No folder uploaded';
+  const drop=document.getElementById('snap-upload-drop');
+  if(drop){drop.classList.remove('filled');drop.querySelector('.fdrop-icon').textContent='📁';}
+  toast('Uploaded folder deleted');
+}
+function reuploadSnapFolder(){
+  const list=document.getElementById('snap-upload-list');
+  const path=document.getElementById('snap-upload-path');
+  const drop=document.getElementById('snap-upload-drop');
+  if(list && !document.getElementById('snap-upload-item')){
+    const row=document.createElement('div');
+    row.className='fmr sel';row.id='snap-upload-item';
+    row.innerHTML='<span class="fmr-icon">📁</span><div class="fmr-info"><div class="fmr-name">new_event_folder/</div><div class="fmr-meta">280 photos</div></div><button class="fmr-del" onclick="deleteSnapUpload()">🗑</button>';
+    list.appendChild(row);
+  }
+  if(path)path.textContent='/photos/new_event_folder/ — 280 photos';
+  if(drop)drop.classList.add('filled');
+  toast('New folder uploaded');
+}
+
+
+
+async function fetchSnapResult(){
+  try{
+    const res=await fetch('/api/snap/result');
+    if(!res.ok)return;
+    const data=await res.json();
+    applySnapSummary(data);
+  }catch(_e){}
+}
+
+function applySnapSummary(data){
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=String(val);};
+  const totalInput=data.total_input_images ?? 0;
+  const totalClusters=data.total_clusters ?? 0;
+  const reps=data.total_representative_candidates ?? 0;
+  const finalSel=data.final_selected_count ?? 0;
+  const ngCount=data.ng_count_after_menna ?? 0;
+  const passing=data.other_passing_count ?? 0;
+
+  set('snap-total-input-upload',totalInput);
+  set('snap-total-clusters-upload',totalClusters);
+  set('snap-representative-upload',reps);
+  set('snap-total-clusters',totalClusters);
+  set('snap-representative',reps);
+  set('snap-final-selected',finalSel);
+  set('snap-ng-count',ngCount);
+  set('snap-final-selected-bucket',finalSel);
+  set('snap-other-passing',passing);
+  set('snap-ng-count-bucket',ngCount);
+  set('snap-total-input-inline',totalInput);
+  set('snap-dedup-rate-inline',data.dedup_reduction_rate ?? 0);
+  set('snap-other-passing-inline',passing);
+  set('snap-export-best',finalSel);
+  set('snap-export-other',passing);
+  set('snap-export-ng',ngCount);
+
+  const badge=document.getElementById('snap-top-loaded-badge');
+  if(badge) badge.textContent=`${totalInput}枚読込済み`;
+  const uploadMeta=document.getElementById('snap-upload-item-meta');
+  if(uploadMeta) uploadMeta.textContent=`${totalInput} photos`;
+  const bestHeader=document.getElementById('snap-best-shot-header-count');
+  if(bestHeader) bestHeader.textContent=`${finalSel} / 25`;
+
+  const report=document.getElementById('snap-export-report-status');
+  if(report) report.innerHTML='<span class="badge b-ok">生成済み</span>';
+  const sim=document.getElementById('snap-export-sim-status');
+  if(sim) sim.innerHTML='<span class="badge b-ok">生成済み</span>';
+  const dedup=document.getElementById('snap-export-dedup-status');
+  if(dedup) dedup.innerHTML='<span class="badge b-ok">生成済み</span>';
+  set('snap-export-final-count', `${finalSel} files`);
+  set('snap-export-ng-count', `${ngCount} files`);
+  set('snap-export-other-count', `${passing} files`);
+}
+
+let snapProgressTimer=null;
+let snapProgressValue=0;
+
+function getSnapStageText(progress){
+  if(progress < 20) return 'Uploading files';
+  if(progress < 45) return 'Running similarity clustering';
+  if(progress < 75) return 'Running Menna snap pipeline';
+  if(progress < 100) return 'Generating output files';
+  return 'Completed';
+}
+
+function setSnapProgress(progress, text, isError=false){
+  const bar=document.getElementById('snap-progress-bar');
+  const txt=document.getElementById('snap-progress-text');
+  if(bar){
+    bar.style.width=`${Math.max(0,Math.min(100,progress))}%`;
+    bar.style.background=isError ? 'var(--red)' : 'var(--teal)';
+  }
+  if(txt){
+    txt.textContent=text;
+    txt.style.color=isError ? 'var(--red)' : 'var(--g500)';
+  }
+}
+
+function startSnapProgressSimulation(){
+  if(snapProgressTimer) clearInterval(snapProgressTimer);
+  snapProgressValue=2;
+  setSnapProgress(snapProgressValue, getSnapStageText(snapProgressValue));
+
+  snapProgressTimer=setInterval(()=>{
+    if(snapProgressValue >= 92) return;
+    const step = snapProgressValue < 20 ? 2.8 : (snapProgressValue < 45 ? 1.9 : (snapProgressValue < 75 ? 1.2 : 0.6));
+    snapProgressValue = Math.min(92, snapProgressValue + step);
+    setSnapProgress(snapProgressValue, getSnapStageText(snapProgressValue));
+  }, 350);
+}
+
+function stopSnapProgressSimulation(){
+  if(snapProgressTimer){
+    clearInterval(snapProgressTimer);
+    snapProgressTimer=null;
+  }
+}
+
+function chooseSnapInput(){
+  const i=document.getElementById('snap-file-input');
+  if(i)i.click();
+}
+
+async function runSnapPipeline(){
+  const input=document.getElementById('snap-file-input');
+  const status=document.getElementById('snap-run-status');
+  if(!input||!input.files||input.files.length===0){
+    toast('画像またはZIPを選択してください');
+    return;
+  }
+  const fd=new FormData();
+  const files=[...input.files];
+  const zip=files.find(f=>f.name.toLowerCase().endsWith('.zip'));
+  if(zip){
+    fd.append('folder_zip',zip);
+  }else{
+    files.forEach(f=>fd.append('images',f));
+  }
+
+  if(status)status.textContent='Processing...';
+  startSnapProgressSimulation();
+  try{
+    const res=await fetch('/api/snap/run',{method:'POST',body:fd});
+    if(!res.ok){
+      const err=await res.json();
+      throw new Error(err.detail||'run failed');
+    }
+    const data=await res.json();
+    applySnapSummary(data.summary||{});
+    stopSnapProgressSimulation();
+    snapProgressValue=100;
+    setSnapProgress(100,'Completed');
+    if(status)status.textContent='Run completed. You can download outputs in Export.';
+    swTab('snap','similarity',null);
+    toast('Snap pipeline completed');
+  }catch(e){
+    stopSnapProgressSimulation();
+    setSnapProgress(snapProgressValue || 0,'Error: '+e.message,true);
+    if(status)status.textContent='Run failed: '+e.message;
+    toast('実行エラー: '+e.message);
+  }
+}
+
+async function downloadSnapOutputs(){
+  try{
+    const res=await fetch('/api/snap/download');
+    if(!res.ok) throw new Error('出力がありません。先に実行してください');
+    const blob=await res.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='snap_outputs.zip';a.click();
+    URL.revokeObjectURL(url);
+    toast('zipをダウンロードしました');
+  }catch(e){
+    toast(e.message);
+  }
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  const input=document.getElementById('snap-file-input');
+  if(input){
+    input.addEventListener('change',()=>{
+      const files=[...input.files];
+      const count=files.length;
+      const path=document.getElementById('snap-upload-path');
+      if(path&&count>0){
+        const first=files[0].name;
+        path.textContent=`${first} — ${count} file(s)`;
+      }
+      toast(`選択: ${count}件`);
+    });
+  }
+  fetchSnapResult();
+});
+
+// ── Input preview (error review) ──
+function updP(){const v=document.getElementById('e1n').value||'__';const p=document.getElementById('e1p');if(p)p.textContent=String(v).padStart(2,'0');}
+
+// ── Toast ──
+let tt;function toast(m){const e=document.getElementById('toast');e.textContent='✓ '+m;e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),2300);}
+</script>
+</body>
+</html>
