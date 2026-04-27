@@ -1271,6 +1271,12 @@ tr.row-warn td{background:var(--amber-pale)}
           </div>
           <div class="btn-row" style="margin-top:14px"><button class="btn btn-primary btn-lg" onclick="runSnapPipeline()">Open Similarity Review</button></div>
           <div id="snap-run-status" style="font-size:11px;color:var(--g500);margin-top:8px">No backend run yet.</div>
+          <div id="snap-progress-wrap" style="margin-top:10px">
+            <div style="height:8px;background:var(--g200);border-radius:999px;overflow:hidden">
+              <div id="snap-progress-bar" style="height:100%;width:0%;background:var(--teal);transition:width .35s ease, background-color .2s ease"></div>
+            </div>
+            <div id="snap-progress-text" style="font-size:11px;color:var(--g500);margin-top:6px">Idle</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1844,6 +1850,50 @@ function applySnapSummary(data){
   if(bestHeader) bestHeader.textContent=`${finalSel} / 25`;
 }
 
+let snapProgressTimer=null;
+let snapProgressValue=0;
+
+function getSnapStageText(progress){
+  if(progress < 20) return 'Uploading files';
+  if(progress < 45) return 'Running similarity clustering';
+  if(progress < 75) return 'Running Menna snap pipeline';
+  if(progress < 100) return 'Generating output files';
+  return 'Completed';
+}
+
+function setSnapProgress(progress, text, isError=false){
+  const bar=document.getElementById('snap-progress-bar');
+  const txt=document.getElementById('snap-progress-text');
+  if(bar){
+    bar.style.width=`${Math.max(0,Math.min(100,progress))}%`;
+    bar.style.background=isError ? 'var(--red)' : 'var(--teal)';
+  }
+  if(txt){
+    txt.textContent=text;
+    txt.style.color=isError ? 'var(--red)' : 'var(--g500)';
+  }
+}
+
+function startSnapProgressSimulation(){
+  if(snapProgressTimer) clearInterval(snapProgressTimer);
+  snapProgressValue=2;
+  setSnapProgress(snapProgressValue, getSnapStageText(snapProgressValue));
+
+  snapProgressTimer=setInterval(()=>{
+    if(snapProgressValue >= 92) return;
+    const step = snapProgressValue < 20 ? 2.8 : (snapProgressValue < 45 ? 1.9 : (snapProgressValue < 75 ? 1.2 : 0.6));
+    snapProgressValue = Math.min(92, snapProgressValue + step);
+    setSnapProgress(snapProgressValue, getSnapStageText(snapProgressValue));
+  }, 350);
+}
+
+function stopSnapProgressSimulation(){
+  if(snapProgressTimer){
+    clearInterval(snapProgressTimer);
+    snapProgressTimer=null;
+  }
+}
+
 function chooseSnapInput(){
   const i=document.getElementById('snap-file-input');
   if(i)i.click();
@@ -1865,7 +1915,8 @@ async function runSnapPipeline(){
     files.forEach(f=>fd.append('images',f));
   }
 
-  if(status)status.textContent='Running snap pipeline...';
+  if(status)status.textContent='Processing...';
+  startSnapProgressSimulation();
   try{
     const res=await fetch('/api/snap/run',{method:'POST',body:fd});
     if(!res.ok){
@@ -1874,10 +1925,15 @@ async function runSnapPipeline(){
     }
     const data=await res.json();
     applySnapSummary(data.summary||{});
+    stopSnapProgressSimulation();
+    snapProgressValue=100;
+    setSnapProgress(100,'Completed');
     if(status)status.textContent='Run completed. You can download outputs in Export.';
     swTab('snap','similarity',null);
     toast('Snap pipeline completed');
   }catch(e){
+    stopSnapProgressSimulation();
+    setSnapProgress(snapProgressValue || 0,'Error: '+e.message,true);
     if(status)status.textContent='Run failed: '+e.message;
     toast('実行エラー: '+e.message);
   }
