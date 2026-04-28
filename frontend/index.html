@@ -1289,7 +1289,7 @@ tr.row-warn td{background:var(--amber-pale)}
         <div class="ss-card"><div class="ss-val" id="snap-ng-count" style="color:var(--amber)">0</div><div class="ss-lbl">NG after Menna</div></div>
       </div>
       <div style="font-size:11px;color:var(--g500);margin:-4px 0 10px" id="snap-metrics-inline">
-        input: <span id="snap-total-input-inline">0</span> / reduction: <span id="snap-dedup-rate-inline">0</span>% / passing: <span id="snap-other-passing-inline">0</span>
+        Run Snap pipeline to see similarity reduction summary.
       </div>
 
       <div class="card">
@@ -1353,7 +1353,7 @@ tr.row-warn td{background:var(--amber-pale)}
       <div id="bk-best">
         <div class="card">
           <div class="card-hd"><div><div class="card-title">Best Shot</div><div class="card-sub">Final selected photos</div></div><span style="font-size:11px;color:var(--g500)" id="snap-best-shot-header-count">0 / 25</span></div>
-          <div class="sg">
+          <div class="sg" id="snap-best-grid">
             <div class="sth best"><div class="sth-inner"><span style="font-size:26px">🏃</span><span>競技</span></div><div class="sth-pcount">👥2</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">本01</span><span class="badge b-blue" style="font-size:9px">競技</span></div></div>
             <div class="sth best"><div class="sth-inner"><span style="font-size:26px">📣</span><span>応援</span></div><div class="sth-pcount">👥5</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">本02</span><span class="badge b-blue" style="font-size:9px">応援</span></div></div>
             <div class="sth best"><div class="sth-inner"><span style="font-size:26px">🏅</span><span>表彰</span></div><div class="sth-pcount">👥3</div><div class="sth-btm"><span class="badge b-ok" style="font-size:9px">本03</span><span class="badge b-blue" style="font-size:9px">表彰</span></div></div>
@@ -1365,7 +1365,7 @@ tr.row-warn td{background:var(--amber-pale)}
       <div id="bk-other" style="display:none">
         <div class="card">
           <div class="card-hd"><div><div class="card-title">Passing Pictures</div><div class="card-sub">Passed but not selected as Best Shot</div></div></div>
-          <div class="sg">
+          <div class="sg" id="snap-other-grid">
             <div class="sth"><div class="sth-inner"><span style="font-size:26px">🏃</span><span>IMG_1013</span></div><div class="sth-pcount">👥2</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">類似</span></div></div>
             <div class="sth"><div class="sth-inner"><span style="font-size:26px">📣</span><span>IMG_1453</span></div><div class="sth-pcount">👥4</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">通過</span></div></div>
             <div class="sth"><div class="sth-inner"><span style="font-size:26px">🎌</span><span>IMG_2149</span></div><div class="sth-pcount">👥3</div><div class="sth-btm"><span class="badge b-gray" style="font-size:9px">通過</span></div></div>
@@ -1378,7 +1378,7 @@ tr.row-warn td{background:var(--amber-pale)}
       <div id="bk-ng" style="display:none">
         <div class="card">
           <div class="card-hd"><div><div class="card-title">NG Photos</div><div class="card-sub">Excluded photos</div></div></div>
-          <div class="sg">
+          <div class="sg" id="snap-ng-grid">
             <div class="sth ng-snap"><div class="sth-inner"><span style="font-size:24px">💨</span><span>IMG_3001</span></div><div class="sth-btm"><span class="badge b-err" style="font-size:9px">ブレ</span></div></div>
             <div class="sth ng-snap"><div class="sth-inner"><span style="font-size:24px">😶</span><span>IMG_3002</span></div><div class="sth-btm"><span class="badge b-err" style="font-size:9px">NG</span></div></div>
             <div class="sth ng-snap"><div class="sth-inner"><span style="font-size:24px">🌑</span><span>IMG_3003</span></div><div class="sth-btm"><span class="badge b-err" style="font-size:9px">露出不足</span></div></div>
@@ -1823,10 +1823,110 @@ function reuploadSnapFolder(){
 async function fetchSnapResult(){
   try{
     const res=await fetch('/api/snap/result');
-    if(!res.ok)return;
+    if(!res.ok){
+      resetSnapSummaryUI();
+      return;
+    }
     const data=await res.json();
     applySnapSummary(data);
-  }catch(_e){}
+  }catch(_e){
+    resetSnapSummaryUI();
+  }
+}
+
+function resetSnapSummaryUI(){
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+  ['snap-total-input-upload','snap-total-clusters-upload','snap-representative-upload','snap-total-clusters','snap-representative','snap-final-selected','snap-ng-count','snap-final-selected-bucket','snap-other-passing','snap-ng-count-bucket','snap-export-best','snap-export-other','snap-export-ng'].forEach(id=>set(id,'-'));
+  set('snap-export-final-count','- files');
+  set('snap-export-ng-count','- files');
+  set('snap-export-other-count','- files');
+
+  const report=document.getElementById('snap-export-report-status');
+  if(report) report.innerHTML='<span class="badge b-gray">未生成</span>';
+  const sim=document.getElementById('snap-export-sim-status');
+  if(sim) sim.innerHTML='<span class="badge b-gray">未生成</span>';
+  const dedup=document.getElementById('snap-export-dedup-status');
+  if(dedup) dedup.innerHTML='<span class="badge b-gray">未生成</span>';
+
+  const badge=document.getElementById('snap-top-loaded-badge');
+  if(badge) badge.textContent='未実行';
+  const bestHeader=document.getElementById('snap-best-shot-header-count');
+  if(bestHeader) bestHeader.textContent='- / 25';
+  const expl=document.getElementById('snap-metrics-inline');
+  if(expl) expl.textContent='Run Snap pipeline to see similarity reduction summary.';
+}
+
+function updateSnapBucketCountsFromDOM(){
+  const count=(id)=>{const g=document.getElementById(id);return g?g.querySelectorAll('.sth').length:0;};
+  const best=count('snap-best-grid');
+  const other=count('snap-other-grid');
+  const ng=count('snap-ng-grid');
+
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=String(val);};
+  set('snap-final-selected-bucket',best);
+  set('snap-other-passing',other);
+  set('snap-ng-count-bucket',ng);
+  set('snap-final-selected',best);
+  set('snap-ng-count',ng);
+  set('snap-export-best',best);
+  set('snap-export-other',other);
+  set('snap-export-ng',ng);
+  set('snap-export-final-count',`${best} files`);
+  set('snap-export-ng-count',`${ng} files`);
+  set('snap-export-other-count',`${other} files`);
+
+  const bestHeader=document.getElementById('snap-best-shot-header-count');
+  if(bestHeader) bestHeader.textContent=`${best} / 25`;
+}
+
+function renderSnapSelectionActions(){
+  const bestGrid=document.getElementById('snap-best-grid');
+  const otherGrid=document.getElementById('snap-other-grid');
+  const ngGrid=document.getElementById('snap-ng-grid');
+  if(!bestGrid||!otherGrid||!ngGrid) return;
+
+  const setActions=(card,actions)=>{
+    let row=card.querySelector('.snap-actions');
+    if(!row){
+      row=document.createElement('div');
+      row.className='snap-actions';
+      row.style.cssText='display:flex;gap:4px;justify-content:center;padding:4px;border-top:1px solid var(--g100)';
+      card.appendChild(row);
+    }
+    row.innerHTML='';
+    actions.forEach(({label,target})=>{
+      const b=document.createElement('button');
+      b.type='button';
+      b.className='btn btn-ghost btn-sm';
+      b.style.padding='2px 6px';
+      b.style.fontSize='10px';
+      b.textContent=label;
+      b.onclick=()=>moveSnapCardToBucket(card,target);
+      row.appendChild(b);
+    });
+  };
+
+  [...bestGrid.querySelectorAll('.sth')].forEach(card=>setActions(card,[{label:'Move to NG',target:'ng'}]));
+  [...otherGrid.querySelectorAll('.sth')].forEach(card=>setActions(card,[{label:'Move to Best Shot',target:'best'},{label:'Move to NG',target:'ng'}]));
+  [...ngGrid.querySelectorAll('.sth')].forEach(card=>setActions(card,[{label:'Move to Best Shot',target:'best'}]));
+}
+
+function moveSnapCardToBucket(card,target){
+  const bestGrid=document.getElementById('snap-best-grid');
+  const otherGrid=document.getElementById('snap-other-grid');
+  const ngGrid=document.getElementById('snap-ng-grid');
+  if(!bestGrid||!otherGrid||!ngGrid) return;
+
+  if(target==='best') bestGrid.appendChild(card);
+  if(target==='other') otherGrid.appendChild(card);
+  if(target==='ng') ngGrid.appendChild(card);
+
+  card.classList.remove('best','ng-snap');
+  if(target==='best') card.classList.add('best');
+  if(target==='ng') card.classList.add('ng-snap');
+
+  renderSnapSelectionActions();
+  updateSnapBucketCountsFromDOM();
 }
 
 function applySnapSummary(data){
@@ -1848,9 +1948,6 @@ function applySnapSummary(data){
   set('snap-final-selected-bucket',finalSel);
   set('snap-other-passing',passing);
   set('snap-ng-count-bucket',ngCount);
-  set('snap-total-input-inline',totalInput);
-  set('snap-dedup-rate-inline',data.dedup_reduction_rate ?? 0);
-  set('snap-other-passing-inline',passing);
   set('snap-export-best',finalSel);
   set('snap-export-other',passing);
   set('snap-export-ng',ngCount);
@@ -1862,6 +1959,12 @@ function applySnapSummary(data){
   const bestHeader=document.getElementById('snap-best-shot-header-count');
   if(bestHeader) bestHeader.textContent=`${finalSel} / 25`;
 
+  const explain=document.getElementById('snap-metrics-inline');
+  if(explain){
+    const reduction=data.dedup_reduction_rate ?? 0;
+    explain.textContent=`Similarity clustering reduced ${totalInput} input photos to ${reps} representative candidates. Reduction rate: ${reduction}%.`;
+  }
+
   const report=document.getElementById('snap-export-report-status');
   if(report) report.innerHTML='<span class="badge b-ok">生成済み</span>';
   const sim=document.getElementById('snap-export-sim-status');
@@ -1871,6 +1974,8 @@ function applySnapSummary(data){
   set('snap-export-final-count', `${finalSel} files`);
   set('snap-export-ng-count', `${ngCount} files`);
   set('snap-export-other-count', `${passing} files`);
+
+  renderSnapSelectionActions();
 }
 
 let snapProgressTimer=null;
@@ -1947,7 +2052,15 @@ async function runSnapPipeline(){
       throw new Error(err.detail||'run failed');
     }
     const data=await res.json();
-    applySnapSummary(data.summary||{});
+    const summary=data.summary||{};
+    if((summary.total_input_images ?? 0)===0){
+      stopSnapProgressSimulation();
+      setSnapProgress(snapProgressValue || 0,'No valid images found. Please upload JPG, PNG, or supported image files.',true);
+      if(status)status.textContent='No valid images found. Please upload JPG, PNG, or supported image files.';
+      resetSnapSummaryUI();
+      return;
+    }
+    applySnapSummary(summary);
     stopSnapProgressSimulation();
     snapProgressValue=100;
     setSnapProgress(100,'Completed');
@@ -1957,7 +2070,7 @@ async function runSnapPipeline(){
   }catch(e){
     stopSnapProgressSimulation();
     setSnapProgress(snapProgressValue || 0,'Error: '+e.message,true);
-    if(status)status.textContent='Run failed: '+e.message;
+    if(status)status.textContent='API error: '+e.message;
     toast('実行エラー: '+e.message);
   }
 }
@@ -1991,6 +2104,8 @@ window.addEventListener('DOMContentLoaded',()=>{
       toast(`選択: ${count}件`);
     });
   }
+  resetSnapSummaryUI();
+  renderSnapSelectionActions();
   fetchSnapResult();
 });
 
