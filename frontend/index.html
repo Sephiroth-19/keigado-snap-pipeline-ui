@@ -1252,6 +1252,7 @@ tr.row-warn td{background:var(--amber-pale)}
       <div class="two-col">
         <div class="card">
           <div class="card-hd"><div class="card-title">Upload Folder</div></div>
+          <div style="font-size:11px;color:var(--g500);margin-bottom:8px">Upload one zip file containing one or more event folders.</div>
           <div id="snap-upload-drop" class="fdrop filled" style="padding:18px"><span class="fdrop-icon">📁</span><div class="fdrop-txt" id="snap-upload-path">/photos/undokai/ — 312 photos</div></div>
           <div class="fm" style="margin-top:12px">
             <div class="fm-hd"><span>Uploaded Folder</span><span style="font-size:10px;color:var(--g400)">Client can delete and re-upload</span></div>
@@ -1260,7 +1261,7 @@ tr.row-warn td{background:var(--amber-pale)}
             </div>
           </div>
           <div class="btn-row" style="margin-top:12px"><button class="btn btn-danger btn-sm" onclick="deleteSnapUpload()">Delete Uploaded Folder</button><button class="btn btn-ghost btn-sm" onclick="chooseSnapInput()">Re-upload Folder</button></div>
-          <input id="snap-file-input" type="file" multiple accept="image/*,.zip" style="display:none">
+          <input id="snap-file-input" type="file" multiple accept=".zip,image/*" style="display:none">
         </div>
         <div class="card">
           <div class="card-hd"><div class="card-title">Upload Status</div></div>
@@ -1271,6 +1272,7 @@ tr.row-warn td{background:var(--amber-pale)}
           </div>
           <div class="btn-row" style="margin-top:14px"><button class="btn btn-primary btn-lg" onclick="runSnapPipeline()">Open Similarity Review</button></div>
           <div id="snap-run-status" style="font-size:11px;color:var(--g500);margin-top:8px">No backend run yet.</div>
+          <div id="snap-upload-events-hint" style="font-size:11px;color:var(--g500);margin-top:6px">For multi-event testing, choose one ZIP that contains multiple top-level event folders.</div>
           <div id="snap-progress-wrap" style="margin-top:10px">
             <div style="height:8px;background:var(--g200);border-radius:999px;overflow:hidden">
               <div id="snap-progress-bar" style="height:100%;width:0%;background:var(--teal);transition:width .35s ease, background-color .2s ease"></div>
@@ -1878,7 +1880,7 @@ function renderEventSummaries(eventSummaries){
     <td>${e.other_passing_count}</td>
   </tr>`).join('');
   box.innerHTML=`<div class="tbl-wrap"><table>
-    <thead><tr><th>Event</th><th>Input</th><th>Clusters</th><th>Representatives</th><th>Best</th><th>NG</th><th>Passing</th></tr></thead>
+    <thead><tr><th>Event Folder</th><th>Input</th><th>Clusters</th><th>Representatives</th><th>Best</th><th>NG</th><th>Passing</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }
@@ -2066,9 +2068,14 @@ async function runSnapPipeline(){
   }
   const fd=new FormData();
   const files=[...input.files];
-  const zip=files.find(f=>f.name.toLowerCase().endsWith('.zip'));
-  if(zip){
-    fd.append('folder_zip',zip);
+  const zipFiles=files.filter(f=>f.name.toLowerCase().endsWith('.zip'));
+  if(zipFiles.length>1){
+    if(status)status.textContent='Please upload exactly one ZIP file.';
+    setSnapProgress(0,'Please upload exactly one ZIP file.',true);
+    return;
+  }
+  if(zipFiles.length===1){
+    fd.append('folder_zip',zipFiles[0]);
   }else{
     files.forEach(f=>fd.append('images',f));
   }
@@ -2127,9 +2134,22 @@ window.addEventListener('DOMContentLoaded',()=>{
       const files=[...input.files];
       const count=files.length;
       const path=document.getElementById('snap-upload-path');
+      const hint=document.getElementById('snap-upload-events-hint');
       if(path&&count>0){
         const first=files[0].name;
         path.textContent=`${first} — ${count} file(s)`;
+      }
+      const zipFiles=files.filter(f=>f.name.toLowerCase().endsWith('.zip'));
+      if(hint){
+        if(zipFiles.length===1){
+          hint.textContent=`ZIP selected: ${zipFiles[0].name}. Event folders inside the ZIP will be detected after run.`;
+        }else if(zipFiles.length>1){
+          hint.textContent='Please select one ZIP file. Re-upload replaces the previous upload.';
+        }else if(count>0){
+          hint.textContent='Image files selected. For multi-event testing, upload one ZIP containing multiple event folders.';
+        }else{
+          hint.textContent='For multi-event testing, choose one ZIP that contains multiple top-level event folders.';
+        }
       }
       toast(`選択: ${count}件`);
     });
