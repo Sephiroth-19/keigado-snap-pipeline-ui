@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import re
 import shutil
 import zipfile
 from pathlib import Path
@@ -9,6 +11,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from openpyxl import Workbook
 
 from backend.snap_pipeline import SnapPipeline
 
@@ -62,6 +65,57 @@ def _pack_outputs(output_dir: Path) -> Path:
     return zip_path
 
 
+def _has_images(path: Path) -> bool:
+    exts = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff", ".heic", ".heif"}
+    return any(p.suffix.lower() in exts for p in path.rglob("*") if p.is_file())
+
+
+def _safe_event_name(name: str) -> str:
+    sanitized = re.sub(r"[^\w\-ぁ-んァ-ヶ一-龠々ー]+", "_", name.strip())
+    return sanitized.strip("_") or "event"
+
+
+def _discover_event_dirs(input_root: Path) -> list[tuple[str, Path]]:
+    top_dirs = [p for p in sorted(input_root.iterdir()) if p.is_dir()]
+    event_dirs: list[tuple[str, Path]] = []
+
+    for d in top_dirs:
+        if _has_images(d):
+            event_dirs.append((_safe_event_name(d.name), d))
+
+    if event_dirs:
+        return event_dirs
+
+    if _has_images(input_root):
+        return [("event_1", input_root)]
+
+    return []
+
+
+def _write_all_events_summary(output_root: Path, event_summaries: list[dict[str, Any]]) -> None:
+    (output_root / "all_events_summary.json").write_text(
+        json.dumps(event_summaries, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "all_events_summary"
+    headers = [
+        "event_name",
+        "total_input_images",
+        "total_clusters",
+        "total_representative_candidates",
+        "dedup_reduction_rate",
+        "final_selected_count",
+        "ng_count_after_menna",
+        "other_passing_count",
+    ]
+    ws.append(headers)
+    for row in event_summaries:
+        ws.append([row.get(k) for k in headers])
+    wb.save(output_root / "all_events_summary.xlsx")
+
+
 @app.post("/api/snap/run")
 async def run_snap_pipeline(
     images: list[UploadFile] | None = File(default=None),
@@ -85,8 +139,46 @@ async def run_snap_pipeline(
         _extract_zip(zip_path, INPUT_DIR)
         zip_path.unlink(missing_ok=True)
 
-    summary = pipeline.run(INPUT_DIR, OUTPUT_DIR)
-    latest_summary = summary.__dict__
+    events = _discover_event_dirs(INPUT_DIR)
+    event_summaries: list[dict[str, Any]] = []
+
+    for event_name, event_input_dir in events:
+        event_output_dir = OUTPUT_DIR / event_name
+        summary = pipeline.run(event_input_dir, event_output_dir)
+        event_summaries.append({"event_name": event_name, **summary.__dict__})
+
+    if not event_summaries:
+        event_summaries = [
+            {
+                "event_name": "event_1",
+                "total_input_images": 0,
+                "total_clusters": 0,
+                "total_representative_candidates": 0,
+                "dedup_reduction_rate": 0.0,
+                "final_selected_count": 0,
+                "ng_count_after_menna": 0,
+                "other_passing_count": 0,
+            }
+        ]
+
+    _write_all_events_summary(OUTPUT_DIR, event_summaries)
+
+    total_summary = {
+        "event_name": "all_events",
+        "total_input_images": sum(e["total_input_images"] for e in event_summaries),
+        "total_clusters": sum(e["total_clusters"] for e in event_summaries),
+        "total_representative_candidates": sum(e["total_representative_candidates"] for e in event_summaries),
+        "dedup_reduction_rate": 0.0,
+        "final_selected_count": sum(e["final_selected_count"] for e in event_summaries),
+        "ng_count_after_menna": sum(e["ng_count_after_menna"] for e in event_summaries),
+        "other_passing_count": sum(e["other_passing_count"] for e in event_summaries),
+    }
+    if total_summary["total_input_images"] > 0:
+        total_summary["dedup_reduction_rate"] = round(
+            (1 - (total_summary["total_representative_candidates"] / total_summary["total_input_images"])) * 100, 2
+        )
+
+    latest_summary = {**total_summary, "event_summaries": event_summaries}
     latest_zip_path = _pack_outputs(OUTPUT_DIR)
     return {"status": "ok", "summary": latest_summary}
 

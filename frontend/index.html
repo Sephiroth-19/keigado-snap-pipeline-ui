@@ -1291,6 +1291,7 @@ tr.row-warn td{background:var(--amber-pale)}
       <div style="font-size:11px;color:var(--g500);margin:-4px 0 10px" id="snap-metrics-inline">
         Run Snap pipeline to see similarity reduction summary.
       </div>
+      <div id="snap-events-summary" style="display:none;margin-bottom:10px"></div>
 
       <div class="card">
         <div class="card-hd"><div><div class="card-title">Similar Groups</div><div class="card-sub">類似写真ごとに確認</div></div><button class="btn btn-ghost btn-sm" onclick="toast('すべてのグループを表示')">全グループ表示</button></div>
@@ -1854,6 +1855,32 @@ function resetSnapSummaryUI(){
   if(bestHeader) bestHeader.textContent='- / 25';
   const expl=document.getElementById('snap-metrics-inline');
   if(expl) expl.textContent='Run Snap pipeline to see similarity reduction summary.';
+  renderEventSummaries([]);
+}
+
+
+function renderEventSummaries(eventSummaries){
+  const box=document.getElementById('snap-events-summary');
+  if(!box) return;
+  if(!eventSummaries || eventSummaries.length<=1){
+    box.style.display='none';
+    box.innerHTML='';
+    return;
+  }
+  box.style.display='block';
+  const rows=eventSummaries.map(e=>`<tr>
+    <td>${e.event_name}</td>
+    <td>${e.total_input_images}</td>
+    <td>${e.total_clusters}</td>
+    <td>${e.total_representative_candidates}</td>
+    <td>${e.final_selected_count}</td>
+    <td>${e.ng_count_after_menna}</td>
+    <td>${e.other_passing_count}</td>
+  </tr>`).join('');
+  box.innerHTML=`<div class="tbl-wrap"><table>
+    <thead><tr><th>Event</th><th>Input</th><th>Clusters</th><th>Representatives</th><th>Best</th><th>NG</th><th>Passing</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
 }
 
 function updateSnapBucketCountsFromDOM(){
@@ -1931,12 +1958,14 @@ function moveSnapCardToBucket(card,target){
 
 function applySnapSummary(data){
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=String(val);};
-  const totalInput=data.total_input_images ?? 0;
-  const totalClusters=data.total_clusters ?? 0;
-  const reps=data.total_representative_candidates ?? 0;
-  const finalSel=data.final_selected_count ?? 0;
-  const ngCount=data.ng_count_after_menna ?? 0;
-  const passing=data.other_passing_count ?? 0;
+  const events=Array.isArray(data.event_summaries)?data.event_summaries:[];
+  const base=(events.length===1?events[0]:data);
+  const totalInput=base.total_input_images ?? 0;
+  const totalClusters=base.total_clusters ?? 0;
+  const reps=base.total_representative_candidates ?? 0;
+  const finalSel=base.final_selected_count ?? 0;
+  const ngCount=base.ng_count_after_menna ?? 0;
+  const passing=base.other_passing_count ?? 0;
 
   set('snap-total-input-upload',totalInput);
   set('snap-total-clusters-upload',totalClusters);
@@ -1961,7 +1990,7 @@ function applySnapSummary(data){
 
   const explain=document.getElementById('snap-metrics-inline');
   if(explain){
-    const reduction=data.dedup_reduction_rate ?? 0;
+    const reduction=base.dedup_reduction_rate ?? data.dedup_reduction_rate ?? 0;
     explain.textContent=`Similarity clustering reduced ${totalInput} input photos to ${reps} representative candidates. Reduction rate: ${reduction}%.`;
   }
 
@@ -1975,6 +2004,7 @@ function applySnapSummary(data){
   set('snap-export-ng-count', `${ngCount} files`);
   set('snap-export-other-count', `${passing} files`);
 
+  renderEventSummaries(events);
   renderSnapSelectionActions();
 }
 
@@ -2105,6 +2135,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     });
   }
   resetSnapSummaryUI();
+  renderEventSummaries(events);
   renderSnapSelectionActions();
   fetchSnapResult();
 });
