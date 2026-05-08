@@ -6,3 +6,12 @@ numpy
 openpyxl
 torch
 torchvision
+openai
+pdf2image
+PyMuPDF
+pandas
+python-docx
+opencv-python-headless
+insightface
+onnxruntime
+python-dotenv

@@ -661,10 +661,11 @@ tr.row-warn td{background:var(--amber-pale)}
     </div>
 
     <div id="tea-upload" class="tc">
-      <div class="alert a-info"><span class="alert-icon">ℹ️</span><div><strong>対象：今年度新任の先生のみ。</strong>1名=1フォルダ。カード持ち写真1枚+本番カット複数枚を同フォルダに入れてください。前年継続の先生は不要です。</div></div>
+      <div class="alert a-info"><span class="alert-icon">ℹ️</span><div><strong>対象：今年度新任の先生のみ。</strong>カード写真と本番写真を同じZIPに入れてください。前年継続の先生は不要です。</div></div>
       <div class="two-col">
         <div class="card">
           <div class="card-hd"><div class="card-title">先生写真フォルダ</div></div>
+          <input id="teacher-photos-zip" type="file" accept=".zip" style="margin-bottom:8px">
           <div class="fdrop filled" style="padding:18px" onclick="toast('フォルダを再選択')"><span class="fdrop-icon">📁</span><div class="fdrop-txt">teacher_watanabe/ — 5枚読込済</div></div>
           <div style="font-size:11px;color:var(--g500);margin-top:8px;padding:8px 10px;background:var(--g50);border-radius:6px">
             📌 <strong>フォルダ構成：</strong><br>・IMG_T003.jpg — <strong>カード持ち写真 1枚</strong>（先生特定に使用）<br>・IMG_T003_2〜5.jpg — <strong>本番カット 4枚</strong>（ベスト選定対象）
@@ -674,9 +675,11 @@ tr.row-warn td{background:var(--amber-pale)}
           </div></div>
         </div>
         <div class="card">
-          <div class="card-hd"><div class="card-title">先生名簿 PDF / Excel</div></div>
-          <div class="fdrop filled" style="padding:18px"><span class="fdrop-icon">📄</span><div class="fdrop-txt">teacher_list_2026.xlsx 読込済</div></div>
-          <div class="btn-row" style="margin-top:11px"><button class="btn btn-primary btn-lg" onclick="swTab('tea','ocr',null);toast('OCRを実行中...')">▶ OCR 実行</button></div>
+          <div class="card-hd"><div class="card-title">先生名簿 PDF</div></div>
+          <input id="teacher-roster-pdf" type="file" accept=".pdf" style="margin-bottom:8px">
+          <div id="teacher-run-status" style="font-size:11px;color:var(--g500)">未実行</div>
+          <div class="fdrop filled" style="padding:18px"><span class="fdrop-icon">📄</span><div class="fdrop-txt">teacher_list_2026.pdf を選択</div></div>
+          <div class="btn-row" style="margin-top:11px"><button class="btn btn-primary btn-lg" id="teacher-run-btn" onclick="runTeacherPipeline()">▶ OCR 実行</button></div>
         </div>
       </div>
     </div>
@@ -1656,6 +1659,29 @@ function swTab(prefix,name,el){
 }
 
 // Init
+
+let teacherJobId=null;
+async function runTeacherPipeline(){
+ const z=document.getElementById('teacher-photos-zip')?.files?.[0];
+ const p=document.getElementById('teacher-roster-pdf')?.files?.[0];
+ const st=document.getElementById('teacher-run-status');
+ if(!z||!p){toast('ZIPとPDFを選択してください');return;}
+ const fd=new FormData();fd.append('photos_zip',z);fd.append('roster_pdf',p);
+ st.textContent='実行中...';
+ const res=await fetch('/api/teacher/run',{method:'POST',body:fd});
+ const data=await res.json(); if(!res.ok){throw new Error(data.detail||'teacher run failed');}
+ teacherJobId=data.job_id; pollTeacherStatus();
+}
+async function pollTeacherStatus(){
+ const st=document.getElementById('teacher-run-status');
+ if(!teacherJobId) return;
+ const timer=setInterval(async()=>{
+   const r=await fetch(`/api/teacher/status/${teacherJobId}`); const d=await r.json();
+   st.textContent=`status: ${d.status}`;
+   if(d.status==='completed'||d.status==='failed'){clearInterval(timer); if(d.status==='completed'){swTab('tea','ocr',null);} }
+ },2000);
+}
+
 window.addEventListener('DOMContentLoaded',()=>{Object.keys(TABS).forEach(prefix=>TABS[prefix].forEach(t=>{const e=document.getElementById(prefix+'-'+t);if(!e)return;e.style.display=e.classList.contains('on')?'block':'none';}));});
 
 // ── Person Search ──
@@ -2125,6 +2151,29 @@ async function downloadSnapOutputs(){
   }catch(e){
     toast(e.message);
   }
+}
+
+
+let teacherJobId=null;
+async function runTeacherPipeline(){
+ const z=document.getElementById('teacher-photos-zip')?.files?.[0];
+ const p=document.getElementById('teacher-roster-pdf')?.files?.[0];
+ const st=document.getElementById('teacher-run-status');
+ if(!z||!p){toast('ZIPとPDFを選択してください');return;}
+ const fd=new FormData();fd.append('photos_zip',z);fd.append('roster_pdf',p);
+ st.textContent='実行中...';
+ const res=await fetch('/api/teacher/run',{method:'POST',body:fd});
+ const data=await res.json(); if(!res.ok){throw new Error(data.detail||'teacher run failed');}
+ teacherJobId=data.job_id; pollTeacherStatus();
+}
+async function pollTeacherStatus(){
+ const st=document.getElementById('teacher-run-status');
+ if(!teacherJobId) return;
+ const timer=setInterval(async()=>{
+   const r=await fetch(`/api/teacher/status/${teacherJobId}`); const d=await r.json();
+   st.textContent=`status: ${d.status}`;
+   if(d.status==='completed'||d.status==='failed'){clearInterval(timer); if(d.status==='completed'){swTab('tea','ocr',null);} }
+ },2000);
 }
 
 window.addEventListener('DOMContentLoaded',()=>{
