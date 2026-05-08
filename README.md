@@ -1,64 +1,46 @@
 # keigado-snap-pipeline-ui
 
-Minimal local web app with existing Snap UI + FastAPI backend.
+FastAPI + static frontend app for Snap Photos and Teacher Photos pipelines.
 
 ## Run locally
-
-1. Install dependencies:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env
+# set OPENAI_API_KEY in .env for Teacher pipeline
+uvicorn backend.app:app --reload --host 127.0.0.1 --port 8000
 ```
 
-2. Start server:
+Open: http://127.0.0.1:8000
 
-```bash
-./run_local.sh
+## Environment variables
+
+```env
+OPENAI_API_KEY=
+OPENAI_MODEL_TEXT=gpt-5.4
+OPENAI_MODEL_VISION=gpt-5.4
 ```
 
-3. Open:
+- `.env` must not be committed.
+- Snap pipeline works without `OPENAI_API_KEY`.
+- Teacher pipeline requires `OPENAI_API_KEY` when calling `POST /api/teacher/run`.
 
-- http://127.0.0.1:8000
-
-## API
+## Snap APIs
 
 - `POST /api/snap/run`
-  - Multipart form fields:
-    - `images`: one or more image files, or
-    - `folder_zip`: one zip file
 - `GET /api/snap/result`
 - `GET /api/snap/download`
 
-The backend executes pipeline stages:
-- similarity clustering
-- deduplicated representative candidate creation
-- best-shot selection
-- Excel + output folder generation
+## Teacher APIs
 
+- `POST /api/teacher/run` (multipart: `photos_zip` + `roster_pdf`)
+- `GET /api/teacher/status/{job_id}`
+- `GET /api/teacher/result/{job_id}`
+- `GET /api/teacher/download/{job_id}`
+- `GET /api/teacher/excel/{job_id}`
 
-## Multi-event ZIP testing
-
-For multi-event processing, create **one ZIP** containing multiple top-level event folders, for example:
-
-```text
-multi_event_test.zip
-  event_01/
-    img001.jpg
-    img002.jpg
-  event_02/
-    img101.jpg
-    img102.jpg
-```
-
-Example creation command:
-
-```bash
-mkdir -p /tmp/multi_event_test/event_01 /tmp/multi_event_test/event_02
-cp /path/to/event_01_images/* /tmp/multi_event_test/event_01/
-cp /path/to/event_02_images/* /tmp/multi_event_test/event_02/
-(cd /tmp/multi_event_test && zip -r multi_event_test.zip event_01 event_02)
-```
-
-Upload `multi_event_test.zip` in the Snap UI. The backend processes each top-level folder separately and preserves per-event output structure in the download ZIP.
+Teacher upload format:
+- One ZIP containing teacher card + portrait photos.
+- One PDF roster file.

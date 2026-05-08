@@ -11,6 +11,8 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
+from backend.teacher_jobs import router as teacher_router
 from openpyxl import Workbook
 
 from backend.snap_pipeline import SnapPipeline
@@ -21,6 +23,7 @@ APP_STATE_DIR = ROOT / "runtime"
 INPUT_DIR = APP_STATE_DIR / "input"
 OUTPUT_DIR = APP_STATE_DIR / "output"
 
+load_dotenv()
 app = FastAPI(title="Snap Pipeline Local App")
 app.add_middleware(
     CORSMiddleware,
@@ -199,3 +202,6 @@ def download_outputs() -> FileResponse:
 
 if (FRONTEND_DIR / "index.html").exists():
     app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+
+
+app.include_router(teacher_router)
