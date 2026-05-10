@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>恵雅堂 AI写真整理システム - Standalone HTML</title>
+<style>
+:root{--navy:#1A2B4A;--navy2:#243D6A;--navyDark:#0F1B30;--teal:#0D8C8C;--teal2:#12B5B5;--tealPale:#EAF7F7;--amber:#D97706;--amberPale:#FEF3C7;--red:#DC2626;--redPale:#FEF2F2;--green:#16A34A;--greenPale:#F0FDF4;--blue:#1D4ED8;--bluePale:#EFF6FF;--purple:#7C3AED;--purplePale:#F5F3FF;--bg:#EEF2F7;--white:#fff;--g50:#F8FAFC;--g100:#F1F5F9;--g200:#E2E8F0;--g300:#CBD5E1;--g400:#94A3B8;--g500:#64748B;--g600:#475569;--g700:#334155;--g800:#1E293B;--border:#CBD5E1;--r:10px;--sh1:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);--sh2:0 8px 20px rgba(15,27,48,.12)}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic UI','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--g800);font-size:13px;line-height:1.55}.app{display:flex;height:100vh;overflow:hidden}.sidebar{width:228px;background:var(--navyDark);flex-shrink:0;display:flex;flex-direction:column;z-index:20}.logo{padding:15px 14px;border-bottom:1px solid rgba(255,255,255,.08)}.logo-row{display:flex;align-items:center;gap:9px}.logo-icon{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--teal),var(--teal2));display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff}.logo-name{font-weight:900;color:var(--teal2);font-size:13.5px}.logo-sub{font-size:10px;color:rgba(255,255,255,.3);margin-left:41px}.nav{padding:12px 12px;flex:1}.nav-label{font-size:9px;letter-spacing:.12em;color:rgba(255,255,255,.25);font-weight:800;text-transform:uppercase;margin:14px 4px 6px}.nav-btn{width:100%;border:0;background:transparent;color:rgba(255,255,255,.62);display:flex;align-items:center;gap:10px;text-align:left;padding:9px 10px;border-radius:7px;border-left:3px solid transparent;font-weight:700;cursor:pointer;font-family:inherit}.nav-btn:hover{background:rgba(255,255,255,.06);color:#fff}.nav-btn.active{background:rgba(13,140,140,.22);color:var(--teal2);border-left-color:var(--teal2);font-weight:900}.nav-icon{width:19px;text-align:center;font-size:15px}.sidebar-foot{padding:13px;border-top:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.25);font-size:10px;text-align:center}.main{flex:1;overflow-y:auto;min-width:0}.topbar{min-height:58px;background:#fff;border-bottom:1px solid var(--border);box-shadow:var(--sh1);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 22px;position:sticky;top:0;z-index:10}.tb-title{font-size:17px;font-weight:900;color:var(--navy)}.tb-sub{font-size:11.5px;color:var(--g500)}.page{display:none}.page.active{display:block}.pinner{padding:18px 22px 30px}.card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:15px;margin-bottom:14px;box-shadow:var(--sh1)}.card.click{cursor:pointer;transition:.15s}.card.click:hover{border-color:var(--teal);box-shadow:var(--sh2);transform:translateY(-1px)}.card-title{font-weight:900;color:var(--navy);font-size:14px}.card-sub{font-size:11.5px;color:var(--g500);margin-top:2px}.btn{border:0;border-radius:7px;padding:8px 13px;display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-weight:900;font-size:12px;cursor:pointer;transition:.15s;white-space:nowrap}.btn:hover{transform:translateY(-1px)}.btn-primary{background:var(--teal);color:#fff}.btn-navy{background:var(--navy);color:#fff}.btn-success{background:var(--green);color:#fff}.btn-danger{background:var(--red);color:#fff}.btn-warn{background:var(--amber);color:#fff}.btn-ghost{background:#fff;color:var(--g600);border:1px solid var(--border)}.btn-sm{padding:5px 9px;font-size:11px}.btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}.grid{display:grid;gap:14px}.grid-2{grid-template-columns:repeat(2,1fr)}.grid-3{grid-template-columns:repeat(3,1fr)}.grid-4{grid-template-columns:repeat(4,1fr)}.grid-5{grid-template-columns:repeat(5,1fr)}.alert{border-radius:10px;padding:11px 13px;margin-bottom:14px;font-size:12.5px;display:flex;gap:10px;border:1px solid}.a-info{background:var(--tealPale);border-color:#67E8F9;color:#155E75}.a-blue{background:var(--bluePale);border-color:#93C5FD;color:#1E3A8A}.a-warn{background:var(--amberPale);border-color:#FCD34D;color:#78350F}.a-ok{background:var(--greenPale);border-color:#86EFAC;color:#14532D}.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:900}.b-ok{background:var(--greenPale);color:var(--green)}.b-err{background:var(--redPale);color:var(--red)}.b-warn{background:var(--amberPale);color:var(--amber)}.b-info{background:var(--tealPale);color:var(--teal)}.b-blue{background:var(--bluePale);color:var(--blue)}.b-purple{background:var(--purplePale);color:var(--purple)}.b-gray{background:var(--g100);color:var(--g500)}.formgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.field label{font-size:10.5px;color:var(--g600);font-weight:900;display:block;margin-bottom:3px}.field input,.field select{width:100%;border:1px solid var(--border);border-radius:7px;padding:8px 9px;font-size:12px;font-family:inherit;background:#fff}.field input:focus,.field select:focus{outline:2px solid rgba(13,140,140,.18);border-color:var(--teal)}.divider{height:1px;background:var(--g200);margin:14px 0}.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:9px;background:#fff}table{width:100%;border-collapse:collapse;font-size:12px}th{padding:8px 10px;text-align:left;background:var(--g50);border-bottom:1px solid var(--border);color:var(--g500);font-size:10.5px;text-transform:uppercase;white-space:nowrap}td{padding:9px 10px;border-bottom:1px solid var(--g100);vertical-align:middle}tr:last-child td{border-bottom:0}tr:hover td{background:var(--g50)}.mono{font-family:ui-monospace,Menlo,monospace;color:var(--g600);font-size:11px}.action-cards{grid-template-columns:1fr 1fr}.action-card{min-height:115px}.action-card.primary{border-color:var(--teal);background:linear-gradient(180deg,#fff,var(--tealPale));box-shadow:var(--sh2)}.wizard{display:none;border:2px solid var(--teal);background:#fff}.wizard.active{display:block}.wizard-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.steps{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.step-pill{padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--g400);font-weight:900;font-size:12px}.step-pill.on{background:var(--teal);border-color:var(--teal);color:#fff}.wizard-step{display:none;min-height:160px}.wizard-step.on{display:block}.chips{display:flex;gap:9px;flex-wrap:wrap}.chip{border:2px solid var(--border);border-radius:999px;background:#fff;color:var(--g600);font-weight:900;padding:8px 12px;cursor:pointer}.chip.on{border-color:var(--teal);background:var(--teal);color:#fff}.summary-box{background:var(--g50);border:1px solid var(--border);border-radius:9px;padding:12px}.summary-row{display:grid;grid-template-columns:140px 1fr;gap:8px;padding:6px 0;border-bottom:1px solid var(--g200)}.summary-row:last-child{border-bottom:0}.summary-row strong{color:var(--navy)}.project-nav{position:sticky;top:58px;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);z-index:8;border-bottom:1px solid var(--border);padding:9px 22px;display:flex;gap:7px;align-items:center;overflow-x:auto}.proj-name{font-weight:900;color:var(--navy);margin-right:8px;white-space:nowrap}.tab-btn{border:1px solid var(--border);background:#fff;color:var(--g600);border-radius:999px;padding:7px 11px;font-weight:900;font-size:12px;cursor:pointer;white-space:nowrap}.tab-btn:hover{border-color:var(--teal);color:var(--teal)}.tab-btn.on{background:var(--teal);border-color:var(--teal);color:#fff}.section{display:none}.section.on{display:block}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{background:#fff;border:1px solid var(--border);border-radius:10px;padding:13px;box-shadow:var(--sh1)}.stat-val{font-size:26px;font-weight:900;color:var(--navy);font-variant-numeric:tabular-nums}.stat-lbl{font-size:11px;color:var(--g500)}.func-card{padding:13px;min-height:120px}.func-icon{font-size:22px;margin-bottom:8px}.view-toggle{display:flex;gap:4px;background:var(--g50);border:1px solid var(--border);border-radius:8px;padding:3px}.view-toggle button{border:0;background:transparent;padding:5px 8px;border-radius:6px;cursor:pointer;color:var(--g500);font-weight:900}.view-toggle button.on{background:#fff;box-shadow:var(--sh1);color:var(--teal)}.wf-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}.wf-tab{border:1px solid var(--border);background:#fff;color:var(--g500);border-radius:999px;padding:7px 11px;font-size:12px;font-weight:900;cursor:pointer}.wf-tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}.drop{border:2px dashed var(--border);background:var(--g50);border-radius:10px;padding:18px;text-align:center;cursor:pointer;color:var(--g500);font-weight:800}.drop:hover{border-color:var(--teal);background:var(--tealPale);color:var(--teal)}.file-list{border:1px solid var(--border);border-radius:9px;background:#fff;overflow:hidden;margin-top:12px}.file-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--g100)}.file-row:last-child{border-bottom:0}.file-row.deleted{opacity:.45;text-decoration:line-through;background:var(--g50)}.file-icon{font-size:19px}.file-info{flex:1;min-width:0}.file-name{font-weight:900;color:var(--g800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.file-meta{font-size:10.5px;color:var(--g500)}.preview-grid{display:grid;grid-template-columns:160px 1fr;gap:14px;align-items:start}.photo-card{height:180px;background:var(--g200);border:1px solid var(--border);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;color:var(--g500);font-size:12px}.panel{background:var(--g50);border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px}.edit-panel{display:none;border:1px solid var(--teal);background:var(--tealPale);border-radius:9px;padding:13px;margin-top:10px}.edit-panel.on{display:block}.thumbs{display:flex;gap:10px;flex-wrap:wrap}.thumb{width:116px;background:var(--g200);border:2px solid transparent;border-radius:9px;overflow:hidden;position:relative}.thumb.best{border-color:var(--green)}.thumb.warn{border-color:var(--amber)}.thumb-img{height:86px;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--g500);font-size:11px}.thumb-lbl{background:rgba(15,27,48,.9);color:#fff;font-size:10.5px;text-align:center;padding:4px 6px}.mark{position:absolute;top:7px;left:7px;background:var(--amber);color:#fff;border-radius:999px;padding:2px 6px;font-size:9px;font-weight:900}.mark.right{left:auto;right:7px;background:var(--purple)}.toast{position:fixed;right:20px;bottom:20px;background:var(--navy);color:#fff;border-radius:9px;padding:11px 15px;box-shadow:var(--sh2);display:none;z-index:999;font-weight:900}.toast.show{display:block}.empty-note{padding:24px;text-align:center;color:var(--g500)}
+@media(max-width:980px){.grid-2,.grid-3,.grid-4,.grid-5,.action-cards,.stats,.formgrid,.preview-grid{grid-template-columns:1fr}.sidebar{width:64px}.logo-name,.logo-sub,.nav-btn span:not(.nav-icon),.nav-label,.sidebar-foot{display:none}.nav{padding:10px}.nav-btn{justify-content:center}.topbar{padding:0 14px}.pinner{padding:14px}.project-nav{top:58px;padding:8px 14px}}
+
+/* UX update: project filtering + teacher export preview */
+.folder-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}.folder-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:13px;cursor:pointer;box-shadow:var(--sh1);transition:.15s;min-height:120px}.folder-card:hover{border-color:var(--teal);box-shadow:var(--sh2);transform:translateY(-1px)}.folder-card.on{border-color:var(--teal);background:var(--tealPale)}.folder-icon{font-size:26px;margin-bottom:8px}.folder-title{font-weight:900;color:var(--navy)}.folder-desc{font-size:11px;color:var(--g500);margin-top:4px}.folder-preview{background:var(--g50);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:12px}.excel-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}.excel-tab{border:1px solid var(--border);background:#fff;color:var(--g600);border-radius:999px;padding:7px 11px;font-size:12px;font-weight:900;cursor:pointer}.excel-tab.on{background:var(--navy);border-color:var(--navy);color:#fff}.legend{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}.legend span{padding:4px 8px;border-radius:999px;font-size:11px;font-weight:900}.row-green td,.legend .lg-green{background:var(--greenPale)!important;color:#14532D}.row-red td,.legend .lg-red{background:var(--redPale)!important;color:#991B1B}.row-yellow td,.legend .lg-yellow{background:var(--amberPale)!important;color:#78350F}.row-gray td,.legend .lg-gray{background:var(--g100)!important;color:var(--g600)}.empty-note{padding:20px;text-align:center;color:var(--g500)}@media(max-width:900px){.folder-grid{grid-template-columns:1fr}.action-cards,.grid-3,.grid-4,.grid-5,.formgrid,.stats{grid-template-columns:1fr}}
+
+
+/* Added: cleaner AI detection + person search demo flow */
+.info-strip{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}.info-pill{background:#fff;border:1px solid var(--border);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:900;color:var(--g600)}.info-pill.ok{background:var(--greenPale);border-color:#86EFAC;color:var(--green)}.info-pill.warn{background:var(--amberPale);border-color:#FCD34D;color:var(--amber)}.option-list{display:grid;gap:10px}.check-card{border:2px solid var(--border);background:#fff;border-radius:10px;padding:12px;display:flex;gap:10px;align-items:flex-start;cursor:pointer;transition:.15s}.check-card:hover{border-color:var(--teal);background:var(--tealPale)}.check-card.active{border-color:var(--teal);background:var(--tealPale);box-shadow:var(--sh1)}.check-card input{margin-top:4px;accent-color:var(--teal)}.check-title{font-weight:900;color:var(--navy)}.check-desc{font-size:11px;color:var(--g500);margin-top:2px}.mini-folder-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.mini-folder{border:1px solid var(--border);border-radius:10px;background:#fff;padding:12px;cursor:pointer;transition:.15s}.mini-folder:hover,.mini-folder.on{border-color:var(--teal);background:var(--tealPale);box-shadow:var(--sh1)}.mini-folder .big{font-size:24px;margin-bottom:6px}.result-note{font-size:11px;color:var(--g500);margin-top:8px}.row-soft-warn td{background:var(--amberPale)}.row-soft-info td{background:var(--bluePale)}.method-card{border:2px solid var(--border);border-radius:10px;background:#fff;padding:12px;cursor:pointer;transition:.15s}.method-card:hover,.method-card.on{border-color:var(--teal);background:var(--tealPale)}.method-title{font-weight:900;color:var(--navy)}.search-mode-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.naming-rule{background:var(--g50);border:1px solid var(--border);border-radius:10px;padding:11px;margin-top:12px}.naming-rule strong{color:var(--navy)}
+@media(max-width:900px){.mini-folder-grid,.search-mode-grid{grid-template-columns:1fr}.action-cards{grid-template-columns:1fr}}
+
+
+/* UX refinements 2026-05-07: project scalability, event-based snap results, multi-person search */
+.project-tools{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.project-create-compact{border:1px solid var(--teal);background:linear-gradient(180deg,#fff,var(--tealPale));border-radius:10px;padding:10px 12px;min-width:240px;box-shadow:var(--sh1)}
+.project-create-compact .card-title{font-size:13px}.project-create-compact .card-sub{font-size:10.8px}
+.result-count-strong{font-weight:900;color:var(--navy)}
+.pagination-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+.pagination-row .small{font-size:11px;color:var(--g500)}
+.event-summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.event-tile{border:1px solid var(--border);background:#fff;border-radius:10px;padding:12px;cursor:pointer;box-shadow:var(--sh1);transition:.15s}
+.event-tile:hover{border-color:var(--teal);box-shadow:var(--sh2);transform:translateY(-1px)}
+.event-tile.on{border-color:var(--teal);background:var(--tealPale);box-shadow:0 0 0 3px rgba(13,140,140,.12)}
+.event-tile .num{font-size:22px;font-weight:900;color:var(--navy)}
+.event-output{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:12px}
+.scope-check-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:8px}
+.target-check-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:8px}
+.person-pill-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.person-pill{padding:5px 9px;border-radius:999px;background:var(--bluePale);color:var(--blue);font-weight:900;font-size:11px}
+.person-result-card{border:1px solid var(--border);border-radius:10px;background:#fff;padding:12px;margin-bottom:10px;box-shadow:var(--sh1)}
+.person-result-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.person-result-title{font-weight:900;color:var(--navy);font-size:14px}
+.found-locations{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.found-location{border:1px solid var(--border);background:var(--g50);border-radius:8px;padding:8px;font-size:11.5px}
+@media(max-width:900px){.event-summary-grid,.scope-check-grid,.target-check-grid,.found-locations{grid-template-columns:1fr}.project-create-compact{width:100%}}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo"><div class="logo-row"><div class="logo-icon">K</div><div class="logo-name">KEIGADO AI</div></div><div class="logo-sub">Standalone Client Demo</div></div>
+    <nav class="nav">
+      <div class="nav-label">Main Menu</div>
+      <button class="nav-btn active" data-nav="projects" onclick="showPage('projects')"><span class="nav-icon">📚</span><span>プロジェクト一覧</span></button>
+      <button class="nav-btn" data-nav="ai" onclick="showPage('ai')"><span class="nav-icon">🤖</span><span>AI 検出チェック</span></button>
+      <div class="nav-label">Current Context</div>
+      <button class="nav-btn" data-nav="project" onclick="openCurrentProject()"><span class="nav-icon">🏫</span><span id="currentContext">プロジェクト未選択</span></button>
+    </nav>
+    <div class="sidebar-foot">© 2026 Keigado AI Systems</div>
+  </aside>
+  <main class="main">
+    <section id="page-projects" class="page active">
+      <div class="topbar"><div><div class="tb-title">プロジェクト一覧</div><div class="tb-sub">既存プロジェクトは検索して開き、新しい学校は新規作成から追加します</div></div><button class="btn btn-primary" onclick="openWizard(1)">＋ 新規プロジェクト作成</button></div>
+      <div class="pinner">
+        <div class="alert a-info"><span>💡</span><div><strong>効率化方針：</strong>100校以上の運用を想定し、一覧表示を標準にします。学校名・年度・ステータスで絞り込み、必要なプロジェクトだけを開きます。</div></div>
+        <div class="card wizard" id="wizard">
+          <div class="wizard-head"><div><div class="card-title">新規プロジェクト作成モード</div><div class="card-sub">学校情報、利用機能、作成内容を確認してから開始します。</div></div><button class="btn btn-ghost btn-sm" onclick="closeWizard()">閉じる</button></div>
+          <div class="steps"><span class="step-pill on" id="stepP1">1 学校・年度情報</span><span class="step-pill" id="stepP2">2 利用機能の選択</span><span class="step-pill" id="stepP3">3 作成内容の確認</span><span class="step-pill" id="stepP4">4 作成完了</span></div>
+          <div class="wizard-step on" id="wizardStep1">
+            <div class="formgrid"><div class="field"><label>学校名</label><input id="npSchool" value="千早高校" oninput="syncProjectName()"></div><div class="field"><label>年度</label><select id="npYear" onchange="syncProjectName()"><option>2026年度</option><option>2027年度</option></select></div><div class="field" style="grid-column:span 2"><label>プロジェクト名</label><input id="npTitle" value="千早高校 2026年度 卒業アルバム"></div><div class="field"><label>初期ステータス</label><select id="npStatus"><option>準備中</option><option>未開始</option><option>処理中</option></select></div></div>
+            <div class="btn-row"><button class="btn btn-primary" onclick="openWizard(2)">次へ：利用機能を選択 →</button></div>
+          </div>
+          <div class="wizard-step" id="wizardStep2">
+            <div class="alert a-blue"><span>📌</span><div>このプロジェクトで利用する機能を選択してください。作成後もProject Settingsから変更できます。</div></div>
+            <div class="chips" id="scopeChips"><button class="chip on" data-scope="個人写真" onclick="toggleScope(this)">個人写真</button><button class="chip on" data-scope="先生写真" onclick="toggleScope(this)">先生写真</button><button class="chip on" data-scope="クラブ写真" onclick="toggleScope(this)">クラブ写真</button><button class="chip on" data-scope="スナップ写真" onclick="toggleScope(this)">スナップ写真</button><button class="chip on" data-scope="人物検索" onclick="toggleScope(this)">人物検索</button></div>
+            <div class="btn-row"><button class="btn btn-ghost" onclick="openWizard(1)">戻る</button><button class="btn btn-primary" onclick="fillConfirm();openWizard(3)">次へ：作成内容を確認 →</button></div>
+          </div>
+          <div class="wizard-step" id="wizardStep3">
+            <div class="alert a-warn"><span>確認</span><div>以下の内容でプロジェクトを作成します。内容に問題がなければ「プロジェクトを作成」をクリックしてください。</div></div>
+            <div class="summary-box"><div class="summary-row"><strong>学校名</strong><span id="sumSchool"></span></div><div class="summary-row"><strong>年度</strong><span id="sumYear"></span></div><div class="summary-row"><strong>プロジェクト名</strong><span id="sumTitle"></span></div><div class="summary-row"><strong>初期ステータス</strong><span id="sumStatus"></span></div><div class="summary-row"><strong>利用機能</strong><span id="sumScope"></span></div></div>
+            <div class="btn-row"><button class="btn btn-ghost" onclick="openWizard(2)">戻る</button><button class="btn btn-success" onclick="createProject()">プロジェクトを作成</button></div>
+          </div>
+          <div class="wizard-step" id="wizardStep4">
+            <div class="alert a-ok"><span>✅</span><div><strong>プロジェクトが作成されました。</strong><br>一覧に追加されました。Dashboardを開いて各ワークフローを開始できます。</div></div>
+            <div class="btn-row"><button class="btn btn-primary" onclick="openNewestProject()">作成したDashboardを開く</button><button class="btn btn-ghost" onclick="closeWizard();renderProjects();toast('プロジェクト一覧で確認できます')">プロジェクト一覧で確認</button></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="project-tools"><div><div class="card-title">既存プロジェクトの検索</div><div class="card-sub">学校名、年度、ステータスで絞り込み、対象のDashboardを開きます。大量の学校がある場合でも一覧から効率よく探せます。</div></div><div class="project-create-compact"><div class="card-title">＋ 新規プロジェクト作成</div><div class="card-sub">新しい学校・年度を追加します。</div><div class="btn-row" style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="openWizard(1)">作成を開始</button></div></div></div>
+          <div class="formgrid"><div class="field"><label>学校名 / School Name</label><input id="filterSchool" placeholder="例：上水高校 / Chihaya"></div><div class="field"><label>年度 / Year</label><select id="filterYear"><option value="すべて">すべて / All</option><option value="2026年度">FY2026 / 2026年度</option><option value="2025年度">FY2025 / 2025年度</option><option value="2027年度">FY2027 / 2027年度</option></select></div><div class="field"><label>ステータス / Status</label><select id="filterStatus"><option value="すべて">すべて / All</option><option value="処理中">処理中 / Processing</option><option value="準備中">準備中 / In preparation</option><option value="完了">完了 / Done</option><option value="未開始">未開始 / Not started</option></select></div><div class="field"><label>並び順 / Sort by</label><select id="filterSort"><option value="updated">更新日順 / Updated date order</option><option value="school">学校名順 / School name order</option><option value="year">年度順 / Year order</option></select></div></div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="renderProjects();toast('検索条件を適用しました')">検索する</button><button class="btn btn-ghost" onclick="clearFilter()">条件をクリア</button><div class="view-toggle" style="margin-left:auto"><button id="viewListBtn" class="on" onclick="setProjectView('list')">一覧</button><button id="viewCardsBtn" onclick="setProjectView('cards')">カード</button></div></div><div id="filterResult" class="card-sub" style="margin-top:8px">All projects are shown.</div>
+        </div>
+        <div id="projectsCards" class="grid grid-3" style="display:none"></div>
+        <div id="projectsList" class="card"><div class="table-wrap"><table><thead><tr><th>Project</th><th>Year</th><th>Status</th><th>Open Items</th><th>Functions</th><th>Action</th></tr></thead><tbody id="projectsTableBody"></tbody></table></div><div class="pagination-row"><div class="small" id="paginationInfo">20件ずつ表示します</div><div class="btn-row" style="margin-top:0"><button class="btn btn-ghost btn-sm" onclick="prevProjectPage()">← 前へ</button><button class="btn btn-ghost btn-sm" onclick="nextProjectPage()">次へ →</button></div></div></div>
+      </div>
+    </section>
+    <section id="page-project" class="page">
+      <div class="topbar"><div><div class="tb-title"><span id="projectTitle">上水高校</span> Project</div><div class="tb-sub"><span id="projectYear">2026年度</span> のワークフローを管理します</div></div><button class="btn btn-ghost" onclick="showPage('projects')">← プロジェクト一覧</button></div>
+      <div class="project-nav"><span class="proj-name" id="projectNavName">上水高校</span><button class="tab-btn on" data-sec="dash" onclick="projectSec('dash')">Dashboard</button><button class="tab-btn" data-sec="individual" onclick="projectSec('individual')">個人写真</button><button class="tab-btn" data-sec="teacher" onclick="projectSec('teacher')">先生写真</button><button class="tab-btn" data-sec="club" onclick="projectSec('club')">クラブ写真</button><button class="tab-btn" data-sec="snap" onclick="projectSec('snap')">スナップ写真</button><button class="tab-btn" data-sec="person" onclick="projectSec('person')">人物検索</button></div>
+      <div class="pinner">
+        <div id="sec-dash" class="section on"><div class="stats"><div class="stat"><div class="stat-val">523</div><div class="stat-lbl">処理済み写真</div></div><div class="stat"><div class="stat-val">3</div><div class="stat-lbl">未解決確認</div></div><div class="stat"><div class="stat-val" id="functionCount">5</div><div class="stat-lbl">利用可能機能</div></div><div class="stat"><div class="stat-val">2</div><div class="stat-lbl">イベントフォルダ</div></div></div>
+          <div class="card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><div><div class="card-title">機能状況一覧</div><div class="card-sub">各ワークフローの状態を確認し、必要な処理へ進みます。</div></div><div class="view-toggle"><button class="on" id="dashCardsBtn" onclick="dashView('cards')">カード</button><button id="dashListBtn" onclick="dashView('list')">一覧</button></div></div>
+            <div id="dashCards" class="grid grid-5" style="margin-top:14px"><div class="card click func-card" onclick="projectSec('individual')"><div class="func-icon">👤</div><div class="card-title">個人写真</div><div class="card-sub">番号/名前編集</div><span class="badge b-err">エラー2件</span></div><div class="card click func-card" onclick="projectSec('teacher')"><div class="func-icon">🎓</div><div class="card-title">先生写真</div><div class="card-sub">OCR/PDF照合</div><span class="badge b-warn">確認1件</span></div><div class="card click func-card" onclick="projectSec('club')"><div class="func-icon">🏆</div><div class="card-title">クラブ写真</div><div class="card-sub">Best Shot選定</div><span class="badge b-info">選定完了</span></div><div class="card click func-card" onclick="projectSec('snap')"><div class="func-icon">📸</div><div class="card-title">スナップ写真</div><div class="card-sub">重複整理/類似写真</div><span class="badge b-blue">処理中</span></div><div class="card click func-card" onclick="projectSec('person')"><div class="func-icon">🔍</div><div class="card-title">人物検索</div><div class="card-sub">写り込み人物検索</div><span class="badge b-purple">利用可能</span></div></div>
+            <div id="dashList" style="display:none;margin-top:14px" class="table-wrap"><table><thead><tr><th>機能</th><th>ステータス</th><th>内容</th><th>操作</th></tr></thead><tbody><tr><td>個人写真</td><td><span class="badge b-err">要修正</span></td><td>エラー2件 / リネーム確認中</td><td><button class="btn btn-primary btn-sm" onclick="projectSec('individual')">開く</button></td></tr><tr><td>先生写真</td><td><span class="badge b-warn">確認待ち</span></td><td>PDF照合1件要確認</td><td><button class="btn btn-primary btn-sm" onclick="projectSec('teacher')">開く</button></td></tr><tr><td>クラブ写真</td><td><span class="badge b-info">検出完了</span></td><td>Best Shot候補確認</td><td><button class="btn btn-primary btn-sm" onclick="projectSec('club')">開く</button></td></tr><tr><td>スナップ写真</td><td><span class="badge b-blue">類似確認中</span></td><td>イベント別AI処理</td><td><button class="btn btn-primary btn-sm" onclick="projectSec('snap')">開く</button></td></tr><tr><td>人物検索</td><td><span class="badge b-ok">利用可能</span></td><td>生徒・先生検索</td><td><button class="btn btn-primary btn-sm" onclick="projectSec('person')">開く</button></td></tr></tbody></table></div>
+          </div>
+        </div>
+        <div id="sec-individual" class="section"><workflow-placeholder data-kind="individual"></workflow-placeholder></div>
+        <div id="sec-teacher" class="section"><workflow-placeholder data-kind="teacher"></workflow-placeholder></div>
+        <div id="sec-club" class="section"><workflow-placeholder data-kind="club"></workflow-placeholder></div>
+        <div id="sec-snap" class="section"><workflow-placeholder data-kind="snap"></workflow-placeholder></div>
+        <div id="sec-person" class="section">
+          <div class="alert a-info"><span>🔍</span><div><strong>人物検索：</strong>「誰を探すか」→「どこから探すか」→「どう探すか」の順で指定します。PDFは名簿チェックではなく、写真やページを含むPDFアルバム・冊子の中から人物を探す検索元として扱います。</div></div>
+          <div class="grid grid-2">
+            <div class="card">
+              <div class="card-title">1. 誰を探すか</div>
+              <div class="card-sub">先生だけ、生徒だけ、または両方を選べます。先生を外した場合、教科検索の案内は非表示になります。</div>
+              <div class="target-check-grid" id="personTargetChecks" style="margin-top:10px">
+                <label class="check-card active"><input type="checkbox" value="teacher" checked onchange="syncPersonSearchLogic()"><div><div class="check-title">先生</div><div class="check-desc">名前・教科・先生写真・PDFアルバム内の掲載ページ</div></div></label>
+                <label class="check-card active"><input type="checkbox" value="student" checked onchange="syncPersonSearchLogic()"><div><div class="check-title">生徒</div><div class="check-desc">名前・クラス・個人写真・スナップ・集合写真</div></div></label>
+                <label class="check-card"><input type="checkbox" value="unknown" onchange="syncPersonSearchLogic()"><div><div class="check-title">未照合人物</div><div class="check-desc">名前が未確定の顔候補</div></div></label>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">2. どこから探すか</div>
+              <div class="card-sub">検索元は複数選択できます。PDFアルバムを選ぶ場合は下でPDFをアップロードします。</div>
+              <div class="scope-check-grid" id="personScopeChecks" style="margin-top:10px">
+                <label class="check-card active"><input type="checkbox" value="PDFアルバム" checked onchange="syncPersonSearchLogic()"><div><div class="check-title">PDFアルバム / PDF冊子</div><div class="check-desc">アップロードPDF内の写真・ページ</div></div></label>
+                <label class="check-card active"><input type="checkbox" value="先生写真" checked onchange="syncPersonSearchLogic()"><div><div class="check-title">先生写真</div></div></label>
+                <label class="check-card active"><input type="checkbox" value="個人写真" checked onchange="syncPersonSearchLogic()"><div><div class="check-title">個人写真</div></div></label>
+                <label class="check-card active"><input type="checkbox" value="クラブ写真" checked onchange="syncPersonSearchLogic()"><div><div class="check-title">クラブ写真</div></div></label>
+                <label class="check-card active"><input type="checkbox" value="スナップ写真" checked onchange="syncPersonSearchLogic()"><div><div class="check-title">スナップ写真</div></div></label>
+                <label class="check-card active"><input type="checkbox" value="集合写真" checked onchange="syncPersonSearchLogic()"><div><div class="check-title">集合写真</div></div></label>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">3. どう探すか</div>
+            <div class="card-sub">通常は「名前で検索」を使います。顔写真がある場合だけ「参照写真で検索」を使います。集合写真から顔を選ぶ操作は複雑なので、この画面では検索元として扱います。</div>
+            <div class="search-mode-grid" style="margin-top:10px">
+              <label class="method-card on" id="psModeText"><input type="radio" name="personSearchModeRadio" value="text" checked onchange="setPersonSearchMode('text')" style="display:none"><div class="method-title">名前・キーワードで検索</div><div class="check-desc" id="personKeywordHelp">例：高橋次郎、国語科、高橋 / 山田太郎、3年A組</div></label>
+              <label class="method-card" id="psModePhoto"><input type="radio" name="personSearchModeRadio" value="photo" onchange="setPersonSearchMode('photo')" style="display:none"><div class="method-title">参照写真で検索</div><div class="check-desc">探したい人物の顔写真をアップロードして検索</div></label>
+            </div>
+            <div id="personTextInputBlock" class="naming-rule" style="margin-top:12px">
+              <div class="formgrid">
+                <div class="field" style="grid-column:span 4"><label id="personKeywordLabel">検索キーワード（複数人はカンマ区切り）</label><input id="personKeyword" value="高橋次郎" placeholder="例：高橋次郎、国語科、高橋 / 山田太郎"></div>
+              </div>
+              <div class="result-note" id="personKeywordNote">先生を選択しているため、名前・一部の名前・教科で検索できます。</div>
+            </div>
+            <div id="personPhotoInputBlock" class="naming-rule" style="display:none;margin-top:12px">
+              <div class="drop" id="personReferencePhotoDrop" onclick="uploadReferencePhotoDemo()">🖼️ 参照写真をアップロード（探したい人物の顔がはっきり写った写真）</div>
+              <div class="result-note">参照写真を使って、選択した検索元の中から似ている人物候補を探します。</div>
+            </div>
+            <div id="personPdfUploadCard" class="naming-rule" style="margin-top:12px">
+              <div class="card-title">PDFアルバムアップロード（検索ソースとして使用）</div>
+              <div class="card-sub">PDFは検索方法ではなく、検索元です。PDFアルバム・PDF冊子内のページや写真から対象人物を探します。</div>
+              <div class="drop" id="personPdfDrop" onclick="uploadPersonPdfDemo()" style="margin-top:10px">📄 PDFをアップロード</div>
+              <div id="personPdfPreview" class="panel" style="display:none;margin-top:10px"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="btn-row"><button class="btn btn-primary" onclick="runPersonSearch()">検索する</button><button class="btn btn-ghost" onclick="clearPersonSearch()">条件をリセット</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div>
+          </div>
+          <div class="card" id="personResults" style="display:none">
+            <div class="card-title" id="personResultTitle">検索結果</div>
+            <div class="info-strip" id="personResultSummary"><span class="info-pill ok">人物別・検索元別に表示</span></div>
+            <div id="personGroupedResults"></div>
+          </div>
+        </div>      </div>
+    </section>
+    <section id="page-ai" class="page">
+      <div class="topbar"><div><div class="tb-title">AI 検出チェック</div><div class="tb-sub">目閉じ検出・人数確認を、1つまたは複数選んで実行できます</div></div><button class="btn btn-ghost" onclick="showPage('projects')">プロジェクト一覧へ</button></div>
+      <div class="pinner">
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-title">① 写真をアップロード</div>
+            <div class="card-sub">1枚・複数枚・フォルダをまとめて確認できます。</div>
+            <div class="drop" id="aiUploadBox" style="margin-top:12px" onclick="aiAddSampleUpload()">☁️ フォルダまたは画像をドロップ / クリックして追加</div>
+            <div class="file-list" id="aiFileList" style="display:none"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">② チェック項目を選択</div>
+            <div class="card-sub">必要な機能だけ選択できます。1つでも2つでも実行可能です。</div>
+            <div class="option-list" style="margin-top:12px">
+              <label class="check-card active" id="aiOptEye"><input type="checkbox" id="aiEye" checked onchange="syncAiOptions()"><div><div class="check-title">👁 目閉じ検出</div><div class="check-desc">各写真に目閉じの可能性がある人物がいるか確認します。</div></div></label>
+              <label class="check-card active" id="aiOptCount"><input type="checkbox" id="aiCount" checked onchange="syncAiOptions()"><div><div class="check-title">👥 人数確認</div><div class="check-desc">写真内のおおよその人数をカウントします。</div></div></label>
+            </div>
+            <div class="btn-row"><button class="btn btn-primary" onclick="runAiDetection()">▶ チェック実行</button><button class="btn btn-ghost" onclick="resetAiDetection()">クリア</button></div>
+          </div>
+        </div>
+        <div class="card" id="aiResultCard" style="display:none">
+          <div class="card-title">チェック結果</div>
+          <div class="table-wrap"><table><thead><tr><th>Preview</th><th>ファイル名</th><th id="aiEyeHeader">目閉じ</th><th id="aiCountHeader">人数</th><th>処理への影響</th><th>備考</th></tr></thead><tbody id="aiResultRows"></tbody></table></div>
+          <div class="btn-row"><button class="btn btn-success" onclick="downloadAiCheckCsv()">チェック結果CSVをダウンロード</button><button class="btn btn-primary" onclick="toast('確認済みにしました')">確認済みにする</button></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+let projects=[{id:'1',name:'上水高校',aliases:['Sheung Shui High School','Jousui','上水'],year:'2026年度',status:'処理中',openItems:3,updatedAt:'2026-05-07',functions:['個人写真','先生写真','クラブ写真','スナップ','人物検索']},{id:'2',name:'千早高校',aliases:['Chihaya High School','Chihaya','千早'],year:'2026年度',status:'準備中',openItems:0,updatedAt:'2026-05-03',functions:['個人写真','先生写真','クラブ写真','スナップ','人物検索']},{id:'3',name:'篠崎高校',aliases:['Shinozaki High School','Shinozaki','篠崎'],year:'2026年度',status:'準備中',openItems:0,updatedAt:'2026-05-01',functions:['個人写真','先生写真','クラブ写真','スナップ','人物検索']},{id:'4',name:'青葉中学校',aliases:['Aoba Junior High School','Aoba','青葉'],year:'2025年度',status:'完了',openItems:0,updatedAt:'2025-12-20',functions:['個人写真','スナップ']}];
+let activeProject=projects[0], newestProject=null, projectView='list', projectPage=1, projectPageSize=20, lastProjectResult=[];
+(function addDemoProjects(){const base=['桜丘高校','白川高校','北町中学校','南野高校','西原中学校','東山高校','緑川高校','若葉中学校','清水高校','光ヶ丘高校','海風中学校','中央高校'];for(let i=5;i<=124;i++){const n=base[(i-5)%base.length]+String(Math.floor((i-5)/base.length)+1).padStart(2,'0');projects.push({id:String(i),name:n,aliases:[n.replace('高校',' High School').replace('中学校',' Junior High School')],year:i%5===0?'2025年度':(i%7===0?'2027年度':'2026年度'),status:i%6===0?'完了':(i%4===0?'処理中':'準備中'),openItems:i%4===0?i%7:0,updatedAt:`2026-04-${String((i%28)+1).padStart(2,'0')}`,functions:['個人写真','先生写真','クラブ写真','スナップ','人物検索']});}})();
+const workflowLabels={individual:['個人写真','番号/名前編集・リネーム','👤'],teacher:['先生写真','OCR/PDF照合・リネーム','🎓'],club:['クラブ写真','Best Shot選定・目閉じ確認','🏆'],snap:['スナップ写真','イベント別AI処理・類似写真整理','📸']};
+const workflowFiles={individual:[['📁','3年A組/','47枚 · class folder'],['📁','3年B組/','42枚 · class folder'],['📄','名簿Excel_上水高校.xlsx','任意 · student list']],teacher:[['📁','teacher_photos/','34枚 · teacher card'],['📄','teacher_list.pdf','PDF教師名簿']],club:[['📁','サッカー部/','18枚 · club folder']],snap:[['📁','運動会/','125枚 · event folder'],['📁','修学旅行/','138枚 · event folder']]};
+function toast(msg){const el=document.getElementById('toast');el.textContent='✅ '+msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2200)}
+function showPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));document.querySelector(`[data-nav="${p}"]`)?.classList.add('active');if(p==='project')document.querySelector('[data-nav="project"]').classList.add('active')}
+function openCurrentProject(){if(!activeProject){toast('先にプロジェクトを選択してください');showPage('projects');return}openProject(activeProject.id)}
+function openProject(id){activeProject=projects.find(p=>p.id===id)||projects[0];document.getElementById('projectTitle').textContent=activeProject.name;document.getElementById('projectYear').textContent=activeProject.year;document.getElementById('projectNavName').textContent=activeProject.name;document.getElementById('currentContext').textContent=activeProject.name+' Dashboard';document.getElementById('functionCount').textContent=activeProject.functions.length;showPage('project');projectSec('dash')}
+function projectSec(sec){document.querySelectorAll('.project-nav .tab-btn').forEach(x=>x.classList.toggle('on',x.dataset.sec===sec));document.querySelectorAll('#page-project .section').forEach(x=>x.classList.remove('on'));document.getElementById('sec-'+sec).classList.add('on');if(['individual','teacher','club','snap'].includes(sec))renderWorkflow(sec,0)}
+function dashView(v){document.getElementById('dashCards').style.display=v==='cards'?'grid':'none';document.getElementById('dashList').style.display=v==='list'?'block':'none';document.getElementById('dashCardsBtn').classList.toggle('on',v==='cards');document.getElementById('dashListBtn').classList.toggle('on',v==='list')}
+function focusSearch(){document.getElementById('filterSchool').focus();toast('検索欄に移動しました')}
+function openWizard(n){document.getElementById('wizard').classList.add('active');[1,2,3,4].forEach(i=>{document.getElementById('wizardStep'+i).classList.toggle('on',i===n);document.getElementById('stepP'+i).classList.toggle('on',i===n)});document.getElementById('wizard').scrollIntoView({behavior:'smooth',block:'start'})}
+function closeWizard(){document.getElementById('wizard').classList.remove('active')}
+function syncProjectName(){const s=document.getElementById('npSchool').value;const y=document.getElementById('npYear').value;document.getElementById('npTitle').value=s+' '+y+' 卒業アルバム'}
+function toggleScope(el){el.classList.toggle('on')}
+function selectedScopes(){return [...document.querySelectorAll('#scopeChips .chip.on')].map(x=>x.dataset.scope)}
+function fillConfirm(){document.getElementById('sumSchool').textContent=document.getElementById('npSchool').value;document.getElementById('sumYear').textContent=document.getElementById('npYear').value;document.getElementById('sumTitle').textContent=document.getElementById('npTitle').value;document.getElementById('sumStatus').textContent=document.getElementById('npStatus').value;document.getElementById('sumScope').textContent=selectedScopes().join(' / ')||'未選択'}
+function createProject(){const p={id:String(Date.now()),name:document.getElementById('npSchool').value||'新規学校',year:document.getElementById('npYear').value,status:document.getElementById('npStatus').value,openItems:0,functions:selectedScopes()};projects.unshift(p);newestProject=p;renderProjects();openWizard(4);toast('プロジェクトを作成しました')}
+function openNewestProject(){if(newestProject)openProject(newestProject.id);else toast('作成済みプロジェクトがありません')}
+function setProjectView(v){projectView=v;projectPage=1;document.getElementById('viewCardsBtn')?.classList.toggle('on',v==='cards');document.getElementById('viewListBtn')?.classList.toggle('on',v==='list');renderProjects()}
+function statusBadge(st){const cls=st==='処理中'?'b-warn':st==='準備中'||st==='未開始'?'b-gray':st==='完了'?'b-ok':'b-info';return `<span class="badge ${cls}">${st}</span>`}
+function projectMatchesSchool(p, q){if(!q)return true;const qq=q.toLowerCase().trim();return [p.name,...(p.aliases||[])].some(x=>String(x).toLowerCase().includes(qq));}
+function getFilteredProjects(){const school=document.getElementById('filterSchool')?.value||'',year=document.getElementById('filterYear')?.value||'すべて',status=document.getElementById('filterStatus')?.value||'すべて',sort=document.getElementById('filterSort')?.value||'updated';let arr=projects.filter(p=>projectMatchesSchool(p,school)&&(year==='すべて'||p.year===year)&&(status==='すべて'||p.status===status));arr.sort((a,b)=>{if(sort==='school')return a.name.localeCompare(b.name,'ja');if(sort==='year')return b.year.localeCompare(a.year,'ja')||a.name.localeCompare(b.name,'ja');return String(b.updatedAt||'').localeCompare(String(a.updatedAt||''));});return arr;}
+function renderProjects(){const arr=getFilteredProjects();lastProjectResult=arr;const total=arr.length;const pages=Math.max(1,Math.ceil(total/projectPageSize));if(projectPage>pages)projectPage=pages;const start=(projectPage-1)*projectPageSize;const pageArr=arr.slice(start,start+projectPageSize);const showing=total?`${start+1}〜${start+pageArr.length}`:'0';document.getElementById('filterResult').innerHTML=`<span class="result-count-strong">${total}件中 ${showing}件を表示しています。</span>（大量プロジェクト想定：20件ずつ表示）`;document.getElementById('projectsCards').style.display=projectView==='cards'?'grid':'none';document.getElementById('projectsList').style.display=projectView==='list'?'block':'none';document.getElementById('paginationInfo').textContent=`Page ${projectPage} / ${pages}　${total}件中 ${showing}件`;const noResult='<div class="card empty-note">該当するプロジェクトがありません。条件を変更してください。</div>';document.getElementById('projectsCards').innerHTML=pageArr.map(p=>`<div class="card click" onclick="openProject('${p.id}')"><div class="card-title">🏫 ${p.name}</div><div class="card-sub">${p.year} · Keigado Album Flow</div><div class="btn-row">${statusBadge(p.status)} ${p.openItems?`<span class="badge b-err">未解決 ${p.openItems}件</span>`:`<span class="badge b-info">${p.functions.length}機能</span>`}</div><p class="card-sub" style="margin-top:10px">${p.functions.join(' / ')}</p><div class="btn-row"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openProject('${p.id}')">Dashboardを開く</button><button class="btn btn-warn btn-sm" onclick="event.stopPropagation();openProject('${p.id}');projectSec('individual')">${p.status==='準備中'||p.status==='未開始'?'初期設定を続ける':'処理を続ける'}</button><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();toast('${p.name} の設定を表示')">設定を見る</button></div></div>`).join('')||noResult;document.getElementById('projectsTableBody').innerHTML=pageArr.map(p=>`<tr onclick="openProject('${p.id}')" style="cursor:pointer"><td><strong>${p.name}</strong><div class="card-sub">Keigado Album Flow</div></td><td>${p.year}</td><td>${statusBadge(p.status)}</td><td>${p.openItems?p.openItems+'件':'—'}</td><td>${p.functions.length}</td><td><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openProject('${p.id}')">Dashboardを開く</button> <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();toast('${p.name} の詳細を表示')">詳細</button></td></tr>`).join('') || `<tr><td colspan="6" class="empty-note">該当するプロジェクトがありません。</td></tr>`;}
+function nextProjectPage(){const pages=Math.max(1,Math.ceil((lastProjectResult.length||0)/projectPageSize));if(projectPage<pages){projectPage++;renderProjects();}else toast('最後のページです');}
+function prevProjectPage(){if(projectPage>1){projectPage--;renderProjects();}else toast('最初のページです');}
+function clearFilter(){document.getElementById('filterSchool').value='';document.getElementById('filterYear').value='すべて';document.getElementById('filterStatus').value='すべて';if(document.getElementById('filterSort'))document.getElementById('filterSort').value='updated';projectPage=1;renderProjects();toast('検索条件をクリアしました')}
+
+const snapEvents=[{id:'sports',name:'運動会',uploaded:125,best:25,passing:90,ng:10,similar:8,excel:'運動会_snap_result.xlsx'},{id:'trip',name:'修学旅行',uploaded:138,best:25,passing:103,ng:10,similar:11,excel:'修学旅行_snap_result.xlsx'}];
+let selectedSnapEvent='sports', selectedSnapFolder='best', finalBestCount=25;
+function renderSnapWorkflow(step){const sec=document.getElementById('sec-snap');const steps=['Upload','AI Process','Event Result','Final BestShot Review','Export'];let tabs=steps.map((s,i)=>`<button class="wf-tab ${i===step?'on':''}" onclick="renderSnapWorkflow(${i})">${i+1} ${s}</button>`).join('');let body='';
+ if(step===0){body=`<div class="card"><div class="card-title">イベントフォルダアップロード</div><div class="card-sub">1つまたは複数のイベントフォルダをアップロードできます。結果もイベント別に分かれます。</div><div class="drop" style="margin-top:12px" onclick="toast('イベントフォルダを追加しました')">☁️ イベントフォルダを追加</div><div class="file-list"><div class="file-row"><span class="file-icon">📁</span><div class="file-info"><div class="file-name">運動会/</div><div class="file-meta">125枚 · event folder</div></div></div><div class="file-row"><span class="file-icon">📁</span><div class="file-info"><div class="file-name">修学旅行/</div><div class="file-meta">138枚 · event folder</div></div></div></div><div class="btn-row"><button class="btn btn-primary" onclick="renderSnapWorkflow(1);toast('イベント別AI処理を開始しました')">AI処理を開始</button></div></div>`;}
+ else if(step===1){body=`<div class="card"><div class="alert a-blue"><span>📸</span><div><strong>AI処理結果：</strong>アップロードされたイベントごとに BestShot / Passing / NG / Similarity Groups / Excel を生成します。</div></div>${snapSummaryTable()}<div class="btn-row"><button class="btn btn-primary" onclick="renderSnapWorkflow(2)">イベント別結果を見る</button></div></div>`;}
+ else if(step===2){body=`<div class="card"><div class="card-title">イベント別処理結果</div><div class="card-sub">イベントとフォルダを選ぶと、BestShot / Passing / NG / Similarity Groups / Excel の中身を確認できます。</div>${snapEventTiles()}<div id="snapEventPreview"></div><div class="btn-row"><button class="btn btn-primary" onclick="renderSnapWorkflow(3)">Final BestShot Reviewへ</button><button class="btn btn-success" onclick="downloadAllSnapResults()">全イベント結果をダウンロード</button></div></div>`;}
+ else if(step===3){body=`<div class="card"><div class="card-title">Final BestShot Review / 最終選定</div><div class="card-sub">AIが選んだBestShot候補を確認し、PassingやNGから写真を追加・復活できます。</div>${snapEventTiles()}<div id="snapFinalReview"></div><div class="btn-row"><button class="btn btn-success" onclick="confirmFinalBestShot()">最終BestShotを確定</button><button class="btn btn-primary" onclick="renderSnapWorkflow(4)">Exportへ</button></div></div>`;}
+ else{body=`<div class="card"><div class="alert a-ok"><span>✅</span><div><strong>スナップ写真のイベント別出力準備が完了しました。</strong><br>イベントごとのExcel・出力フォルダ、または全イベントまとめてダウンロードできます。</div></div>${snapEventTiles()}<div id="snapEventPreview"></div><div class="btn-row"><button class="btn btn-success" onclick="downloadSnapExcel(selectedSnapEvent)">このイベントのExcelをダウンロード</button><button class="btn btn-primary" onclick="downloadSnapFolder(selectedSnapEvent)">このイベントの出力フォルダをダウンロード</button><button class="btn btn-success" onclick="downloadAllSnapResults()">全イベント結果をダウンロード</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;}
+ sec.innerHTML=`<div class="alert a-info"><span>📸</span><div><strong>スナップ写真：</strong>イベントフォルダごとに処理し、出力もイベント別に分けて確認できます。</div></div><div class="wf-tabs">${tabs}</div>${body}`; if(step===2||step===4)setTimeout(()=>selectSnapEvent(selectedSnapEvent||'sports'),0); if(step===3)setTimeout(()=>renderSnapFinalReview(),0);}
+function snapSummaryTable(){return `<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Event</th><th>Uploaded</th><th>BestShot</th><th>Passing</th><th>NG</th><th>Similar Groups</th><th>Action</th></tr></thead><tbody>${snapEvents.map(e=>`<tr><td><strong>${e.name}</strong></td><td>${e.uploaded}</td><td><span class="badge b-ok">${e.best}</span></td><td>${e.passing}</td><td><span class="badge b-err">${e.ng}</span></td><td><span class="badge b-blue">${e.similar}</span></td><td><button class="btn btn-primary btn-sm" onclick="renderSnapWorkflow(2);setTimeout(()=>selectSnapEvent('${e.id}'),0)">View Result</button></td></tr>`).join('')}</tbody></table></div>`;}
+function snapEventTiles(){return `<div class="event-summary-grid">${snapEvents.map(e=>`<div class="event-tile ${selectedSnapEvent===e.id?'on':''}" id="snapTile-${e.id}" onclick="selectSnapEvent('${e.id}')"><div class="card-title">${e.name}</div><div class="card-sub">${e.uploaded}枚アップロード</div><div class="num">${e.best}</div><div class="card-sub">BestShot</div></div>`).join('')}</div>`;}
+function snapFolderButtons(e){const folders=[['best','BestShot',e.best],['passing','Passing',e.passing],['ng','NG',e.ng],['similar','Similarity Groups',e.similar],['excel','Excel',1]];return `<div class="mini-folder-grid" style="margin-top:12px">${folders.map(f=>`<div class="mini-folder ${selectedSnapFolder===f[0]?'on':''}" onclick="selectSnapFolder('${f[0]}')"><div class="big">${f[0]==='excel'?'📊':'📁'}</div><strong>${f[1]}</strong><div class="check-desc">${f[2]}${f[0]==='similar'?'グループ':f[0]==='excel'?'ファイル':'枚'}</div></div>`).join('')}</div>`;}
+function snapFolderContent(e,folder){
+ const sets={
+  best:{title:'BestShot',desc:'イベント定義とスコアに基づく最終候補です。不要な写真はPassingへ戻せます。',rows:[['IMG_0045.jpg','Score 92','表情・構図が良好','Passingへ戻す','moveBestToPassing()'],['IMG_0081.jpg','Score 89','被写体が明確','Passingへ戻す','moveBestToPassing()'],['IMG_0112.jpg','Score 87','バランス良好','Passingへ戻す','moveBestToPassing()']]},
+  passing:{title:'Passing',desc:'NGではないが、BestShotには未選定の写真です。必要に応じてBestShotへ追加できます。',rows:[['IMG_0120.jpg','Score 78','類似写真あり','BestShotに追加','addPassingToBest()'],['IMG_0133.jpg','Score 74','品質は問題なし','BestShotに追加','addPassingToBest()'],['IMG_0201.jpg','Score 70','構図やや弱い','BestShotに追加','addPassingToBest()']]},
+  ng:{title:'NG',desc:'品質・表情・失敗場面などで除外された写真です。クライアント判断でPassingまたはBestShotへ戻せます。',rows:[['IMG_0300.jpg','NG','目閉じ','NGからPassingへ戻す','restoreNgToPassing()'],['IMG_0331.jpg','NG','ブレあり','NGからBestShotへ追加','restoreNgToBest()'],['IMG_0402.jpg','NG','顔が隠れている','NGからPassingへ戻す','restoreNgToPassing()']]},
+  similar:{title:'Similarity Groups',desc:'近い写真をグループ化し、代表候補を選べるようにします。',rows:[['G-01','5枚','代表候補 IMG_0045.jpg','確認','toast(\'類似グループを確認しました\')'],['G-02','4枚','代表候補 IMG_0081.jpg','確認','toast(\'類似グループを確認しました\')']]},
+  excel:{title:'Excel',desc:'スコア、コメント、類似グループ、NG理由を一覧化します。',rows:[[e.excel,'5 tabs','BestShot / Passing / NG / Similarity / Summary','Download',`downloadSnapExcel('${e.id}')`]]}
+ };
+ const d=sets[folder]||sets.best;
+ return `<div class="card" style="margin-top:12px"><div class="card-title">${e.name} / ${d.title}</div><div class="card-sub">${d.desc}</div><div class="thumbs" style="margin-top:12px">${d.rows.slice(0,3).map((r,i)=>`<div class="thumb ${folder==='best'?'best':folder==='ng'?'warn':''}"><div class="thumb-img">📸<br>${r[0]}</div><div class="thumb-lbl">${r[1]}</div></div>`).join('')}</div><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>File / Group</th><th>Score / Count</th><th>Reason / Comment</th><th>Action</th></tr></thead><tbody>${d.rows.map(r=>`<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td><button class="btn btn-primary btn-sm" onclick="${r[4]}">${r[3]}</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function selectSnapEvent(id){selectedSnapEvent=id;selectedSnapFolder=selectedSnapFolder||'best';document.querySelectorAll('.event-tile').forEach(x=>x.classList.remove('on'));document.getElementById('snapTile-'+id)?.classList.add('on');const e=snapEvents.find(x=>x.id===id)||snapEvents[0];const el=document.getElementById('snapEventPreview');if(el)el.innerHTML=`<div class="event-output"><div class="card-title">${e.name} / 出力フォルダプレビュー</div><div class="output-tree" style="margin-top:10px">${e.name}/<br>├─ BestShot/　${e.best}枚<br>├─ Passing/　${e.passing}枚<br>├─ NG/　${e.ng}枚<br>├─ Similarity Groups/　${e.similar}グループ<br>└─ Excel/<br>　 └─ ${e.excel}</div>${snapFolderButtons(e)}<div id="snapFolderContent">${snapFolderContent(e,selectedSnapFolder)}</div></div>`;const final=document.getElementById('snapFinalReview');if(final)renderSnapFinalReview();}
+function selectSnapFolder(folder){selectedSnapFolder=folder;selectSnapEvent(selectedSnapEvent);}
+function renderSnapFinalReview(){
+ const e=snapEvents.find(x=>x.id===selectedSnapEvent)||snapEvents[0];
+ document.querySelectorAll('.event-tile').forEach(x=>x.classList.remove('on'));
+ document.getElementById('snapTile-'+e.id)?.classList.add('on');
+ const el=document.getElementById('snapFinalReview');if(!el)return;
+ el.innerHTML=`<div class="grid grid-3" style="margin-top:12px"><div class="card"><div class="card-title">BestShot候補</div><div class="card-sub">現在 ${finalBestCount} 枚。外す場合はPassingへ戻します。</div><div class="thumbs"><div class="thumb best"><div class="thumb-img">📸<br>IMG_0045</div><div class="thumb-lbl">本01</div></div><div class="thumb best"><div class="thumb-img">📸<br>IMG_0081</div><div class="thumb-lbl">本02</div></div></div><button class="btn btn-ghost btn-sm" onclick="moveBestToPassing()">Passingへ戻す</button></div><div class="card"><div class="card-title">Passing</div><div class="card-sub">NGではない未選定写真。必要ならBestShotに追加できます。</div><div class="thumbs"><div class="thumb"><div class="thumb-img">📸<br>IMG_0120</div><div class="thumb-lbl">Score 78</div></div></div><button class="btn btn-primary btn-sm" onclick="addPassingToBest()">BestShotに追加</button></div><div class="card"><div class="card-title">NG</div><div class="card-sub">AIはNG判定。ただしクライアント判断で戻す先を選べます。</div><div class="thumbs"><div class="thumb warn"><div class="thumb-img">📸<br>IMG_0300</div><div class="thumb-lbl">目閉じ</div></div></div><div class="btn-row"><button class="btn btn-ghost btn-sm" onclick="restoreNgToPassing()">NGからPassingへ戻す</button><button class="btn btn-warn btn-sm" onclick="restoreNgToBest()">NGからBestShotへ追加</button></div></div></div>`;
+}
+
+function addPassingToBest(){finalBestCount++;renderSnapFinalReview();toast('PassingからBestShotへ追加しました');}
+function moveBestToPassing(){finalBestCount=Math.max(0,finalBestCount-1);renderSnapFinalReview();toast('BestShotからPassingへ戻しました');}
+function restoreNgToBest(){finalBestCount++;renderSnapFinalReview();toast('NG写真をBestShotへ追加しました');}
+function restoreNgToPassing(){renderSnapFinalReview();toast('NG写真をPassingへ戻しました');}
+
+function confirmFinalBestShot(){toast(`最終BestShot ${finalBestCount}枚を確定しました`);}
+function downloadSnapExcel(id){const e=snapEvents.find(x=>x.id===id)||snapEvents[0];downloadTextFile(e.excel.replace('.xlsx','_demo.csv'),`event,filename,category,score,comment\n${e.name},IMG_0045.jpg,BestShot,92,表情と構図が良好\n${e.name},IMG_0099.jpg,NG,35,ブレあり`);toast(`${e.name}のExcelをダウンロードしました`);}
+function downloadSnapFolder(id){const e=snapEvents.find(x=>x.id===id)||snapEvents[0];downloadTextFile(`${e.name}_output_folder_structure.txt`,`${e.name}/\n├─ BestShot/\n├─ Passing/\n├─ NG/\n├─ Similarity Groups/\n└─ Excel/\n   └─ ${e.excel}`);toast(`${e.name}の出力フォルダ構成をダウンロードしました`);}
+function downloadAllSnapResults(){downloadTextFile('snap_all_events_output_structure.txt',snapEvents.map(e=>`${e.name}/\n├─ BestShot/\n├─ Passing/\n├─ NG/\n├─ Similarity Groups/\n└─ Excel/${e.excel}`).join('\n\n'));toast('全イベント結果をダウンロードしました');}
+function normalizeYear(v){return String(v||'').replace(/[^0-9]/g,'');}
+function normalizeStatus(v){const s=String(v||'').toLowerCase();if(s.includes('処理')||s.includes('processing'))return '処理中';if(s.includes('準備')||s.includes('preparation'))return '準備中';if(s.includes('完了')||s.includes('done'))return '完了';if(s.includes('未開始')||s.includes('not'))return '未開始';return s;}
+function projectMatchesSchool(p,term){if(!term)return true;const t=term.toLowerCase();return [p.name,...(p.aliases||[])].some(x=>String(x).toLowerCase().includes(t));}
+function getFilteredProjects(){const school=document.getElementById('filterSchool')?.value.trim()||'';const yearRaw=document.getElementById('filterYear')?.value||'すべて';const statusRaw=document.getElementById('filterStatus')?.value||'すべて';const sort=document.getElementById('filterSort')?.value||'updated';const yearNorm=normalizeYear(yearRaw), statusNorm=normalizeStatus(statusRaw);let arr=projects.filter(p=>projectMatchesSchool(p,school)&&(yearRaw==='すべて'||yearNorm===''||normalizeYear(p.year)===yearNorm)&&(statusRaw==='すべて'||normalizeStatus(p.status)===statusNorm));arr.sort((a,b)=>{if(sort==='school')return a.name.localeCompare(b.name,'ja');if(sort==='year')return normalizeYear(b.year).localeCompare(normalizeYear(a.year))||a.name.localeCompare(b.name,'ja');return String(b.updatedAt||'').localeCompare(String(a.updatedAt||''));});return arr;}
+function renderProjects(){const arr=getFilteredProjects();lastProjectResult=arr;const total=arr.length;const pages=Math.max(1,Math.ceil(total/projectPageSize));if(projectPage>pages)projectPage=pages;const start=(projectPage-1)*projectPageSize;const pageArr=arr.slice(start,start+projectPageSize);const showing=total?`${start+1}〜${start+pageArr.length}`:'0';document.getElementById('filterResult').innerHTML=`<span class="result-count-strong">${total}件中 ${showing}件を表示しています。</span>（20件ずつ表示）`;document.getElementById('projectsCards').style.display=projectView==='cards'?'grid':'none';document.getElementById('projectsList').style.display=projectView==='list'?'block':'none';const pi=document.getElementById('paginationInfo');if(pi)pi.textContent=`Page ${projectPage} / ${pages}　${total}件中 ${showing}件`;const noResult='<div class="card empty-note">該当するプロジェクトがありません。条件を変更するか「条件をクリア」を押してください。</div>';document.getElementById('projectsCards').innerHTML=pageArr.map(p=>`<div class="card click" onclick="openProject('${p.id}')"><div class="card-title">🏫 ${p.name}</div><div class="card-sub">${p.year} · Keigado Album Flow · 更新日 ${p.updatedAt||'—'}</div><div class="btn-row">${statusBadge(p.status)} ${p.openItems?`<span class="badge b-err">未解決 ${p.openItems}件</span>`:`<span class="badge b-info">${p.functions.length}機能</span>`}</div><p class="card-sub" style="margin-top:10px">${p.functions.join(' / ')}</p><div class="btn-row"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openProject('${p.id}')">Dashboardを開く</button><button class="btn btn-warn btn-sm" onclick="event.stopPropagation();openProject('${p.id}');projectSec('individual')">${p.status==='準備中'||p.status==='未開始'?'初期設定を続ける':'処理を続ける'}</button><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();toast('${p.name} の設定を表示')">設定を見る</button></div></div>`).join('')||noResult;document.getElementById('projectsTableBody').innerHTML=pageArr.map(p=>`<tr onclick="openProject('${p.id}')" style="cursor:pointer"><td><strong>${p.name}</strong><div class="card-sub">Keigado Album Flow</div></td><td>${p.year}</td><td>${statusBadge(p.status)}</td><td>${p.openItems?p.openItems+'件':'—'}</td><td>${p.functions.length}</td><td><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openProject('${p.id}')">Dashboardを開く</button> <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();toast('${p.name} の詳細を表示')">詳細</button></td></tr>`).join('') || `<tr><td colspan="6" class="empty-note">該当するプロジェクトがありません。</td></tr>`;}
+function nextProjectPage(){const pages=Math.max(1,Math.ceil((lastProjectResult.length||0)/projectPageSize));if(projectPage<pages){projectPage++;renderProjects();}else toast('最後のページです');}
+function prevProjectPage(){if(projectPage>1){projectPage--;renderProjects();}else toast('最初のページです');}
+function clearFilter(){document.getElementById('filterSchool').value='';document.getElementById('filterYear').value='すべて';document.getElementById('filterStatus').value='すべて';if(document.getElementById('filterSort'))document.getElementById('filterSort').value='updated';projectPage=1;renderProjects();toast('検索条件をクリアしました');}
+function renderWorkflow(kind,step){
+ if(kind==='snap') return renderSnapWorkflow(step);
+ const [title,sub,icon]=workflowLabels[kind];const sec=document.getElementById('sec-'+kind);const steps=kind==='teacher'?['Upload','OCR/PDF Match','Review/Edit','BestShot Select','Export Result']:['Upload','AI Process','Review/Edit','Rename/Select','Export'];
+ let tabs=steps.map((s,i)=>`<button class="wf-tab ${i===step?'on':''}" onclick="renderWorkflow('${kind}',${i})">${i+1} ${s}</button>`).join('');let body='';
+ if(step===0){const files=(workflowFiles[kind]||[]).map(f=>`<div class="file-row"><span class="file-icon">${f[0]}</span><div class="file-info"><div class="file-name">${f[1]}</div><div class="file-meta">${f[2]}</div></div><button class="btn btn-danger btn-sm" onclick="this.closest('.file-row').classList.add('deleted');toast('ファイルを削除候補にしました')">削除</button></div>`).join('');body=`<div class="card"><div class="card-title">アップロード</div><div class="card-sub">必要なフォルダ・ファイルを追加してAI処理を開始します。</div><div class="drop" style="margin-top:12px" onclick="toast('サンプルフォルダを追加しました')">☁️ フォルダまたはファイルを追加</div><div class="file-list">${files}</div><div class="btn-row"><button class="btn btn-primary" onclick="renderWorkflow('${kind}',1);toast('${title}のAI処理を開始しました')">AI処理を開始</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`}
+ else if(step===1){body=`<div class="card"><div class="card-title">${kind==='teacher'?'OCR / PDF教師名簿照合':'AI処理結果'}</div><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>File</th><th>Result</th><th>Status</th><th>Action</th></tr></thead><tbody><tr><td class="mono">13670033.JPG</td><td>${kind==='teacher'?'OCR名：斎藤 明博 / PDF候補：齋藤 明博':'高信頼で自動判定'}</td><td><span class="badge b-ok">OK</span></td><td><button class="btn btn-success btn-sm" onclick="toast('確定しました')">確定</button></td></tr><tr><td class="mono">T_009.JPG</td><td>${kind==='teacher'?'OCR名とPDF名簿が一致しないため確認':'候補複数 / 要確認'}</td><td><span class="badge b-warn">確認</span></td><td><button class="btn btn-primary btn-sm" onclick="renderWorkflow('${kind}',2)">レビューへ</button></td></tr></tbody></table></div><div class="btn-row"><button class="btn btn-primary" onclick="renderWorkflow('${kind}',2)">レビュー/編集へ</button></div></div>`}
+ else if(step===2){body=editReviewBody(kind, icon);}
+ else if(step===3){body=selectRenameBody(kind, title, icon);}
+ else {body=kind==='teacher'?teacherExportBody():(kind==='club'?clubExportBody():genericExportBody(kind,title))}
+ sec.innerHTML=`<div class="alert a-info"><span>${icon}</span><div><strong>${title}：</strong>${sub}</div></div><div class="wf-tabs">${tabs}</div>${body}`; if(kind==='teacher'&&step===4){selectTeacherFolder('best');renderTeacherExcelTab('match');} if(kind==='club'&&step===4){selectClubFolder('clean');}
+}
+function editReviewBody(kind, icon){
+ const isTeacher=kind==='teacher';
+ const isIndividual=kind==='individual';
+ const naming=isTeacher?'教科_先生名_元ファイル名_タグ<br>例：<span class="mono">国語科_高橋次郎_IMG0165_本01.jpg</span>':'[Year]_[SchoolName]_[OriginalFileName]_[Grade][Class][ID]_[Tag].ext<br>例：<span class="mono">26_上水高_IMG_2337_3105_札01.jpg</span>';
+ const candidates=isTeacher?[
+  ['IMG0165.jpg','国語科 / 高橋次郎','本01','teacher'],['IMG0166.jpg','国語科 / 高橋次郎','本02','teacher'],['IMG0167.jpg','国語科 / 高橋次郎','札01','teacher'],['IMG0168.jpg','国語科 / 高橋次郎','本03','teacher']
+ ]:[
+  ['IMG_2337.jpg','3年A組 / 05番','札01','3A'],['IMG_2338.jpg','3年A組 / 05番','本01','3A'],['IMG_2339.jpg','3年A組 / 05番','本02','3A'],['IMG_3101.jpg','3年B組 / 12番','札01','3B'],['IMG_3102.jpg','3年B組 / 12番','本01','3B'],['IMG_3103.jpg','3年B組 / 12番','本02','3B']
+ ];
+ const classTabs=isIndividual?`<div class="review-buckets"><button class="bucket on" data-class-filter="3A" onclick="filterRenameClass('3A',this)">3年A組</button><button class="bucket" data-class-filter="3B" onclick="filterRenameClass('3B',this)">3年B組</button><button class="bucket" data-class-filter="all" onclick="filterRenameClass('all',this)">全クラス</button></div><div class="result-note">クラスフォルダごとに確認します。3年A組と3年B組の結果を混ぜて処理するのではなく、表示を切り替えて確認できます。</div>`:'';
+ const rows=candidates.map((c,i)=>`<tr data-class="${c[3]}"><td class="mono">${c[0]}</td><td>${c[1]}</td><td><div class="tag-editor"><select class="tag-select" onchange="updateTagPreview(this,'${kind}',${i})"><option ${c[2]==='札01'?'selected':''}>札01</option><option ${c[2]==='札02'?'selected':''}>札02</option><option ${c[2]==='本01'?'selected':''}>本01</option><option ${c[2]==='本02'?'selected':''}>本02</option><option ${c[2]==='本03'?'selected':''}>本03</option><option>その他（手入力）</option></select><input class="manual-tag-input" placeholder="例：本05 / 札04" oninput="updateManualTagPreview(this,'${kind}')" disabled style="margin-top:6px;width:130px;background:var(--g100)"></div><div class="check-desc">本04・本05・札03など、選択肢にない番号は「その他（手入力）」を選んで入力します。</div></td><td class="mono tag-preview">${isTeacher?`国語科_高橋次郎_${c[0]}_${c[2]}.jpg`:`26_上水高_${c[0]}_${c[1].includes('05')?'3105':'3B12'}_${c[2]}.jpg`}</td></tr>`).join('');
+ return `<div class="card"><div class="card-title">Review / Edit：写真種別の確認・その他（手入力）修正</div><div class="card-sub">自動判定結果を確認し、必要な写真だけ本01・本02・札01などに修正します。選択肢にない場合はその他（手入力）できます。</div>${classTabs}<div class="preview-grid" style="margin-top:12px"><div class="photo-card">${icon}<br>${isTeacher?'Teacher candidates':'Class folder candidates'}<br>プレビュー</div><div><div class="panel"><strong>確認状態：</strong><span class="badge b-ok">候補抽出済み</span> <span class="badge b-warn">タグは手動修正可能</span></div><div class="naming-rule"><strong>命名ルール：</strong><br>${naming}</div><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Original File</th><th>${isTeacher?'Teacher / Subject':'Class / ID'}</th><th>写真種別</th><th>Rename Preview</th></tr></thead><tbody>${rows}</tbody></table></div><div class="btn-row"><button class="btn btn-success" onclick="toast('写真種別を確定しました')">写真種別を確定</button><button class="btn btn-primary" onclick="renderWorkflow('${kind}',3)">次へ</button></div></div></div></div>`;
+}
+
+function cleanTagText(raw){return (raw||'').replace(/\s+/g,'').trim();}
+function tagFromRow(tr){
+ const sel=tr?.querySelector('.tag-select');
+ const manual=tr?.querySelector('.manual-tag-input');
+ if(!sel)return '本01';
+ if(sel.value==='その他（手入力）') return cleanTagText(manual?.value)||'';
+ return sel.value;
+}
+function updateTagPreview(sel,kind,rowIndex){
+ const tr=sel.closest('tr');
+ const input=tr?.querySelector('.manual-tag-input');
+ if(input){
+   const manual=sel.value==='その他（手入力）';
+   input.disabled=!manual;
+   input.style.background=manual?'#fff':'var(--g100)';
+   if(manual){input.focus();}else{input.value='';}
+ }
+ applyTagPreview(tr,kind);
+ toast(sel.value==='その他（手入力）'?'その他（手入力）欄に本05・札04などを入力してください':'リネームプレビューを更新しました');
+}
+function updateManualTagPreview(input,kind){applyTagPreview(input.closest('tr'),kind);}
+function applyTagPreview(tr,kind){
+ const file=tr?.children[0]?.textContent||'IMG.jpg';
+ const target=tr?.children[1]?.textContent||'';
+ const tag=tagFromRow(tr);
+ const out=tr?.querySelector('.tag-preview');
+ if(!out)return;
+ if(!tag){out.textContent='その他（手入力）タグを入力してください';return;}
+ const safeTag=tag;
+ if(kind==='teacher') out.textContent=`国語科_高橋次郎_${file}_${safeTag}.jpg`;
+ else{
+   const id=target.includes('05')?'3105':(target.includes('12')?'3B12':'3105');
+   out.textContent=`26_上水高_${file}_${id}_${safeTag}.jpg`;
+ }
+}
+function filterRenameClass(cls,btn){
+ document.querySelectorAll('.review-buckets .bucket').forEach(b=>b.classList.remove('on'));
+ btn?.classList.add('on');
+ document.querySelectorAll('tr[data-class]').forEach(tr=>{tr.style.display=(cls==='all'||tr.dataset.class===cls)?'':'none'});
+ toast(cls==='all'?'全クラスを表示しました':cls+' の候補を表示しました');
+}
+
+function selectRenameBody(kind,title,icon){
+ const isTeacher=kind==='teacher', isIndividual=kind==='individual';
+ const sample=isTeacher?'国語科_高橋次郎_IMG0165_本01.jpg':isIndividual?'26_上水高_IMG_2337_3105_本01.jpg':'バドミントン部_20260403_IMG0045_本01.jpg';
+ return `<div class="card"><div class="card-title">${isTeacher?'BestShot Selection / 自動リネーム':'Rename / Select'}</div><div class="thumbs" style="margin-top:12px"><div class="thumb best"><div class="thumb-img">${icon}<br>Selected</div><div class="thumb-lbl">本01</div></div><div class="thumb"><div class="thumb-img">${icon}<br>Candidate</div><div class="thumb-lbl">本02</div></div><div class="thumb warn"><div class="thumb-img">${icon}<br>Card</div><div class="thumb-lbl">札01</div></div></div><div class="panel" style="margin-top:12px"><strong>出力プレビュー：</strong><span class="mono">${sample}</span><div class="card-sub">本01・本02・札01・札02は前の画面で手動変更できます。</div></div><div class="btn-row"><button class="btn btn-primary" onclick="renderWorkflow('${kind}',4)">出力前確認へ</button></div></div>`;
+}
+function genericExportBody(kind,title){return `<div class="card"><div class="alert a-ok"><span>✅</span><div><strong>${title}の出力準備が完了しました。</strong><br>確認用レポートと納品用ファイルをダウンロードできます。</div></div><div class="table-wrap"><table><thead><tr><th>Output</th><th>Purpose</th><th>Status</th></tr></thead><tbody><tr><td>renamed_${kind}_photos/</td><td>納品用ファイル</td><td><span class="badge b-ok">Ready</span></td></tr><tr><td>${kind}_review_summary.xlsx</td><td>確認・修正履歴</td><td><span class="badge b-ok">Ready</span></td></tr></tbody></table></div><div class="btn-row"><button class="btn btn-success" onclick="toast('出力ファイルを作成しました')">Export</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;}
+function clubExportBody(){return `<div class="card"><div class="alert a-ok"><span>✅</span><div><strong>クラブ写真の検出結果を確認できます。</strong><br>現在はマークなし画像・マークあり画像・Excel結果ファイルの3出力を表示します。</div></div><div class="card-title">Club_Output / 出力フォルダプレビュー</div><div class="folder-grid"><div class="folder-card on" id="club-folder-clean" onclick="selectClubFolder('clean')"><div class="folder-icon">📁</div><div class="folder-title">マークなし画像</div><div class="folder-desc">最終利用向けのクリーン画像</div></div><div class="folder-card" id="club-folder-marked" onclick="selectClubFolder('marked')"><div class="folder-icon">📁</div><div class="folder-title">マークあり画像</div><div class="folder-desc">人数カウント結果と目つぶり箇所を赤枠で表示</div></div><div class="folder-card" id="club-folder-excel" onclick="selectClubFolder('excel')"><div class="folder-icon">📊</div><div class="folder-title">Excel結果ファイル</div><div class="folder-desc">人数カウント結果と目つぶり検出メモ</div></div></div><div class="folder-preview" id="clubFolderPreview"></div><div class="result-note" style="margin-top:12px">次のステップとして、写真リネーム機能とベストショット選定をこの画面に統合予定です。</div><div class="btn-row"><button class="btn btn-success" onclick="downloadClubExcel()">Excelをダウンロード</button><button class="btn btn-primary" onclick="downloadClubFolder()">出力フォルダをダウンロード</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;}
+function selectClubFolder(type){['clean','marked','excel'].forEach(x=>document.getElementById('club-folder-'+x)?.classList.toggle('on',x===type));const html={clean:`<strong>Clean/ マークなし画像</strong><br><span class="mono">├─ バドミントン部_20260403_IMG0045_本01.jpg</span><br><span class="mono">└─ バドミントン部_20260403_IMG0046_本02.jpg</span><div class="thumbs" style="margin-top:10px"><div class="thumb best"><div class="thumb-img">🏆<br>Clean</div><div class="thumb-lbl">本01</div></div><div class="thumb"><div class="thumb-img">🏆<br>Clean</div><div class="thumb-lbl">本02</div></div></div>`,marked:`<strong>Marked/ マークあり画像</strong><br><span class="mono">├─ バドミントン部_20260403_IMG0045_marked.jpg</span><br><span class="mono">└─ バドミントン部_20260403_IMG0046_marked.jpg</span><div class="thumbs" style="margin-top:10px"><div class="thumb warn"><span class="mark">赤枠</span><div class="thumb-img">🏆<br>人数 15</div><div class="thumb-lbl">目つぶり候補 1</div></div><div class="thumb"><span class="mark">人数</span><div class="thumb-img">🏆<br>人数 14</div><div class="thumb-lbl">目つぶりなし</div></div></div>`,excel:`<strong>Excel/</strong><br><span class="mono">└─ club_detection_result.xlsx</span><div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>File</th><th>Person Count</th><th>Eye Closing Memo</th><th>Output</th></tr></thead><tbody><tr><td>IMG0045.jpg</td><td>15</td><td>1名目つぶり候補</td><td>Marked / Clean</td></tr><tr><td>IMG0046.jpg</td><td>14</td><td>なし</td><td>Marked / Clean</td></tr></tbody></table></div>`}[type];const target=document.getElementById('clubFolderPreview');if(target)target.innerHTML=html;}
+function downloadClubExcel(){downloadTextFile('club_detection_result_demo.csv','file,person_count,eye_closing_memo\nIMG0045.jpg,15,1名目つぶり候補\nIMG0046.jpg,14,なし');toast('クラブ写真Excel結果をダウンロードしました');}
+function downloadClubFolder(){downloadTextFile('Club_Output_folder_structure.txt','Club_Output/\n├─ Clean/\n├─ Marked/\n└─ Excel/club_detection_result.xlsx');toast('クラブ写真出力フォルダ構成をダウンロードしました');}
+function teacherExportBody(){return `<div class="card"><div class="alert a-ok"><span>✅</span><div><strong>先生写真の出力準備が完了しました。</strong><br>BestShot / Processed / Unknown / Excel の内容を確認し、Excelまたは出力構成をダウンロードできます。</div></div><div class="card-title">Teacher_Output / 出力フォルダプレビュー</div><div class="folder-grid"><div class="folder-card on" id="folder-best" onclick="selectTeacherFolder('best')"><div class="folder-icon">📁</div><div class="folder-title">BestShot</div><div class="folder-desc">順位付きで自動リネームされたベストショット写真（本1、本2など）</div></div><div class="folder-card" id="folder-processed" onclick="selectTeacherFolder('processed')"><div class="folder-icon">📁</div><div class="folder-title">Processed</div><div class="folder-desc">カード情報が正常に処理された教師写真</div></div><div class="folder-card" id="folder-unknown" onclick="selectTeacherFolder('unknown')"><div class="folder-icon">📁</div><div class="folder-title">Unknown</div><div class="folder-desc">カード名がPDF教師名簿と一致しなかった写真</div></div><div class="folder-card" id="folder-excel" onclick="selectTeacherFolder('excel')"><div class="folder-icon">📊</div><div class="folder-title">Excel</div><div class="folder-desc">処理結果・照合結果の一覧</div></div></div><div class="folder-preview" id="teacherFolderPreview"></div><div class="card" style="margin-top:14px"><div class="card-title">Excel出力プレビュー：teacher_processing_result.xlsx</div><div class="card-sub">1つのExcelファイル内に5つのタブを作成します。各タブをクリックすると内容例を確認できます。</div><div class="excel-tabs"><button class="excel-tab on" id="tab-match" onclick="renderTeacherExcelTab('match')">Match Result</button><button class="excel-tab" id="tab-pdf" onclick="renderTeacherExcelTab('pdf')">PDF Staff Master</button><button class="excel-tab" id="tab-final" onclick="renderTeacherExcelTab('final')">Final Name List</button><button class="excel-tab" id="tab-score" onclick="renderTeacherExcelTab('score')">BestShot Scores</button><button class="excel-tab" id="tab-subject" onclick="renderTeacherExcelTab('subject')">Staff by Subject</button></div><div id="teacherExcelPreview"></div></div><div class="btn-row"><button class="btn btn-success" onclick="downloadTeacherExcel()">Excelをダウンロード</button><button class="btn btn-primary" onclick="downloadTeacherOutputFolder()">出力フォルダをダウンロード</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;}
+function selectTeacherFolder(type){['best','processed','unknown','excel'].forEach(x=>{const el=document.getElementById('folder-'+x);if(el)el.classList.toggle('on',x===type);});const html={best:`<strong>BestShot/</strong><br><span class="mono">├─ 01_保健体育科_齋藤明博_13670037.JPG_本1.jpg</span><br><span class="mono">├─ 02_保健体育科_齋藤明博_13670040.JPG_本2.jpg</span><br><span class="mono">└─ 03_保健体育科_齋藤明博_13670036.JPG_本3.jpg</span><p class="card-sub" style="margin-top:8px">順位と本番号が分かる形で自動リネームされたベストショット写真です。</p>`,processed:`<strong>Processed/</strong><br><span class="mono">├─ 13670033_card_processed.jpg</span><br><span class="mono">├─ 13670034_portrait_processed.jpg</span><br><span class="mono">└─ 13670035_portrait_processed.jpg</span><p class="card-sub" style="margin-top:8px">カード情報が正常に処理され、教師名・教科との紐づけが完了した写真です。</p>`,unknown:`<strong>Unknown/</strong><br><span class="mono">├─ T_009_unmatched.jpg</span><br><span class="mono">└─ T_014_low_confidence.jpg</span><p class="card-sub" style="margin-top:8px">カード名がPDF教師名簿と一致しなかった写真や、OCR信頼度が低い写真を確認用に分けます。</p>`,excel:`<strong>Excel/</strong><br><span class="mono">└─ teacher_processing_result.xlsx</span><p class="card-sub" style="margin-top:8px">Match Result / PDF Staff Master / Final Name List / BestShot Scores / Staff by Subject の5タブを含む処理結果ファイルです。</p>`}[type];const target=document.getElementById('teacherFolderPreview');if(target)target.innerHTML=html;}
+function renderTeacherExcelTab(tab){['match','pdf','final','score','subject'].forEach(x=>{const el=document.getElementById('tab-'+x);if(el)el.classList.toggle('on',x===tab);});const target=document.getElementById('teacherExcelPreview');if(target)target.innerHTML=teacherExcelTabs[tab]||teacherExcelTabs.match;}
+function downloadBase64File(base64,filename,mime){const bin=atob(base64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);const blob=new Blob([bytes],{type:mime});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);}
+function downloadTeacherExcel(){if(EMBEDDED_TEACHER_XLSX_BASE64){downloadBase64File(EMBEDDED_TEACHER_XLSX_BASE64,'teacher_processing_result.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');toast('Excelファイルをダウンロードしました');}else{downloadTextFile('teacher_processing_result_demo.csv','Tab,Description\nMatch Result,OCR結果とPDF教師名簿の照合結果\nPDF Staff Master,PDFから抽出した教師名簿\nFinal Name List,確認・リネーム後の最終リスト\nBestShot Scores,ベストショット順位・スコア・コメント\nStaff by Subject,教科別教師名簿');toast('サンプルCSVをダウンロードしました');}}
+function downloadTextFile(filename,content){const blob=new Blob([content],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);}
+function downloadTeacherOutputFolder(){const content=`Teacher_Output/
+├─ BestShot/
+│  ├─ 01_保健体育科_齋藤明博_13670037.JPG_本1.jpg
+│  └─ 02_保健体育科_齋藤明博_13670040.JPG_本2.jpg
+├─ Processed/
+│  └─ カード情報が正常に処理された教師写真
+├─ Unknown/
+│  └─ カード名がPDF教師名簿と一致しなかった写真
+└─ Excel/
+   └─ teacher_processing_result.xlsx`;downloadTextFile('Teacher_Output_folder_structure.txt',content);toast('出力フォルダ構成をダウンロードしました');}
+
+// ===== Added: AI detection page and person search demo logic =====
+let personSearchMode='text';
+function aiAddSampleUpload(){
+ const box=document.getElementById('aiUploadBox');
+ const list=document.getElementById('aiFileList');
+ if(box) box.innerHTML='📁<br><strong>3枚選択済み</strong>（IMG_0001.jpg・IMG_0015.jpg・IMG_T001_3.jpg）';
+ if(list){list.style.display='block';list.innerHTML=`<div class="file-row"><span class="file-icon">🖼️</span><div class="file-info"><div class="file-name">IMG_0001.jpg</div><div class="file-meta">個人写真候補</div></div></div><div class="file-row"><span class="file-icon">🖼️</span><div class="file-info"><div class="file-name">IMG_0015.jpg</div><div class="file-meta">目閉じ確認候補</div></div></div><div class="file-row"><span class="file-icon">🖼️</span><div class="file-info"><div class="file-name">IMG_T001_3.jpg</div><div class="file-meta">先生写真 / 複数名参考</div></div></div>`;}
+ toast('サンプル写真を追加しました');
+}
+function syncAiOptions(){
+ const eye=document.getElementById('aiEye')?.checked, count=document.getElementById('aiCount')?.checked;
+ document.getElementById('aiOptEye')?.classList.toggle('active',!!eye);
+ document.getElementById('aiOptCount')?.classList.toggle('active',!!count);
+}
+function runAiDetection(){
+ const eye=document.getElementById('aiEye')?.checked, count=document.getElementById('aiCount')?.checked;
+ if(!eye&&!count){toast('目閉じ検出または人数確認を1つ以上選択してください');return;}
+ aiAddSampleUpload();syncAiOptions();
+ const card=document.getElementById('aiResultCard'); if(card) card.style.display='block';
+ document.getElementById('aiEyeHeader').style.display=eye?'table-cell':'none';
+ document.getElementById('aiCountHeader').style.display=count?'table-cell':'none';
+ const rows=[
+  {file:'IMG_0001.jpg',preview:'👤',eye:'目閉じなし',eyeCls:'b-ok',count:'1',countCls:'b-purple',note:'通常続行'},
+  {file:'IMG_0015.jpg',preview:'👤',eye:'目閉じあり',eyeCls:'b-warn',count:'1',countCls:'b-purple',note:'AIランキングのみ参照'},
+  {file:'IMG_T001_3.jpg',preview:'🎓',eye:'目閉じなし',eyeCls:'b-ok',count:'2人',countCls:'b-warn',note:'人物数は参考'}
+ ];
+ document.getElementById('aiResultRows').innerHTML=rows.map((r,i)=>`<tr class="${i===1&&eye?'row-soft-warn':i===2&&count?'row-soft-info':''}"><td><div class="photo-card" style="width:44px;height:44px;font-size:18px">${r.preview}</div></td><td class="mono">${r.file}</td>${eye?`<td><span class="badge ${r.eyeCls}">${r.eye}</span></td>`:''}${count?`<td><span class="badge ${r.countCls}">👥 ${r.count}</span></td>`:''}<td><span class="badge b-ok">通常続行</span></td><td>${r.note}</td></tr>`).join('');
+ card?.scrollIntoView({behavior:'smooth',block:'start'});toast('AI検出結果を表示しました');
+}
+function resetAiDetection(){
+ const card=document.getElementById('aiResultCard'); if(card) card.style.display='none';
+ const list=document.getElementById('aiFileList'); if(list){list.style.display='none';list.innerHTML='';}
+ const box=document.getElementById('aiUploadBox'); if(box) box.innerHTML='☁️ フォルダまたは画像をドロップ / クリックして追加';
+ toast('AI検出チェックをクリアしました');
+}
+function downloadAiCheckCsv(){
+ const eye=document.getElementById('aiEye')?.checked, count=document.getElementById('aiCount')?.checked;
+ let cols=['file']; if(eye) cols.push('eye_closing'); if(count) cols.push('person_count'); cols.push('process_impact','note');
+ const rows=[['IMG_0001.jpg','なし','1','通常続行','OK'],['IMG_0015.jpg','あり','1','通常続行','AIランキングのみ参照'],['IMG_T001_3.jpg','なし','2','通常続行','人物数は参考']];
+ const out=[cols.join(',')].concat(rows.map(r=>{let a=[r[0]]; if(eye)a.push(r[1]); if(count)a.push(r[2]); a.push(r[3],r[4]); return a.join(',')})).join('\n');
+ downloadTextFile('ai_detection_check_result.csv',out);toast('チェック結果CSVをダウンロードしました');
+}
+function uploadPersonPdfDemo(){
+ const drop=document.getElementById('personPdfDrop');
+ const prev=document.getElementById('personPdfPreview');
+ if(drop)drop.innerHTML='📄 <strong>PDF読込済み：teacher_album_sample.pdf</strong>';
+ if(prev){
+   prev.style.display='block';
+   prev.innerHTML=`<div class="card-sub" style="margin-bottom:8px"><strong>PDFアルバム内の検索プレビュー：</strong>ページ内の写真・周辺テキスト・顔候補を検索元として使います。</div><div class="table-wrap"><table><thead><tr><th>PDF Page</th><th>ページ内の手がかり</th><th>Source</th></tr></thead><tbody><tr><td>p.12</td><td>国語科 / 高橋次郎 / 先生写真ページ</td><td>teacher_album_sample.pdf</td></tr><tr><td>p.18</td><td>職員集合写真 / 高橋先生候補</td><td>teacher_album_sample.pdf</td></tr><tr><td>p.31</td><td>3年A組集合写真 / 生徒候補あり</td><td>school_album_sample.pdf</td></tr></tbody></table></div>`;
+ }
+ toast('PDFを検索元に追加しました');
+}
+function uploadReferencePhotoDemo(){
+ const drop=document.getElementById('personReferencePhotoDrop');
+ if(drop)drop.innerHTML='🖼️ <strong>参照写真読込済み：reference_face.jpg</strong>';
+ toast('参照写真を追加しました');
+}
+function checkedValues(containerId){return [...document.querySelectorAll(`#${containerId} input[type="checkbox"]:checked`)].map(x=>x.value)}
+function syncPersonSearchLogic(){
+ document.querySelectorAll('#personTargetChecks .check-card,#personScopeChecks .check-card').forEach(label=>{const cb=label.querySelector('input');label.classList.toggle('active',!!cb?.checked)});
+ const targets=checkedValues('personTargetChecks');
+ const teacherOn=targets.includes('teacher');
+ const studentOn=targets.includes('student');
+ const help=document.getElementById('personKeywordHelp');
+ const label=document.getElementById('personKeywordLabel');
+ const note=document.getElementById('personKeywordNote');
+ const input=document.getElementById('personKeyword');
+ if(help){help.textContent=teacherOn?'例：高橋次郎、国語科、高橋 / 山田太郎':'例：山田太郎、佐藤、3年A組、3105';}
+ if(label){label.textContent=teacherOn?'検索キーワード（名前・一部の名前・教科 / 複数人はカンマ区切り）':'検索キーワード（生徒名・クラス・番号 / 複数人はカンマ区切り）';}
+ if(note){note.textContent=teacherOn?'先生を選択しているため、名前・一部の名前・教科で検索できます。':'生徒のみ選択中のため、教科検索の案内は表示しません。生徒名・クラス・番号で検索します。';}
+ if(input && !teacherOn && input.value.includes('国語科')) input.value='山田太郎';
+ const pdfCard=document.getElementById('personPdfUploadCard');
+ if(pdfCard){const scopes=checkedValues('personScopeChecks');pdfCard.style.display='block';}
+}
+function setPersonSearchMode(mode){
+ personSearchMode=mode;
+ document.getElementById('psModeText')?.classList.toggle('on',mode==='text');
+ document.getElementById('psModePhoto')?.classList.toggle('on',mode==='photo');
+ document.getElementById('personTextInputBlock').style.display=mode==='text'?'block':'none';
+ document.getElementById('personPhotoInputBlock').style.display=mode==='photo'?'block':'none';
+ syncPersonSearchLogic();
+}
+function clearPersonSearch(){
+ document.querySelectorAll('#personTargetChecks input,#personScopeChecks input').forEach(cb=>{cb.checked=true});
+ document.querySelector('#personTargetChecks input[value="unknown"]').checked=false;
+ const input=document.getElementById('personKeyword');if(input)input.value='高橋次郎';
+ document.getElementById('personResults').style.display='none';
+ setPersonSearchMode('text');
+ syncPersonSearchLogic();
+ toast('人物検索条件をリセットしました');
+}
+function runPersonSearch(){
+ const targets=checkedValues('personTargetChecks');
+ const scopes=checkedValues('personScopeChecks');
+ if(!targets.length){toast('検索対象を1つ以上選択してください');return;}
+ if(!scopes.length){toast('検索元を1つ以上選択してください');return;}
+ const raw=(personSearchMode==='photo'?'参照写真':(document.getElementById('personKeyword')?.value||'高橋次郎'));
+ const keys=raw.split(',').map(x=>x.trim()).filter(Boolean);
+ const people=[];
+ if(targets.includes('teacher')){
+   const name=(keys.find(x=>x.includes('高橋'))||'高橋次郎').replace(/\s+/g,'');
+   people.push({name,type:'先生',conf:'高',locations:[
+    ['PDFアルバム','2件','teacher_album_sample.pdf p.12 / p.18：先生写真ページ・職員集合写真内候補'],
+    ['先生写真','2件','国語科_高橋次郎_IMG0165_本01.jpg / 国語科_高橋次郎_IMG0166_本02.jpg'],
+    ['スナップ写真','2件','入学式 IMG_011.jpg / 文化祭 IMG_204.jpg'],
+    ['集合写真','1件','職員集合写真 p.18']
+   ]});
+ }
+ if(targets.includes('student')){
+   const name=(targets.includes('teacher')?'山田太郎':(keys.find(x=>x.includes('山田'))||keys.find(x=>x.includes('佐藤'))||'山田太郎')).replace(/\s+/g,'');
+   people.push({name,type:'生徒',conf:'中',locations:[
+    ['個人写真','1件','26_上水高_IMG_2337_3105_札01.jpg'],
+    ['スナップ写真','5件','運動会 IMG_045.jpg ほか'],
+    ['クラブ写真','2件','バドミントン部_20260403_IMG0045_本01.jpg ほか'],
+    ['集合写真','1件','3年A組集合写真'],
+    ['PDFアルバム','1件','school_album_sample.pdf p.31：集合写真内の候補']
+   ]});
+ }
+ if(targets.includes('unknown')){
+   people.push({name:'未照合人物 A',type:'未照合',conf:'低',locations:[['スナップ写真','3件','顔候補のみ'],['集合写真','1件','名前未確定'],['PDFアルバム','1件','school_album_sample.pdf p.44：顔候補のみ']]});
+ }
+ const filtered=people.map(p=>({...p,locations:p.locations.filter(l=>scopes.includes(l[0]))})).filter(p=>p.locations.length);
+ const result=document.getElementById('personResults');result.style.display='block';
+ document.getElementById('personResultTitle').textContent=`検索結果：${raw}`;
+ document.getElementById('personResultSummary').innerHTML=`<span class="info-pill ok">人物別・検索元別に表示</span><span class="info-pill">対象：${targets.join(' / ')}</span><span class="info-pill">検索元：${scopes.join(' / ')}</span>`;
+ document.getElementById('personGroupedResults').innerHTML=filtered.map(p=>`<div class="person-result-card"><div class="person-result-head"><div><div class="person-result-title">${p.name}</div><div class="card-sub">${p.type} · Matching confidence: ${p.conf}</div></div><span class="badge ${p.conf==='高'?'b-ok':p.conf==='中'?'b-warn':'b-gray'}">${p.conf}</span></div><div class="found-locations">${p.locations.map(l=>`<div class="found-location"><strong>${l[0]}</strong><br>${l[1]}<br><span class="mono">${l[2]}</span><div class="btn-row" style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="toast('${p.name} / ${l[0]} の詳細プレビューを表示')">詳細を見る</button></div></div>`).join('')}</div></div>`).join('')||'<div class="empty-note">選択した検索元には一致候補がありません。</div>';
+ result.scrollIntoView({behavior:'smooth',block:'start'});
+ toast('人物検索を実行しました');
+}
+
+
+// ===== UX v4 fix: manual tag input is always editable + class-separated individual workflow =====
+let selectedIndividualClass='3A';
+const individualClassData={
+  '3A':{label:'3年A組',folder:'3年A組/',uploaded:47,ok:43,missing:2,duplicate:2,rows:[
+    ['IMG_2337.jpg','05番 / 山田 太郎','札01','OK','カード写真'],
+    ['IMG_2338.jpg','05番 / 山田 太郎','本01','OK','第1候補'],
+    ['IMG_2339.jpg','05番 / 山田 太郎','本02','OK','第2候補'],
+    ['IMG_2340.jpg','05番 / 山田 太郎','本03','要確認','同じ人物の追加候補。必要なら本04/本05をその他（手入力）'],
+    ['IMG_2401.jpg','不明','札01','エラー','番号札未検出。クラス・番号・タグを確認']
+  ]},
+  '3B':{label:'3年B組',folder:'3年B組/',uploaded:42,ok:40,missing:1,duplicate:1,rows:[
+    ['IMG_3101.jpg','12番 / 中村 健太','札01','OK','カード写真'],
+    ['IMG_3102.jpg','12番 / 中村 健太','本01','OK','第1候補'],
+    ['IMG_3103.jpg','12番 / 中村 健太','本02','OK','第2候補'],
+    ['IMG_3110.jpg','12番 / 中村 健太','本03','要確認','同じ人物の追加候補。必要なら本04/本05をその他（手入力）'],
+    ['IMG_3188.jpg','不明','札01','エラー','番号候補が複数。手動確認']
+  ]}
+};
+function classBadgeForStatus(st){return st==='OK'?'<span class="badge b-ok">OK</span>':st==='エラー'?'<span class="badge b-err">エラー</span>':'<span class="badge b-warn">要確認</span>';}
+function tagControl(defaultTag, idx, kind){
+  return `<div class="tag-editor" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <select class="tag-select" onchange="updateTagPreviewV4(this,'${kind}')">
+      ${['札01','札02','本01','本02','本03','その他（手入力）'].map(t=>`<option ${defaultTag===t?'selected':''}>${t}</option>`).join('')}
+    </select>
+    <input class="manual-tag-input" placeholder="例：本04 / 本05 / 札03" oninput="updateManualTagPreviewV4(this,'${kind}')" disabled style="width:180px;background:var(--g100);cursor:not-allowed" />
+  </div><div class="check-desc">通常は左の候補を選択します。本04・本05・札03などを入力したい場合のみ「その他（手入力）」を選んでください。</div>`;
+}
+function tagFromRowV4(tr){
+  const sel=tr?.querySelector('.tag-select');
+  const manual=(tr?.querySelector('.manual-tag-input')?.value||'').trim();
+  if(sel?.value==='その他（手入力）') return manual || 'その他（手入力）未設定';
+  return sel?.value || '本01';
+}
+function updateTagPreviewV4(el,kind){
+  const tr=el.closest('tr');
+  const input=tr?.querySelector('.manual-tag-input');
+  const manual=el.value==='その他（手入力）';
+  if(input){
+    input.disabled=!manual;
+    input.style.background=manual?'#fff':'var(--g100)';
+    input.style.cursor=manual?'text':'not-allowed';
+    if(!manual) input.value='';
+    if(manual) input.focus();
+  }
+  applyTagPreviewV4(tr,kind);
+}
+function updateManualTagPreviewV4(input,kind){applyTagPreviewV4(input.closest('tr'),kind);}
+function applyTagPreviewV4(tr,kind){
+  if(!tr)return;
+  const file=tr.dataset.file || tr.children[0]?.textContent || 'IMG.jpg';
+  const target=tr.dataset.target || tr.children[1]?.textContent || '';
+  const tag=tagFromRowV4(tr);
+  const out=tr.querySelector('.tag-preview');
+  if(!out)return;
+  if(kind==='teacher') out.textContent=`国語科_高橋次郎_${file}_${tag}.jpg`;
+  else if(kind==='club'){
+    const club=tr.dataset.club || 'バドミントン部';
+    const date=tr.dataset.date || '20260403';
+    out.textContent=`${club}_${date}_${file}_${tag}.jpg`;
+  }
+  else {
+    const classId=tr.dataset.classid || (target.includes('3年B')?'3B':'3A');
+    const no=(target.match(/(\d+)番/)||[])[1] || (classId==='3A'?'05':'12');
+    const id=classId==='3A'?'310'+Number(no):'3B'+String(no).padStart(2,'0');
+    out.textContent=`26_上水高_${file}_${id}_${tag}.jpg`;
+  }
+}
+function makeManualRows(rows, kind, classId){
+  return rows.map((r,i)=>`<tr data-classid="${classId||''}" data-file="${r[0]}" data-target="${r[1]}">
+    <td class="mono">${r[0]}</td><td>${r[1]}</td><td>${classBadgeForStatus(r[3])}</td><td>${r[4]}</td>
+    <td>${tagControl(r[2],i,kind)}</td>
+    <td class="mono tag-preview">${kind==='teacher'?`国語科_高橋次郎_${r[0]}_${r[2]}.jpg`:`26_上水高_${r[0]}_${classId==='3A'?'3105':'3B12'}_${r[2]}.jpg`}</td>
+  </tr>`).join('');
+}
+window.editReviewBody=function(kind, icon){
+  if(kind==='teacher'){
+    const rows=[
+      ['IMG0165.jpg','国語科 / 高橋次郎','本01','OK','BestShot第1候補'],
+      ['IMG0166.jpg','国語科 / 高橋次郎','本02','OK','BestShot第2候補'],
+      ['IMG0167.jpg','国語科 / 高橋次郎','札01','OK','カード保持写真'],
+      ['IMG0168.jpg','国語科 / 高橋次郎','本03','要確認','同じ先生の追加候補。必要なら本04/本05をその他（手入力）']
+    ];
+    return `<div class="card"><div class="card-title">Review / Edit：先生写真のタグ確認・その他（手入力）修正</div>
+      <div class="card-sub">本01・本02・札01などは自動候補ですが、必要に応じて本04・本05・札03などを直接入力できます。</div>
+      <div class="naming-rule" style="margin-top:12px"><strong>先生写真 命名ルール：</strong><br>教科_先生名_元ファイル名_タグ<br>例：<span class="mono">国語科_高橋次郎_IMG0165_本01.jpg</span></div>
+      <div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Original File</th><th>Teacher / Subject</th><th>Status</th><th>Comment</th><th>写真タグ</th><th>Rename Preview</th></tr></thead><tbody>${makeManualRows(rows,'teacher','teacher')}</tbody></table></div>
+      <div class="btn-row"><button class="btn btn-success" onclick="toast('先生写真タグを確定しました')">タグを確定</button><button class="btn btn-primary" onclick="renderWorkflow('teacher',3)">次へ</button></div></div>`;
+  }
+  return '';
+};
+function individualClassTabs(){
+  return `<div class="review-buckets"><button class="bucket ${selectedIndividualClass==='3A'?'on':''}" onclick="selectedIndividualClass='3A';renderIndividualWorkflow(2)">3年A組</button><button class="bucket ${selectedIndividualClass==='3B'?'on':''}" onclick="selectedIndividualClass='3B';renderIndividualWorkflow(2)">3年B組</button><button class="bucket ${selectedIndividualClass==='all'?'on':''}" onclick="selectedIndividualClass='all';renderIndividualWorkflow(2)">全クラス</button></div>`;
+}
+function renderIndividualWorkflow(step){
+  const sec=document.getElementById('sec-individual');
+  const steps=['Upload','Class Result','Review/Edit','Rename Preview','Export'];
+  const tabs=steps.map((s,i)=>`<button class="wf-tab ${i===step?'on':''}" onclick="renderIndividualWorkflow(${i})">${i+1} ${s}</button>`).join('');
+  let body='';
+  if(step===0) body=individualUploadBody();
+  else if(step===1) body=individualClassResultBody();
+  else if(step===2) body=individualReviewBody();
+  else if(step===3) body=individualRenamePreviewBody();
+  else body=individualExportBody();
+  sec.innerHTML=`<div class="alert a-info"><span>👤</span><div><strong>個人写真：</strong>アップロードしたクラスフォルダごとに処理し、結果もクラス別に確認・出力します。</div></div><div class="wf-tabs">${tabs}</div>${body}`;
+}
+function individualUploadBody(){
+  return `<div class="card"><div class="card-title">① クラス別フォルダをアップロード</div><div class="card-sub">例：3年A組/ と 3年B組/ をアップロードした場合、次の処理結果もクラス別に表示されます。</div>
+    <div class="drop" style="margin-top:12px" onclick="toast('クラスフォルダを追加しました')">☁️ クラス別フォルダを追加</div>
+    <div class="file-list"><div class="file-row"><span class="file-icon">📁</span><div class="file-info"><div class="file-name">3年A組/</div><div class="file-meta">47枚 · class folder</div></div></div><div class="file-row"><span class="file-icon">📁</span><div class="file-info"><div class="file-name">3年B組/</div><div class="file-meta">42枚 · class folder</div></div></div><div class="file-row"><span class="file-icon">📄</span><div class="file-info"><div class="file-name">名簿Excel_上水高校.xlsx</div><div class="file-meta">任意 · class/student list</div></div></div></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="renderIndividualWorkflow(1);toast('クラス別にAI処理を開始しました')">AI処理を開始</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
+}
+function individualClassResultBody(){
+  const rows=Object.entries(individualClassData).map(([id,d])=>`<tr><td><strong>${d.label}</strong><div class="card-sub">${d.folder}</div></td><td>${d.uploaded}</td><td><span class="badge b-ok">OK ${d.ok}</span></td><td><span class="badge b-err">エラー ${d.missing}</span></td><td><span class="badge b-warn">要確認 ${d.duplicate}</span></td><td><button class="btn btn-primary btn-sm" onclick="selectedIndividualClass='${id}';renderIndividualWorkflow(2)">${d.label}をレビュー</button></td></tr>`).join('');
+  return `<div class="card"><div class="card-title">② クラス別AI処理結果</div><div class="card-sub">アップロードしたフォルダごとに結果を分けて表示します。エラーはクラス単位でレビューできます。</div>
+    <div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Class Folder</th><th>Uploaded</th><th>正常</th><th>エラー</th><th>要確認</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="folder-preview" style="margin-top:12px"><strong>Result structure preview</strong><br><span class="mono">Individual_Process_Result/</span><br><span class="mono">├─ 3年A組/  OK・Error・Review</span><br><span class="mono">└─ 3年B組/  OK・Error・Review</span></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="selectedIndividualClass='3A';renderIndividualWorkflow(2)">レビュー/編集へ</button></div></div>`;
+}
+function individualReviewBody(){
+  const classIds=selectedIndividualClass==='all'?['3A','3B']:[selectedIndividualClass];
+  const rows=classIds.flatMap(id=>individualClassData[id].rows.map(r=>[id,...r]));
+  const rowHtml=rows.map((r,i)=>`<tr data-classid="${r[0]}" data-file="${r[1]}" data-target="${individualClassData[r[0]].label} / ${r[2]}">
+    <td>${individualClassData[r[0]].label}</td><td class="mono">${r[1]}</td><td>${r[2]}</td><td>${classBadgeForStatus(r[4])}</td><td>${r[5]}</td><td>${tagControl(r[3],i,'individual')}</td><td class="mono tag-preview">26_上水高_${r[1]}_${r[0]==='3A'?'3105':'3B12'}_${r[3]}.jpg</td>
+  </tr>`).join('');
+  return `<div class="card"><div class="card-title">③ クラス別レビュー / タグその他（手入力）</div><div class="card-sub">クラスを切り替えて、エラー・要確認行だけでなく、同じ人物の追加写真にも本04・本05・札03などを直接入力できます。</div>${individualClassTabs()}
+    <div class="naming-rule"><strong>個人写真 命名ルール：</strong><br>[Year]_[SchoolName]_[OriginalFileName]_[Grade][Class][ID]_[Tag].ext<br>例：<span class="mono">26_上水高_IMG_2337_3105_札01.jpg</span></div>
+    <div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Class</th><th>Original File</th><th>Student / ID</th><th>Status</th><th>Comment</th><th>写真タグ</th><th>Rename Preview</th></tr></thead><tbody>${rowHtml}</tbody></table></div>
+    <div class="btn-row"><button class="btn btn-success" onclick="toast('タグ修正を保存しました')">修正を保存</button><button class="btn btn-primary" onclick="renderIndividualWorkflow(3)">リネーム確認へ</button></div></div>`;
+}
+function individualRenamePreviewBody(){
+  return `<div class="card"><div class="card-title">④ クラス別リネーム確認</div><div class="card-sub">最終出力もアップロードしたクラスフォルダごとに分かれます。</div>
+    <div class="grid grid-2" style="margin-top:12px"><div class="folder-preview"><strong>3年A組/</strong><br><span class="mono">├─ 26_上水高_IMG_2337_3105_札01.jpg</span><br><span class="mono">├─ 26_上水高_IMG_2338_3105_本01.jpg</span><br><span class="mono">├─ 26_上水高_IMG_2339_3105_本02.jpg</span><br><span class="mono">└─ 26_上水高_IMG_2340_3105_本04.jpg</span></div><div class="folder-preview"><strong>3年B組/</strong><br><span class="mono">├─ 26_上水高_IMG_3101_3B12_札01.jpg</span><br><span class="mono">├─ 26_上水高_IMG_3102_3B12_本01.jpg</span><br><span class="mono">├─ 26_上水高_IMG_3103_3B12_本02.jpg</span><br><span class="mono">└─ 26_上水高_IMG_3110_3B12_本03.jpg</span></div></div>
+    <div class="btn-row"><button class="btn btn-ghost" onclick="renderIndividualWorkflow(2)">レビューへ戻る</button><button class="btn btn-primary" onclick="renderIndividualWorkflow(4)">出力前確認へ</button></div></div>`;
+}
+function individualExportBody(){
+  return `<div class="card"><div class="alert a-ok"><span>✅</span><div><strong>個人写真の出力準備が完了しました。</strong><br>3年A組・3年B組ごとにリネーム済みファイルと確認Excelを出力します。</div></div>
+    <div class="folder-preview"><strong>Individual_Output/</strong><br><span class="mono">├─ 3年A組/</span><br><span class="mono">│  ├─ 札01/</span><br><span class="mono">│  ├─ 本01/</span><br><span class="mono">│  ├─ 本02/</span><br><span class="mono">│  └─ 本04/  その他（手入力）タグの追加写真</span><br><span class="mono">├─ 3年B組/</span><br><span class="mono">│  ├─ 札01/</span><br><span class="mono">│  ├─ 本01/</span><br><span class="mono">│  ├─ 本02/</span><br><span class="mono">│  └─ 本03/</span><br><span class="mono">└─ individual_review_summary.xlsx</span></div>
+    <div class="btn-row"><button class="btn btn-success" onclick="toast('個人写真の出力ファイルを作成しました')">Export</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
+}
+const PREV_RENDER_WORKFLOW_V4=window.renderWorkflow;
+window.renderWorkflow=function(kind,step){
+  if(kind==='individual') return renderIndividualWorkflow(step||0);
+  return PREV_RENDER_WORKFLOW_V4(kind,step||0);
+};
+window.projectSec=function(sec){
+  document.querySelectorAll('.project-nav .tab-btn').forEach(x=>x.classList.toggle('on',x.dataset.sec===sec));
+  document.querySelectorAll('#page-project .section').forEach(x=>x.classList.remove('on'));
+  document.getElementById('sec-'+sec).classList.add('on');
+  if(sec==='individual')renderIndividualWorkflow(0); else if(['teacher','club','snap'].includes(sec))window.renderWorkflow(sec,0);
+};
+
+
+// ===== Final revision: club-specific review/edit flow and tidy person search source behavior =====
+let selectedClubName='バドミントン部';
+let selectedClubDate='20260403';
+function clubUploadBody(){return `<div class="card"><div class="card-title">① クラブフォルダをアップロード</div><div class="card-sub">クラブ写真にはカード保持画像はありません。フォルダ名をクラブ名として扱います。</div><div class="drop" style="margin-top:12px" onclick="toast('クラブフォルダを追加しました')">☁️ クラブフォルダを追加</div><div class="file-list"><div class="file-row"><span class="file-icon">📁</span><div class="file-info"><div class="file-name">バドミントン部/</div><div class="file-meta">24枚 · folder name becomes club name</div></div></div><div class="file-row"><span class="file-icon">📁</span><div class="file-info"><div class="file-name">サッカー部/</div><div class="file-meta">18枚 · folder name becomes club name</div></div></div></div><div class="btn-row"><button class="btn btn-primary" onclick="renderClubWorkflow(1);toast('クラブ写真のAI検出を開始しました')">AI検出を開始</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;}
+function clubAiBody(){return `<div class="card"><div class="card-title">② AI Detection / Ranking</div><div class="card-sub">人数カウント、目つぶり検出、BestShot候補をクラブフォルダごとに作成します。</div><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Club Folder</th><th>Photo</th><th>Person Count</th><th>Eye Closing</th><th>Candidate</th><th>Action</th></tr></thead><tbody><tr><td>バドミントン部</td><td class="mono">IMG0045.jpg</td><td>15</td><td><span class="badge b-ok">なし</span></td><td><span class="badge b-ok">BestShot候補</span></td><td><button class="btn btn-primary btn-sm" onclick="renderClubWorkflow(2)">Review/Edit</button></td></tr><tr><td>バドミントン部</td><td class="mono">IMG0046.jpg</td><td>14</td><td><span class="badge b-warn">1名候補</span></td><td><span class="badge b-warn">要確認</span></td><td><button class="btn btn-primary btn-sm" onclick="renderClubWorkflow(2)">Review/Edit</button></td></tr><tr><td>サッカー部</td><td class="mono">IMG1012.jpg</td><td>18</td><td><span class="badge b-ok">なし</span></td><td><span class="badge b-blue">予備候補</span></td><td><button class="btn btn-primary btn-sm" onclick="renderClubWorkflow(2)">Review/Edit</button></td></tr></tbody></table></div><div class="btn-row"><button class="btn btn-primary" onclick="renderClubWorkflow(2)">Review/Editへ</button></div></div>`;}
+function clubReviewBody(){const rows=[['バドミントン部','IMG0045.jpg','本01','15','なし','BestShot候補'],['バドミントン部','IMG0046.jpg','本02','14','1名候補','要確認'],['バドミントン部','IMG0047.jpg','本03','15','なし','予備候補'],['サッカー部','IMG1012.jpg','本01','18','なし','BestShot候補']];const rowHtml=rows.map((r,i)=>`<tr data-club="${r[0]}" data-date="20260403" data-file="${r[1]}" data-target="${r[0]}"><td><input value="${r[0]}" oninput="this.closest('tr').dataset.club=this.value;applyTagPreviewV4(this.closest('tr'),'club')"></td><td><input value="20260403" oninput="this.closest('tr').dataset.date=this.value;applyTagPreviewV4(this.closest('tr'),'club')"></td><td class="mono">${r[1]}</td><td>${r[3]}名</td><td>${r[4]==='なし'?'<span class="badge b-ok">なし</span>':'<span class="badge b-warn">'+r[4]+'</span>'}</td><td>${r[5]}</td><td>${tagControl(r[2],i,'club')}</td><td class="mono tag-preview">${r[0]}_20260403_${r[1]}_${r[2]}.jpg</td></tr>`).join('');return `<div class="card"><div class="card-title">③ Review / Edit：クラブ名・撮影日・タグ確認</div><div class="card-sub">クラブ写真にはカード保持画像がないため、フォルダ名をクラブ名として使います。必要に応じてクラブ名・撮影日・タグを編集します。</div><div class="naming-rule" style="margin-top:12px"><strong>クラブ写真 命名ルール：</strong><br>フォルダ名_撮影日_元ファイル名_タグ<br>例：<span class="mono">バドミントン部_20260403_IMG0045_本01.jpg</span></div><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Club Name</th><th>Shooting Date</th><th>Original File</th><th>Person Count</th><th>Eye Closing</th><th>AI Candidate</th><th>写真タグ</th><th>Rename Preview</th></tr></thead><tbody>${rowHtml}</tbody></table></div><div class="btn-row"><button class="btn btn-success" onclick="toast('クラブ写真の編集内容を保存しました')">編集内容を保存</button><button class="btn btn-primary" onclick="renderClubWorkflow(3)">Rename / Output Previewへ</button></div></div>`;}
+function clubRenameBody(){return `<div class="card"><div class="card-title">④ Rename / Output Preview</div><div class="card-sub">クリーン画像、マークあり画像、Excel結果ファイルの出力を確認します。</div><div class="output-tree" style="margin-top:12px">Club_Output/<br>├─ Clean/　マークなし画像<br>│  ├─ バドミントン部_20260403_IMG0045_本01.jpg<br>│  └─ バドミントン部_20260403_IMG0046_本02.jpg<br>├─ Marked/　人数カウント・目つぶり赤枠付き画像<br>│  ├─ バドミントン部_20260403_IMG0045_marked.jpg<br>│  └─ バドミントン部_20260403_IMG0046_marked.jpg<br>└─ Excel/<br>　 └─ club_detection_result.xlsx</div><div class="btn-row"><button class="btn btn-ghost" onclick="renderClubWorkflow(2)">Review/Editへ戻る</button><button class="btn btn-primary" onclick="renderClubWorkflow(4)">Exportへ</button></div></div>`;}
+function renderClubWorkflow(step){const sec=document.getElementById('sec-club');const steps=['Upload','AI Detection','Review/Edit','Rename/Output','Export'];const tabs=steps.map((s,i)=>`<button class="wf-tab ${i===step?'on':''}" onclick="renderClubWorkflow(${i})">${i+1} ${s}</button>`).join('');let body='';if(step===0)body=clubUploadBody();else if(step===1)body=clubAiBody();else if(step===2)body=clubReviewBody();else if(step===3)body=clubRenameBody();else body=clubExportBody();sec.innerHTML=`<div class="alert a-info"><span>🏆</span><div><strong>クラブ写真：</strong>カード保持画像は使用せず、クラブフォルダ名をクラブ名として処理します。Review/Editでは撮影日・タグ・リネームを確認します。</div></div><div class="wf-tabs">${tabs}</div>${body}`;if(step===4)selectClubFolder('clean');}
+// compact PDF source layout helper
+function finalizePersonSearchLayout(){const card=document.getElementById('personPdfUploadCard');if(card){card.style.display='block';}syncPersonSearchLogic();}
+const PREV_RENDER_WORKFLOW_FINAL=window.renderWorkflow;
+window.renderWorkflow=function(kind,step){if(kind==='individual')return renderIndividualWorkflow(step||0);if(kind==='club')return renderClubWorkflow(step||0);return PREV_RENDER_WORKFLOW_FINAL(kind,step||0);};
+window.projectSec=function(sec){document.querySelectorAll('.project-nav .tab-btn').forEach(x=>x.classList.toggle('on',x.dataset.sec===sec));document.querySelectorAll('#page-project .section').forEach(x=>x.classList.remove('on'));document.getElementById('sec-'+sec).classList.add('on');if(sec==='individual')renderIndividualWorkflow(0);else if(sec==='club')renderClubWorkflow(0);else if(['teacher','snap'].includes(sec))window.renderWorkflow(sec,0);else if(sec==='person')finalizePersonSearchLayout();};
+
+setTimeout(()=>{setPersonSearchMode('text');syncPersonSearchLogic();/* v4 no default rename filter needed */},0);
+
+// live filters: changing dropdown immediately refreshes both card and list views
+setTimeout(()=>{['filterSchool','filterYear','filterStatus','filterSort'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(id==='filterSchool'?'input':'change',()=>{projectPage=1;renderProjects();});});renderProjects();},0);
+
+renderProjects();
+</script>
+
+<script>
+// ===== UX v6: clearer rename UI + cleaner teacher excel preview =====
+(function(){
+  const style = document.createElement('style');
+  style.textContent = `
+  .rename-rule-strip{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .rename-chip{padding:7px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:12px;color:var(--ink2)}
+  .rename-chip strong{color:var(--ink1)}
+  .rename-preview-box{margin-top:10px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fcfdff}
+  .rename-preview-box .label{font-size:12px;color:var(--ink2);margin-bottom:6px}
+  .rename-preview-box .value{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--ink1)}
+  .tight-table th,.tight-table td{padding:10px 10px;vertical-align:top}
+  .teacher-grid-note{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
+  .teacher-mini{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff}
+  .teacher-mini .k{font-size:12px;color:var(--ink2);margin-bottom:6px}
+  .teacher-mini .v{font-weight:700;color:var(--ink1)}
+  .teacher-excel-panel{margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fff}
+  .teacher-excel-title{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+  .teacher-excel-title .meta{font-size:12px;color:var(--ink2)}
+  .readable-table table{min-width:900px}
+  .readable-table th{white-space:nowrap}
+  .subtle-note{font-size:12px;color:var(--ink2)}
+  `;
+  document.head.appendChild(style);
+
+  function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function individualId(classId, no){
+    const n = String(no||'').replace(/\D/g,'').padStart(2,'0');
+    return classId==='3A' ? `31${n}` : `32${n}`;
+  }
+  function friendlyTagControl(defaultTag, kind){
+    return `<div class="tag-editor" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select class="tag-select" onchange="updateTagPreviewV4(this,'${kind}')">
+        ${['札01','札02','本01','本02','本03','その他（手入力）'].map(t=>`<option ${defaultTag===t?'selected':''}>${t}</option>`).join('')}
+      </select>
+      <input class="manual-tag-input" placeholder="例：本04 / 本05 / 札03" oninput="updateManualTagPreviewV4(this,'${kind}')" disabled style="width:170px;background:var(--g100);cursor:not-allowed" />
+    </div><div class="check-desc">通常は候補から選択します。<strong>その他（手入力）</strong>を選んだ時だけ右欄に入力できます。</div>`;
+  }
+
+  window.individualReviewBody = function(){
+    const classIds = selectedIndividualClass==='all' ? ['3A','3B'] : [selectedIndividualClass || '3A'];
+    const rows = classIds.flatMap(id => individualClassData[id].rows.map(r => ({classId:id, label:individualClassData[id].label, file:r[0], person:r[1], defaultTag:r[2], status:r[3], comment:r[4]})));
+    const rowHtml = rows.map((r,i)=>{
+      const no = (r.person.match(/(\d+)番/)||[])[1] || '00';
+      const preview = `26_上水高_${r.file}_${individualId(r.classId,no)}_${r.defaultTag}.jpg`;
+      return `<tr data-classid="${r.classId}" data-file="${escapeHtml(r.file)}" data-target="${escapeHtml(r.person)}">
+        <td>${escapeHtml(r.label)}</td>
+        <td>${escapeHtml(no)}</td>
+        <td class="mono">${escapeHtml(r.file)}</td>
+        <td>${classBadgeForStatus(r.status)}</td>
+        <td>${escapeHtml(r.comment)}</td>
+        <td>${friendlyTagControl(r.defaultTag,'individual')}</td>
+        <td>
+          <div class="rename-rule-strip">
+            <span class="rename-chip"><strong>Year</strong> 26</span>
+            <span class="rename-chip"><strong>School</strong> 上水高</span>
+            <span class="rename-chip"><strong>Original</strong> ${escapeHtml(r.file)}</span>
+            <span class="rename-chip"><strong>Class+ID</strong> ${individualId(r.classId,no)}</span>
+          </div>
+          <div class="rename-preview-box"><div class="label">Rename Preview</div><div class="value tag-preview">${escapeHtml(preview)}</div></div>
+        </td>
+      </tr>`;
+    }).join('');
+    return `<div class="card"><div class="card-title">③ クラス別レビュー / リネーム確認</div><div class="card-sub">クラスごとに、元ファイル名・出席番号・写真タグを確認します。<strong>生徒名は確認用データとして内部で保持し、ファイル名には含めません。</strong></div>${individualClassTabs()}
+      <div class="naming-rule"><strong>個人写真 命名ルール：</strong><br>[Year]_[SchoolName]_[OriginalFileName]_[Grade][Class][ID]_[Tag].ext<br>例：<span class="mono">26_上水高_IMG_2337_3105_札01.jpg</span></div>
+      <div class="table-wrap readable-table tight-table" style="margin-top:12px"><table><thead><tr><th>クラス</th><th>出席番号</th><th>元ファイル名</th><th>状態</th><th>備考</th><th>写真タグ</th><th>Rename Preview</th></tr></thead><tbody>${rowHtml}</tbody></table></div>
+      <div class="btn-row"><button class="btn btn-success" onclick="toast('タグ修正を保存しました')">修正を保存</button><button class="btn btn-primary" onclick="renderIndividualWorkflow(3)">リネーム確認へ</button></div></div>`;
+  };
+
+  window.editReviewBody = function(kind, icon){
+    if(kind!=='teacher') return '';
+    const rows = [
+      {subject:'国語科', name:'高橋次郎', file:'IMG0165.jpg', status:'OK', candidate:'BestShot第1候補', tag:'本01'},
+      {subject:'国語科', name:'高橋次郎', file:'IMG0166.jpg', status:'OK', candidate:'BestShot第2候補', tag:'本02'},
+      {subject:'国語科', name:'高橋次郎', file:'IMG0167.jpg', status:'OK', candidate:'カード保持写真', tag:'札01'},
+      {subject:'国語科', name:'高橋次郎', file:'IMG0168.jpg', status:'要確認', candidate:'追加候補（必要なら本04/本05）', tag:'本03'}
+    ];
+    const rowHtml = rows.map((r,i)=>`<tr data-classid="teacher" data-file="${escapeHtml(r.file)}" data-target="${escapeHtml(r.subject+' / '+r.name)}">
+      <td>${escapeHtml(r.subject)}</td>
+      <td>${escapeHtml(r.name)}</td>
+      <td class="mono">${escapeHtml(r.file)}</td>
+      <td>${classBadgeForStatus(r.status)}</td>
+      <td>${escapeHtml(r.candidate)}</td>
+      <td>${friendlyTagControl(r.tag,'teacher')}</td>
+      <td>
+        <div class="rename-rule-strip">
+          <span class="rename-chip"><strong>Subject</strong> ${escapeHtml(r.subject)}</span>
+          <span class="rename-chip"><strong>Name</strong> ${escapeHtml(r.name)}</span>
+          <span class="rename-chip"><strong>Original</strong> ${escapeHtml(r.file)}</span>
+        </div>
+        <div class="rename-preview-box"><div class="label">Rename Preview</div><div class="value tag-preview">${escapeHtml(r.subject)}_${escapeHtml(r.name)}_${escapeHtml(r.file)}_${escapeHtml(r.tag)}.jpg</div></div>
+      </td>
+    </tr>`).join('');
+    return `<div class="card"><div class="card-title">③ Review / Edit：先生写真のタグ確認</div><div class="card-sub">教科・先生名・元ファイル名・写真タグを見ながら確認します。<strong>本04・本05・札03</strong>などは「その他（手入力）」を選んで入力します。</div>
+      <div class="naming-rule" style="margin-top:12px"><strong>先生写真 命名ルール：</strong><br>教科_先生名_元ファイル名_タグ<br>例：<span class="mono">国語科_高橋次郎_IMG0165_本01.jpg</span></div>
+      <div class="table-wrap readable-table tight-table" style="margin-top:12px"><table><thead><tr><th>教科</th><th>先生名</th><th>元ファイル名</th><th>状態</th><th>候補</th><th>写真タグ</th><th>Rename Preview</th></tr></thead><tbody>${rowHtml}</tbody></table></div>
+      <div class="btn-row"><button class="btn btn-success" onclick="toast('先生写真タグを確定しました')">タグを確定</button><button class="btn btn-primary" onclick="renderWorkflow('teacher',3)">次へ</button></div></div>`;
+  };
+
+  window.clubReviewBody = function(){
+    const rows=[
+      {club:'バドミントン部', date:'20260403', file:'IMG0045.jpg', count:'15名', eye:'なし', candidate:'BestShot候補', tag:'本01'},
+      {club:'バドミントン部', date:'20260403', file:'IMG0046.jpg', count:'14名', eye:'1名候補', candidate:'要確認', tag:'本02'},
+      {club:'バドミントン部', date:'20260403', file:'IMG0047.jpg', count:'15名', eye:'なし', candidate:'予備候補', tag:'本03'},
+      {club:'サッカー部', date:'20260403', file:'IMG1012.jpg', count:'18名', eye:'なし', candidate:'BestShot候補', tag:'本01'}
+    ];
+    const rowHtml = rows.map(r=>`<tr data-club="${escapeHtml(r.club)}" data-date="${escapeHtml(r.date)}" data-file="${escapeHtml(r.file)}" data-target="${escapeHtml(r.club)}">
+      <td><input value="${escapeHtml(r.club)}" oninput="this.closest('tr').dataset.club=this.value;applyTagPreviewV4(this.closest('tr'),'club')"></td>
+      <td><input value="${escapeHtml(r.date)}" oninput="this.closest('tr').dataset.date=this.value;applyTagPreviewV4(this.closest('tr'),'club')"></td>
+      <td class="mono">${escapeHtml(r.file)}</td>
+      <td>${escapeHtml(r.count)}</td>
+      <td>${r.eye==='なし'?'<span class="badge b-ok">なし</span>':'<span class="badge b-warn">'+escapeHtml(r.eye)+'</span>'}</td>
+      <td>${escapeHtml(r.candidate)}</td>
+      <td>${friendlyTagControl(r.tag,'club')}</td>
+      <td>
+        <div class="rename-rule-strip">
+          <span class="rename-chip"><strong>Club</strong> ${escapeHtml(r.club)}</span>
+          <span class="rename-chip"><strong>Date</strong> ${escapeHtml(r.date)}</span>
+          <span class="rename-chip"><strong>Original</strong> ${escapeHtml(r.file)}</span>
+        </div>
+        <div class="rename-preview-box"><div class="label">Rename Preview</div><div class="value tag-preview">${escapeHtml(r.club)}_${escapeHtml(r.date)}_${escapeHtml(r.file)}_${escapeHtml(r.tag)}.jpg</div></div>
+      </td>
+    </tr>`).join('');
+    return `<div class="card"><div class="card-title">③ Review / Edit：クラブ名・撮影日・タグ確認</div><div class="card-sub">クラブ写真にはカード保持画像がないため、<strong>フォルダ名＝クラブ名</strong>として処理します。クラブ名・撮影日・タグを確認してリネームをプレビューします。</div>
+      <div class="naming-rule" style="margin-top:12px"><strong>クラブ写真 命名ルール：</strong><br>フォルダ名_撮影日_元ファイル名_タグ<br>例：<span class="mono">バドミントン部_20260403_IMG0045_本01.jpg</span></div>
+      <div class="table-wrap readable-table tight-table" style="margin-top:12px"><table><thead><tr><th>クラブ名</th><th>撮影日</th><th>元ファイル名</th><th>人数</th><th>目つぶり</th><th>AI候補</th><th>写真タグ</th><th>Rename Preview</th></tr></thead><tbody>${rowHtml}</tbody></table></div>
+      <div class="btn-row"><button class="btn btn-success" onclick="toast('クラブ写真の編集内容を保存しました')">編集内容を保存</button><button class="btn btn-primary" onclick="renderClubWorkflow(3)">Rename / Output Previewへ</button></div></div>`;
+  };
+
+  window.teacherExportBody = function(){
+    return `<div class="card"><div class="alert a-ok"><span>✅</span><div><strong>先生写真の出力準備が完了しました。</strong><br>BestShot / Processed / Unknown / Excel の内容を確認し、必要に応じてExcelまたは出力構成をダウンロードできます。</div></div>
+      <div class="card-title">Teacher_Output / 出力フォルダプレビュー</div>
+      <div class="folder-grid">
+        <div class="folder-card" id="folder-best" onclick="selectTeacherFolder('best')"><div class="folder-icon">📁</div><div class="folder-title">BestShot</div><div class="folder-desc">順位付きで自動リネームされたベストショット写真（本1、本2など）</div></div>
+        <div class="folder-card" id="folder-processed" onclick="selectTeacherFolder('processed')"><div class="folder-icon">📁</div><div class="folder-title">Processed</div><div class="folder-desc">カード情報が正常に処理された教師写真</div></div>
+        <div class="folder-card" id="folder-unknown" onclick="selectTeacherFolder('unknown')"><div class="folder-icon">📁</div><div class="folder-title">Unknown</div><div class="folder-desc">カード名がPDF教師名簿と一致しなかった写真</div></div>
+        <div class="folder-card on" id="folder-excel" onclick="selectTeacherFolder('excel')"><div class="folder-icon">📊</div><div class="folder-title">Excel</div><div class="folder-desc">処理結果・照合結果の一覧</div></div>
+      </div>
+      <div class="folder-preview" id="teacherFolderPreview"></div>
+      <div class="teacher-excel-panel">
+        <div class="teacher-excel-title"><div><div class="card-title">Excel出力プレビュー：teacher_processing_result.xlsx</div><div class="card-sub">1つのExcelファイル内に5つのタブを作成します。各タブをクリックすると内容例を確認できます。</div></div><div class="meta">見やすい一覧形式で確認できます</div></div>
+        <div class="excel-tabs">
+          <button class="excel-tab" id="tab-match" onclick="renderTeacherExcelTab('match')">Match Result</button>
+          <button class="excel-tab" id="tab-pdf" onclick="renderTeacherExcelTab('pdf')">PDF Staff Master</button>
+          <button class="excel-tab on" id="tab-final" onclick="renderTeacherExcelTab('final')">Final Name List</button>
+          <button class="excel-tab" id="tab-score" onclick="renderTeacherExcelTab('score')">BestShot Scores</button>
+          <button class="excel-tab" id="tab-subject" onclick="renderTeacherExcelTab('subject')">Staff by Subject</button>
+        </div>
+        <div id="teacherExcelPreview"></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-success" onclick="downloadTeacherExcel()">Excelをダウンロード</button><button class="btn btn-primary" onclick="downloadTeacherOutputFolder()">出力フォルダをダウンロード</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div>
+    </div>`;
+  };
+
+  window.selectTeacherFolder = function(type){
+    ['best','processed','unknown','excel'].forEach(x=>document.getElementById('folder-'+x)?.classList.toggle('on',x===type));
+    const previews = {
+      best:`<strong>BestShot/</strong><br><span class="mono">├─ 01_保健体育科_齋藤明博_13670037.JPG_本1.jpg</span><br><span class="mono">├─ 02_保健体育科_齋藤明博_13670040.JPG_本2.jpg</span><br><span class="mono">└─ 03_保健体育科_齋藤明博_13670036.JPG_本3.jpg</span><div class="subtle-note" style="margin-top:8px">順位と本番号が分かる形で自動リネームされたベストショット写真です。</div>`,
+      processed:`<strong>Processed/</strong><br><span class="mono">├─ 13670033_card_processed.jpg</span><br><span class="mono">├─ 13670034_portrait_processed.jpg</span><br><span class="mono">└─ 13670035_portrait_processed.jpg</span><div class="subtle-note" style="margin-top:8px">カード情報が正常に処理され、教師名・教科との紐づけが完了した写真です。</div>`,
+      unknown:`<strong>Unknown/</strong><br><span class="mono">├─ T_009_unmatched.jpg</span><br><span class="mono">└─ T_014_low_confidence.jpg</span><div class="subtle-note" style="margin-top:8px">カード名がPDF教師名簿と一致しなかった写真や、OCR信頼度が低い写真を確認用に分けます。</div>`,
+      excel:`<strong>Excel/</strong><br><span class="mono">└─ teacher_processing_result.xlsx</span><div class="subtle-note" style="margin-top:8px">Match Result / PDF Staff Master / Final Name List / BestShot Scores / Staff by Subject の5タブを含みます。</div>`
+    };
+    const target=document.getElementById('teacherFolderPreview');
+    if(target) target.innerHTML = previews[type] || previews.excel;
+  };
+
+  function teacherTable(title, cols, rows, note=''){
+    return `<div class="card-title" style="margin-top:10px">${title}</div>${note?`<div class="card-sub">${note}</div>`:''}<div class="table-wrap readable-table tight-table" style="margin-top:10px"><table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  }
+  window.renderTeacherExcelTab = function(tab){
+    ['match','pdf','final','score','subject'].forEach(x=>document.getElementById('tab-'+x)?.classList.toggle('on',x===tab));
+    const htmlMap = {
+      match: teacherTable('Match Result', ['ORIGINAL FILENAME','OCR TEACHER NAME','PDF MATCH NAME','SUBJECT','MATCH RESULT','NOTE'], [
+        ['13670033.JPG','齋藤 明博','齋藤 明博','校長','<span class="badge b-ok">一致</span>','exact'],
+        ['13670034.JPG','齋藤 明博','斎藤 明博','保健体育','<span class="badge b-ok">一致</span>','表記ゆれ吸収'],
+        ['13670039.JPG','斉藤 明博','齋藤 明博','保健体育','<span class="badge b-warn">手動確認</span>','カードなし写真を同一人物へ紐づけ']
+      ], 'OCR結果とPDF教師名簿の照合結果を確認します。'),
+      pdf: teacherTable('PDF Staff Master', ['SUBJECT','TEACHER NAME','ROLE','SOURCE PAGE'], [
+        ['校長','齋藤 明博','管理職','p.1'],
+        ['保健体育','齋藤 明博','教員','p.2'],
+        ['国語科','高橋 次郎','教員','p.3']
+      ], 'PDFから抽出した教師名簿です。'),
+      final: teacherTable('Final Name List', ['ORIGINAL FILENAME','RENAMED FILENAME','FINAL TEACHER NAME','SUBJECT','MATCH METHOD'], [
+        ['13670033.JPG','—','斎藤 明博','校長','exact'],
+        ['13670034.JPG','保健体育科_齋藤明博_13670034_本1.jpg','齋藤 明博','保健体育','manual/link'],
+        ['13670040.JPG','保健体育科_齋藤明博_13670040_本2.jpg','齋藤 明博','保健体育','bestshot']
+      ], '確認・リネーム後の最終リストです。'),
+      score: teacherTable('BestShot Scores', ['FILE','RANK','SCORE','COMMENT'], [
+        ['13670034.JPG','本1','92','正面・ピント良好'],
+        ['13670040.JPG','本2','88','姿勢安定'],
+        ['13670036.JPG','本3','84','やや視線ずれ']
+      ], 'ベストショット順位、スコア、コメントを確認できます。'),
+      subject: teacherTable('Staff by Subject', ['SUBJECT','TEACHER NAME','COUNT','NOTE'], [
+        ['校長','齋藤 明博','1','管理職'],
+        ['保健体育','齋藤 明博','3','カード保持＋ポートレート'],
+        ['国語科','高橋 次郎','2','BestShot候補あり']
+      ], '教科別に整理した教師名簿です。')
+    };
+    const target=document.getElementById('teacherExcelPreview');
+    if(target) target.innerHTML = htmlMap[tab] || htmlMap.final;
+  };
+
+  const prevRenderWorkflow = window.renderWorkflow;
+  window.renderWorkflow = function(kind, step){
+    prevRenderWorkflow(kind, step);
+    if(kind==='teacher' && step===4){
+      selectTeacherFolder('excel');
+      renderTeacherExcelTab('final');
+    }
+  };
+
+  // If teacher export is already open, refresh default selection after load.
+  setTimeout(()=>{
+    if(document.getElementById('sec-teacher')?.classList.contains('on')){
+      try{selectTeacherFolder('excel');renderTeacherExcelTab('final');}catch(e){}
+    }
+  }, 50);
+})();
+</script>
+
+<script>
+// ===== UX v7: allow client to manually edit all filename components =====
+(function(){
+  const style=document.createElement('style');
+  style.textContent=`
+  .rename-component-grid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;align-items:end}
+  .rename-component-grid .field input{font-size:12px;padding:6px 8px}
+  .component-note{font-size:11px;color:var(--ink2);margin-top:4px}
+  .filename-preview-live{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;min-width:360px}
+  .filename-preview-live .label{font-size:11px;color:var(--ink2);margin-bottom:4px}
+  .filename-preview-live .value{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;word-break:break-all;color:var(--ink1)}
+  .rename-table td{vertical-align:top}
+  .rename-table .mini{font-size:11px;color:var(--ink2)}
+  .tag-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .tag-row input{width:120px;font-size:12px;padding:6px 8px}
+  `;
+  document.head.appendChild(style);
+
+  function esc(s){return String(s ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function clean(s){return String(s ?? '').replace(/\s+/g,'').trim();}
+  function tagEditor(defaultTag, kind){
+    return `<div class="tag-row"><select class="tag-select" onchange="updateTagPreviewV4(this,'${kind}')">${['札01','札02','本01','本02','本03','その他（手入力）'].map(t=>`<option ${defaultTag===t?'selected':''}>${t}</option>`).join('')}</select><input class="manual-tag-input" placeholder="例：本05 / 札04" disabled oninput="updateManualTagPreviewV4(this,'${kind}')" style="background:var(--g100);cursor:not-allowed"></div><div class="mini">手入力は「その他（手入力）」選択時のみ有効</div>`;
+  }
+  function selectedTag(tr){
+    const sel=tr.querySelector('.tag-select');
+    const input=tr.querySelector('.manual-tag-input');
+    if(sel && sel.value==='その他（手入力）') return clean(input?.value)||'未入力';
+    return sel?.value || '本01';
+  }
+  function updateManualState(tr){
+    const sel=tr.querySelector('.tag-select');
+    const input=tr.querySelector('.manual-tag-input');
+    if(!sel||!input)return;
+    const on=sel.value==='その他（手入力）';
+    input.disabled=!on;
+    input.style.background=on?'#fff':'var(--g100)';
+    input.style.cursor=on?'text':'not-allowed';
+    if(!on) input.value='';
+    if(on) input.focus();
+  }
+  function part(tr, cls, fallback=''){
+    const el=tr.querySelector('.'+cls);
+    return clean(el?.value || el?.textContent || fallback);
+  }
+  function buildFilename(tr, kind){
+    const tag=selectedTag(tr);
+    if(kind==='teacher'){
+      const subject=part(tr,'rn-subject','国語科');
+      const name=part(tr,'rn-teacher','高橋次郎');
+      const original=part(tr,'rn-original','IMG0165.jpg');
+      return `${subject}_${name}_${original}_${tag}.jpg`;
+    }
+    if(kind==='club'){
+      const club=part(tr,'rn-club','バドミントン部');
+      const date=part(tr,'rn-date','20260403');
+      const original=part(tr,'rn-original','IMG0045.jpg');
+      return `${club}_${date}_${original}_${tag}.jpg`;
+    }
+    const year=part(tr,'rn-year','26');
+    const school=part(tr,'rn-school','上水高');
+    const original=part(tr,'rn-original','IMG_2337.jpg');
+    const grade=part(tr,'rn-grade','3');
+    const klass=part(tr,'rn-class','1');
+    const id=part(tr,'rn-id','05').padStart(2,'0');
+    return `${year}_${school}_${original}_${grade}${klass}${id}_${tag}.jpg`;
+  }
+  window.updateTagPreviewV4=function(el,kind){
+    const tr=el.closest('tr');
+    updateManualState(tr);
+    applyTagPreviewV4(tr,kind);
+  };
+  window.updateManualTagPreviewV4=function(input,kind){applyTagPreviewV4(input.closest('tr'),kind);};
+  window.applyTagPreviewV4=function(tr,kind){
+    if(!tr)return;
+    const out=tr.querySelector('.tag-preview');
+    if(out)out.textContent=buildFilename(tr,kind);
+  };
+
+  function individualRow(r, classId, label){
+    const no=(r[1].match(/(\d+)番/)||[])[1] || (classId==='3A'?'05':'12');
+    const klass=classId==='3A'?'1':'2';
+    const grade='3';
+    const file=r[0];
+    const tag=r[2];
+    const status=r[3];
+    const comment=r[4];
+    const preview=`26_上水高_${file}_${grade}${klass}${String(no).padStart(2,'0')}_${tag}.jpg`;
+    return `<tr>
+      <td>${esc(label)}<div class="mini">${esc(r[1])}</div></td>
+      <td>${classBadgeForStatus(status)}<div class="mini">${esc(comment)}</div></td>
+      <td>
+        <div class="rename-component-grid">
+          <div class="field"><label>Year</label><input class="rn-year" value="26" oninput="applyTagPreviewV4(this.closest('tr'),'individual')"></div>
+          <div class="field"><label>School</label><input class="rn-school" value="上水高" oninput="applyTagPreviewV4(this.closest('tr'),'individual')"></div>
+          <div class="field"><label>Original File</label><input class="rn-original" value="${esc(file)}" oninput="applyTagPreviewV4(this.closest('tr'),'individual')"></div>
+          <div class="field"><label>Grade</label><input class="rn-grade" value="${grade}" oninput="applyTagPreviewV4(this.closest('tr'),'individual')"></div>
+          <div class="field"><label>Class</label><input class="rn-class" value="${klass}" oninput="applyTagPreviewV4(this.closest('tr'),'individual')"></div>
+          <div class="field"><label>ID / Card No.</label><input class="rn-id" value="${String(no).padStart(2,'0')}" oninput="applyTagPreviewV4(this.closest('tr'),'individual')"></div>
+          <div class="field" style="grid-column:span 2"><label>Photo Tag / Ranking</label>${tagEditor(tag,'individual')}</div>
+        </div>
+        <div class="component-note">生徒名は確認用のみで、ファイル名には含めません。</div>
+        <div class="filename-preview-live"><div class="label">Rename Preview</div><div class="value tag-preview">${esc(preview)}</div></div>
+      </td>
+    </tr>`;
+  }
+  window.individualReviewBody=function(){
+    const classIds=selectedIndividualClass==='all'?['3A','3B']:[selectedIndividualClass||'3A'];
+    const rows=classIds.flatMap(id=>individualClassData[id].rows.map(r=>individualRow(r,id,individualClassData[id].label))).join('');
+    return `<div class="card"><div class="card-title">③ クラス別レビュー / ファイル名の構成要素を手動編集</div><div class="card-sub">Year・School・Original File・Grade・Class・ID・Tag をクライアント側で手入力修正できます。</div>${individualClassTabs()}
+      <div class="naming-rule"><strong>個人写真 命名ルール：</strong><br>[Year]_[SchoolName]_[OriginalFileName]_[Grade][Class][ID]_[Tag].ext<br>例：<span class="mono">26_上水高_IMG_2337_3105_札01.jpg</span></div>
+      <div class="table-wrap readable-table rename-table" style="margin-top:12px"><table><thead><tr><th>Class / Student Ref.</th><th>Status</th><th>Editable filename parts</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="btn-row"><button class="btn btn-success" onclick="toast('リネーム情報を保存しました')">修正を保存</button><button class="btn btn-primary" onclick="renderIndividualWorkflow(3)">リネーム確認へ</button></div></div>`;
+  };
+
+  window.editReviewBody=function(kind,icon){
+    if(kind!=='teacher')return '';
+    const rows=[
+      ['国語科','高橋次郎','IMG0165.jpg','本01','OK','BestShot第1候補'],
+      ['国語科','高橋次郎','IMG0166.jpg','本02','OK','BestShot第2候補'],
+      ['国語科','高橋次郎','IMG0167.jpg','札01','OK','カード保持写真'],
+      ['国語科','高橋次郎','IMG0168.jpg','本03','要確認','追加候補（必要なら本04/本05）']
+    ].map(r=>{
+      const [sub,name,file,tag,status,comment]=r;
+      return `<tr><td>${classBadgeForStatus(status)}<div class="mini">${esc(comment)}</div></td><td>
+        <div class="rename-component-grid">
+          <div class="field"><label>Subject</label><input class="rn-subject" value="${esc(sub)}" oninput="applyTagPreviewV4(this.closest('tr'),'teacher')"></div>
+          <div class="field"><label>Teacher Name</label><input class="rn-teacher" value="${esc(name)}" oninput="applyTagPreviewV4(this.closest('tr'),'teacher')"></div>
+          <div class="field"><label>Original File</label><input class="rn-original" value="${esc(file)}" oninput="applyTagPreviewV4(this.closest('tr'),'teacher')"></div>
+          <div class="field"><label>Photo Tag / Ranking</label>${tagEditor(tag,'teacher')}</div>
+        </div>
+        <div class="filename-preview-live"><div class="label">Rename Preview</div><div class="value tag-preview">${esc(sub)}_${esc(name)}_${esc(file)}_${esc(tag)}.jpg</div></div>
+      </td></tr>`;
+    }).join('');
+    return `<div class="card"><div class="card-title">③ Review / Edit：先生写真のファイル名を手動編集</div><div class="card-sub">教科・先生名・元ファイル名・写真タグを、必要に応じてクライアント側で直接修正できます。</div>
+      <div class="naming-rule" style="margin-top:12px"><strong>先生写真 命名ルール：</strong><br>教科_先生名_元ファイル名_タグ<br>例：<span class="mono">国語科_高橋次郎_IMG0165_本01.jpg</span></div>
+      <div class="table-wrap readable-table rename-table" style="margin-top:12px"><table><thead><tr><th>Status</th><th>Editable filename parts</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="btn-row"><button class="btn btn-success" onclick="toast('先生写真のリネーム情報を保存しました')">修正を保存</button><button class="btn btn-primary" onclick="renderWorkflow('teacher',3)">次へ</button></div></div>`;
+  };
+
+  window.clubReviewBody=function(){
+    const data=[
+      ['バドミントン部','20260403','IMG0045.jpg','本01','15名','なし','BestShot候補'],
+      ['バドミントン部','20260403','IMG0046.jpg','本02','14名','1名候補','要確認'],
+      ['バドミントン部','20260403','IMG0047.jpg','本03','15名','なし','予備候補'],
+      ['サッカー部','20260403','IMG1012.jpg','本01','18名','なし','BestShot候補']
+    ].map(r=>{
+      const [club,date,file,tag,count,eye,cand]=r;
+      return `<tr><td><span class="badge ${eye==='なし'?'b-ok':'b-warn'}">${esc(eye)}</span><div class="mini">人数 ${esc(count)} / ${esc(cand)}</div></td><td>
+        <div class="rename-component-grid">
+          <div class="field"><label>Club Name</label><input class="rn-club" value="${esc(club)}" oninput="applyTagPreviewV4(this.closest('tr'),'club')"></div>
+          <div class="field"><label>Shooting Date</label><input class="rn-date" value="${esc(date)}" oninput="applyTagPreviewV4(this.closest('tr'),'club')"></div>
+          <div class="field"><label>Original File</label><input class="rn-original" value="${esc(file)}" oninput="applyTagPreviewV4(this.closest('tr'),'club')"></div>
+          <div class="field"><label>Photo Tag / Ranking</label>${tagEditor(tag,'club')}</div>
+        </div>
+        <div class="filename-preview-live"><div class="label">Rename Preview</div><div class="value tag-preview">${esc(club)}_${esc(date)}_${esc(file)}_${esc(tag)}.jpg</div></div>
+      </td></tr>`;
+    }).join('');
+    return `<div class="card"><div class="card-title">③ Review / Edit：クラブ写真のファイル名を手動編集</div><div class="card-sub">カード保持画像は使わず、フォルダ名をクラブ名として扱います。クラブ名・撮影日・元ファイル名・タグは手入力で修正できます。</div>
+      <div class="naming-rule" style="margin-top:12px"><strong>クラブ写真 命名ルール：</strong><br>フォルダ名_撮影日_元ファイル名_タグ<br>例：<span class="mono">バドミントン部_20260403_IMG0045_本01.jpg</span></div>
+      <div class="table-wrap readable-table rename-table" style="margin-top:12px"><table><thead><tr><th>AI Check</th><th>Editable filename parts</th></tr></thead><tbody>${data}</tbody></table></div>
+      <div class="btn-row"><button class="btn btn-success" onclick="toast('クラブ写真のリネーム情報を保存しました')">修正を保存</button><button class="btn btn-primary" onclick="renderClubWorkflow(3)">Rename / Output Previewへ</button></div></div>`;
+  };
+})();
+</script>
+
+<script>
+// ===== UX v8: error review lists + direct tag typing + simplified club flow + clearer PDF source placement =====
+(function(){
+  const style=document.createElement('style');
+  style.textContent=`
+  .error-list-card{border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:12px;overflow:hidden}
+  .error-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:#fbfdff;flex-wrap:wrap}
+  .error-toolbar strong{color:var(--ink1)}
+  .direct-tag-input{width:140px!important;font-size:12px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .direct-tag-help{font-size:11px;color:var(--ink2);margin-top:4px}
+  .rename-component-grid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;align-items:end}
+  .rename-component-grid .field input{font-size:12px;padding:6px 8px}
+  .filename-preview-live{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;min-width:360px}
+  .filename-preview-live .label{font-size:11px;color:var(--ink2);margin-bottom:4px}
+  .filename-preview-live .value{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;word-break:break-all;color:var(--ink1)}
+  .rename-table td{vertical-align:top}
+  .rename-table .mini{font-size:11px;color:var(--ink2);line-height:1.45}
+  .pdf-source-inline{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .pdf-source-inline .title{font-weight:800;color:var(--ink1)}
+  @media(max-width:900px){.rename-component-grid{grid-template-columns:1fr}.pdf-source-inline{grid-template-columns:1fr}}
+  `;
+  document.head.appendChild(style);
+
+  function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function clean(s){return String(s??'').replace(/\s+/g,'').trim();}
+  function tagInput(value,kind){return `<input class="direct-tag-input rn-tag" value="${esc(value)}" placeholder="例：本01 / 本05 / 札03" oninput="applyTagPreviewV8(this.closest('tr'),'${kind}')"><div class="direct-tag-help">本01・本02・本05・札03などを直接入力</div>`;}
+  function val(tr,cls,fallback=''){const el=tr?.querySelector('.'+cls);return clean(el?.value||el?.textContent||fallback);}
+  function buildName(tr,kind){
+    const tag=val(tr,'rn-tag','本01');
+    const ext=val(tr,'rn-ext','jpg').replace(/^\./,'')||'jpg';
+    if(kind==='teacher')return `${val(tr,'rn-subject','国語科')}_${val(tr,'rn-teacher','高橋次郎')}_${val(tr,'rn-original','IMG0165')}_${tag}.${ext}`;
+    if(kind==='club')return `${val(tr,'rn-club','バドミントン部')}_${val(tr,'rn-date','20260403')}_${val(tr,'rn-original','IMG0045')}_${tag}.${ext}`;
+    return `${val(tr,'rn-year','26')}_${val(tr,'rn-school','上水高')}_${val(tr,'rn-original','IMG_2337')}_${val(tr,'rn-grade','3')}${val(tr,'rn-class','1')}${val(tr,'rn-id','05').padStart(2,'0')}_${tag}.${ext}`;
+  }
+  window.applyTagPreviewV8=function(tr,kind){const out=tr?.querySelector('.tag-preview');if(out)out.textContent=buildName(tr,kind);};
+  window.applyTagPreviewV4=function(tr,kind){window.applyTagPreviewV8(tr,kind);};
+  window.updateManualTagPreviewV4=function(input,kind){window.applyTagPreviewV8(input.closest('tr'),kind);};
+  window.updateTagPreviewV4=function(el,kind){window.applyTagPreviewV8(el.closest('tr'),kind);};
+
+  function editableIndividualBlock(data){
+    const {year='26', school='上水高', original='IMG_2401', grade='3', klass='1', id='05', tag='本05', ext='jpg'}=data;
+    return `<div class="rename-component-grid">
+      <div class="field"><label>Year</label><input class="rn-year" value="${esc(year)}" oninput="applyTagPreviewV8(this.closest('tr'),'individual')"></div>
+      <div class="field"><label>School</label><input class="rn-school" value="${esc(school)}" oninput="applyTagPreviewV8(this.closest('tr'),'individual')"></div>
+      <div class="field"><label>Original File</label><input class="rn-original" value="${esc(original)}" oninput="applyTagPreviewV8(this.closest('tr'),'individual')"></div>
+      <div class="field"><label>Grade</label><input class="rn-grade" value="${esc(grade)}" oninput="applyTagPreviewV8(this.closest('tr'),'individual')"></div>
+      <div class="field"><label>Class</label><input class="rn-class" value="${esc(klass)}" oninput="applyTagPreviewV8(this.closest('tr'),'individual')"></div>
+      <div class="field"><label>ID / Card No.</label><input class="rn-id" value="${esc(id)}" oninput="applyTagPreviewV8(this.closest('tr'),'individual')"></div>
+      <div class="field"><label>Photo Tag / Ranking</label>${tagInput(tag,'individual')}</div>
+      <div class="field"><label>Extension</label><input class="rn-ext" value="${esc(ext)}" oninput="applyTagPreviewV8(this.closest('tr'),'individual')"><div class="direct-tag-help">例：jpg / png / tif</div></div>
+    </div><div class="filename-preview-live"><div class="label">Rename Preview</div><div class="value tag-preview">${esc(year)}_${esc(school)}_${esc(original)}_${esc(grade)}${esc(klass)}${esc(id)}_${esc(tag)}.${esc(ext)}</div></div>`;
+  }
+  function editableTeacherBlock(data){
+    const {subject='国語科', teacher='高橋次郎', original='IMG0165', tag='本01', ext='jpg'}=data;
+    return `<div class="rename-component-grid">
+      <div class="field"><label>Subject</label><input class="rn-subject" value="${esc(subject)}" oninput="applyTagPreviewV8(this.closest('tr'),'teacher')"></div>
+      <div class="field"><label>Teacher Name</label><input class="rn-teacher" value="${esc(teacher)}" oninput="applyTagPreviewV8(this.closest('tr'),'teacher')"></div>
+      <div class="field"><label>Original File</label><input class="rn-original" value="${esc(original)}" oninput="applyTagPreviewV8(this.closest('tr'),'teacher')"></div>
+      <div class="field"><label>Photo Tag / Ranking</label>${tagInput(tag,'teacher')}</div>
+      <div class="field"><label>Extension</label><input class="rn-ext" value="${esc(ext)}" oninput="applyTagPreviewV8(this.closest('tr'),'teacher')"><div class="direct-tag-help">例：jpg / png / tif</div></div>
+    </div><div class="filename-preview-live"><div class="label">Rename Preview</div><div class="value tag-preview">${esc(subject)}_${esc(teacher)}_${esc(original)}_${esc(tag)}.${esc(ext)}</div></div>`;
+  }
+  function editableClubBlock(data){
+    const {club='バドミントン部', date='20260403', original='IMG0045', tag='本01', ext='jpg'}=data;
+    return `<div class="rename-component-grid">
+      <div class="field"><label>Club Name</label><input class="rn-club" value="${esc(club)}" oninput="applyTagPreviewV8(this.closest('tr'),'club')"></div>
+      <div class="field"><label>Shooting Date</label><input class="rn-date" value="${esc(date)}" oninput="applyTagPreviewV8(this.closest('tr'),'club')"></div>
+      <div class="field"><label>Original File</label><input class="rn-original" value="${esc(original)}" oninput="applyTagPreviewV8(this.closest('tr'),'club')"></div>
+      <div class="field"><label>Photo Tag / Ranking</label>${tagInput(tag,'club')}</div>
+      <div class="field"><label>Extension</label><input class="rn-ext" value="${esc(ext)}" oninput="applyTagPreviewV8(this.closest('tr'),'club')"><div class="direct-tag-help">例：jpg / png / tif</div></div>
+    </div><div class="filename-preview-live"><div class="label">Rename Preview</div><div class="value tag-preview">${esc(club)}_${esc(date)}_${esc(original)}_${esc(tag)}.${esc(ext)}</div></div>`;
+  }
+
+  function individualErrorList(){
+    const rows=[
+      {cls:'3年A組', file:'IMG_2401', issue:'番号札未検出', info:'ID不明', data:{original:'IMG_2401', grade:'3', klass:'1', id:'05', tag:'本05', ext:'jpg'}},
+      {cls:'3年B組', file:'IMG_3188', issue:'同一番号の候補複数', info:'12番候補', data:{original:'IMG_3188', grade:'3', klass:'2', id:'12', tag:'本03', ext:'jpg'}}
+    ].map((r,i)=>`<tr><td>${esc(r.cls)}</td><td class="mono">${esc(r.file)}</td><td><span class="badge b-err">${esc(r.issue)}</span><div class="mini">${esc(r.info)}</div></td><td>${editableIndividualBlock(r.data)}</td><td><button class="btn btn-success btn-sm" onclick="toast('エラー行のリネームを確定しました')">確定</button></td></tr>`).join('');
+    return `<div class="error-list-card"><div class="error-toolbar"><div><strong>エラーリネーム一覧</strong><div class="card-sub">エラー行だけを一覧で確認し、ファイル名の各要素を直接修正できます。</div></div><span class="badge b-err">2件</span></div><div class="table-wrap readable-table rename-table"><table><thead><tr><th>Class</th><th>Original File</th><th>Issue</th><th>Rename Correction</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }
+  function teacherErrorList(){
+    const rows=[
+      {file:'T_009', issue:'PDF未照合', info:'OCR: 高橋二郎 / PDF一致なし', data:{subject:'国語科', teacher:'高橋次郎', original:'T_009', tag:'本03', ext:'jpg'}},
+      {file:'T_014', issue:'OCR信頼度低', info:'カード文字が不鮮明', data:{subject:'数学科', teacher:'田中一郎', original:'T_014', tag:'札02', ext:'jpg'}}
+    ].map(r=>`<tr><td class="mono">${esc(r.file)}</td><td><span class="badge b-warn">${esc(r.issue)}</span><div class="mini">${esc(r.info)}</div></td><td>${editableTeacherBlock(r.data)}</td><td><button class="btn btn-success btn-sm" onclick="toast('先生写真エラーのリネームを確定しました')">確定</button></td></tr>`).join('');
+    return `<div class="error-list-card"><div class="error-toolbar"><div><strong>先生写真 エラーリネーム一覧</strong><div class="card-sub">PDF未照合・OCR低信頼などを一覧で修正します。</div></div><span class="badge b-warn">2件</span></div><div class="table-wrap readable-table rename-table"><table><thead><tr><th>Original File</th><th>Issue</th><th>Rename Correction</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }
+
+  window.individualReviewBody=function(){
+    const classIds=selectedIndividualClass==='all'?['3A','3B']:[selectedIndividualClass||'3A'];
+    const normalRows=classIds.flatMap(id=>individualClassData[id].rows.filter(r=>r[3]==='OK'||r[3]==='要確認').slice(0,4).map(r=>{
+      const no=(r[1].match(/(\d+)番/)||[])[1] || (id==='3A'?'05':'12');
+      const klass=id==='3A'?'1':'2';
+      return `<tr><td>${individualClassData[id].label}<div class="mini">${esc(r[1])}</div></td><td>${classBadgeForStatus(r[3])}<div class="mini">${esc(r[4])}</div></td><td>${editableIndividualBlock({original:r[0].replace(/\.jpg$/,''), grade:'3', klass, id:String(no).padStart(2,'0'), tag:r[2], ext:'jpg'})}</td></tr>`;
+    })).join('');
+    return `<div class="card"><div class="card-title">③ クラス別レビュー / ファイル名の構成要素を手動編集</div><div class="card-sub">通常候補とエラー候補を分けて確認します。Photo Tag / Ranking はドロップダウンではなく直接入力できます。</div>${individualClassTabs()}
+      <div class="naming-rule"><strong>個人写真 命名ルール：</strong><br>[Year]_[SchoolName]_[OriginalFileName]_[Grade][Class][ID]_[Tag].ext<br>例：<span class="mono">26_上水高_IMG_2337_3105_札01.jpg</span></div>
+      <div class="table-wrap readable-table rename-table" style="margin-top:12px"><table><thead><tr><th>Class / Student Ref.</th><th>Status</th><th>Editable filename parts</th></tr></thead><tbody>${normalRows}</tbody></table></div>${individualErrorList()}
+      <div class="btn-row"><button class="btn btn-success" onclick="toast('リネーム情報を保存しました')">修正を保存</button><button class="btn btn-primary" onclick="renderIndividualWorkflow(3)">リネーム確認へ</button></div></div>`;
+  };
+
+  window.editReviewBody=function(kind,icon){
+    if(kind!=='teacher')return '';
+    const normal=[
+      {subject:'国語科', teacher:'高橋次郎', original:'IMG0165', tag:'本01', ext:'jpg', status:'OK', note:'BestShot第1候補'},
+      {subject:'国語科', teacher:'高橋次郎', original:'IMG0166', tag:'本02', ext:'jpg', status:'OK', note:'BestShot第2候補'},
+      {subject:'国語科', teacher:'高橋次郎', original:'IMG0167', tag:'札01', ext:'jpg', status:'OK', note:'カード保持写真'}
+    ].map(r=>`<tr><td>${classBadgeForStatus(r.status)}<div class="mini">${esc(r.note)}</div></td><td>${editableTeacherBlock(r)}</td></tr>`).join('');
+    return `<div class="card"><div class="card-title">③ Review / Edit：先生写真のファイル名を手動編集</div><div class="card-sub">通常候補とエラー候補を分けて確認します。Photo Tag / Ranking は直接入力です。</div>
+      <div class="naming-rule" style="margin-top:12px"><strong>先生写真 命名ルール：</strong><br>教科_先生名_元ファイル名_タグ<br>例：<span class="mono">国語科_高橋次郎_IMG0165_本01.jpg</span></div>
+      <div class="table-wrap readable-table rename-table" style="margin-top:12px"><table><thead><tr><th>Status</th><th>Editable filename parts</th></tr></thead><tbody>${normal}</tbody></table></div>${teacherErrorList()}
+      <div class="btn-row"><button class="btn btn-success" onclick="toast('先生写真のリネーム情報を保存しました')">修正を保存</button><button class="btn btn-primary" onclick="renderWorkflow('teacher',3)">次へ</button></div></div>`;
+  };
+
+  window.clubAiBody=function(){return `<div class="card"><div class="card-title">② AI Detection / Ranking</div><div class="card-sub">人数カウント、目つぶり検出、BestShot候補をクラブフォルダごとに作成します。</div><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Club Folder</th><th>Photo</th><th>Person Count</th><th>Eye Closing</th><th>Candidate</th></tr></thead><tbody><tr><td>バドミントン部</td><td class="mono">IMG0045.jpg</td><td>15</td><td><span class="badge b-ok">なし</span></td><td><span class="badge b-ok">BestShot候補</span></td></tr><tr><td>バドミントン部</td><td class="mono">IMG0046.jpg</td><td>14</td><td><span class="badge b-warn">1名候補</span></td><td><span class="badge b-warn">要確認</span></td></tr><tr><td>サッカー部</td><td class="mono">IMG1012.jpg</td><td>18</td><td><span class="badge b-ok">なし</span></td><td><span class="badge b-blue">予備候補</span></td></tr></tbody></table></div><div class="btn-row"><button class="btn btn-primary" onclick="renderClubWorkflow(2)">Rename / Output Previewへ</button></div></div>`;};
+  window.clubRenameBody=function(){
+    const rows=[
+      {club:'バドミントン部', date:'20260403', original:'IMG0045', tag:'本01', ext:'jpg', memo:'人数15 / 目つぶりなし'},
+      {club:'バドミントン部', date:'20260403', original:'IMG0046', tag:'本02', ext:'jpg', memo:'人数14 / 目つぶり1名候補'},
+      {club:'サッカー部', date:'20260403', original:'IMG1012', tag:'本01', ext:'jpg', memo:'人数18 / 目つぶりなし'}
+    ].map(r=>`<tr><td>${esc(r.memo)}</td><td>${editableClubBlock(r)}</td></tr>`).join('');
+    return `<div class="card"><div class="card-title">③ Rename / Output Preview</div><div class="card-sub">クラブ写真はReview/Editステップを分けず、この画面でファイル名を直接修正し、出力構成を確認します。</div>
+      <div class="naming-rule" style="margin-top:12px"><strong>クラブ写真 命名ルール：</strong><br>フォルダ名_撮影日_元ファイル名_タグ<br>例：<span class="mono">バドミントン部_20260403_IMG0045_本01.jpg</span></div>
+      <div class="table-wrap readable-table rename-table" style="margin-top:12px"><table><thead><tr><th>AI Check</th><th>Editable filename parts</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="output-tree" style="margin-top:12px">Club_Output/<br>├─ Clean/　マークなし画像<br>├─ Marked/　人数カウント・目つぶり赤枠付き画像<br>└─ Excel/　club_detection_result.xlsx</div>
+      <div class="btn-row"><button class="btn btn-success" onclick="toast('クラブ写真のリネーム情報を保存しました')">修正を保存</button><button class="btn btn-primary" onclick="renderClubWorkflow(3)">Exportへ</button></div></div>`;
+  };
+  window.renderClubWorkflow=function(step){
+    const sec=document.getElementById('sec-club');
+    const steps=['Upload','AI Detection / Ranking','Rename / Output Preview','Export'];
+    const tabs=steps.map((s,i)=>`<button class="wf-tab ${i===step?'on':''}" onclick="renderClubWorkflow(${i})">${i+1} ${s}</button>`).join('');
+    let body=''; if(step===0)body=clubUploadBody(); else if(step===1)body=clubAiBody(); else if(step===2)body=clubRenameBody(); else body=clubExportBody();
+    sec.innerHTML=`<div class="alert a-info"><span>🏆</span><div><strong>クラブ写真：</strong>カード保持画像は使用せず、クラブフォルダ名をクラブ名として処理します。リネームはOutput Preview内で直接編集します。</div></div><div class="wf-tabs">${tabs}</div>${body}`;
+    if(step===3)selectClubFolder('clean');
+  };
+
+  window.finalizePersonSearchLayout=function(){
+    const card=document.getElementById('personPdfUploadCard');
+    if(card){
+      card.className='pdf-source-inline';
+      card.innerHTML=`<div><div class="title">PDFアルバムを検索対象に含める（Where to look）</div><div class="card-sub">PDFは検索方法ではなく、検索元です。PDFアルバム・PDF冊子内のページや写真も検索対象に含めます。</div><div id="personPdfPreview" class="panel" style="display:none;margin-top:10px"></div></div><button class="btn btn-primary" id="personPdfDrop" onclick="uploadPersonPdfDemo()">PDFをアップロード</button>`;
+    }
+    syncPersonSearchLogic();
+  };
+  const oldProjectSec=window.projectSec;
+  window.projectSec=function(sec){oldProjectSec(sec); if(sec==='person')finalizePersonSearchLayout();};
+})();
+</script>
+
+<script>
+// ===== UX v9: no extension editing + error list expands to edit panel =====
+(function(){
+  const style=document.createElement('style');
+  style.textContent=`
+  .error-summary-row td{background:#fff}
+  .error-edit-row{display:none}
+  .error-edit-row.open{display:table-row}
+  .error-edit-row td{background:#fbfdff;border-top:1px dashed var(--line)}
+  .expand-edit-panel{border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px}
+  .expand-edit-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+  .rename-component-grid.no-ext{grid-template-columns:repeat(4,minmax(120px,1fr))}
+  .direct-tag-input{width:160px!important;font-size:12px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .file-ext-note{font-size:11px;color:var(--ink2);margin-top:4px}
+  @media(max-width:900px){.rename-component-grid.no-ext{grid-template-columns:1fr}}
+  `;
+  document.head.appendChild(style);
+
+  function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function clean(s){return String(s??'').replace(/\s+/g,'').trim();}
+  function fileParts(raw, fallbackExt='jpg'){
+    const s=clean(raw||'');
+    const m=s.match(/^(.*)\.([A-Za-z0-9]+)$/);
+    if(m) return {base:m[1], ext:m[2].toLowerCase()};
+    return {base:s, ext:fallbackExt.replace(/^\./,'')||'jpg'};
+  }
+  function currentFile(tr, fallback='IMG_0001'){
+    const input=tr?.querySelector('.rn-original');
+    return input?input.value:fallback;
+  }
+  function extFromRow(tr){
+    const fromData=tr?.dataset?.ext || 'jpg';
+    return fileParts(currentFile(tr), fromData).ext;
+  }
+  function baseFromRow(tr, fallback){
+    return fileParts(currentFile(tr, fallback), tr?.dataset?.ext||'jpg').base;
+  }
+  function tagInput(value, kind){
+    return `<input class="direct-tag-input rn-tag" value="${esc(value)}" placeholder="例：本01 / 本05 / 札03" oninput="applyTagPreviewV9(this.closest('tr'),'${kind}')"><div class="direct-tag-help">本01・本02・本05・札03などを直接入力</div>`;
+  }
+  function val(tr, cls, fallback=''){
+    const el=tr?.querySelector('.'+cls);
+    return clean(el?.value || el?.textContent || fallback);
+  }
+  function buildName(tr,kind){
+    const tag=val(tr,'rn-tag','本01');
+    const ext=extFromRow(tr);
+    const original=baseFromRow(tr, kind==='teacher'?'IMG0165':kind==='club'?'IMG0045':'IMG_2337');
+    if(kind==='teacher') return `${val(tr,'rn-subject','国語科')}_${val(tr,'rn-teacher','高橋次郎')}_${original}_${tag}.${ext}`;
+    if(kind==='club') return `${val(tr,'rn-club','バドミントン部')}_${val(tr,'rn-date','20260403')}_${original}_${tag}.${ext}`;
+    return `${val(tr,'rn-year','26')}_${val(tr,'rn-school','上水高')}_${original}_${val(tr,'rn-grade','3')}${val(tr,'rn-class','1')}${val(tr,'rn-id','05').padStart(2,'0')}_${tag}.${ext}`;
+  }
+  window.applyTagPreviewV9=function(tr,kind){
+    const out=tr?.querySelector('.tag-preview');
+    if(out) out.textContent=buildName(tr,kind);
+    const note=tr?.querySelector('.file-ext-note');
+    if(note) note.textContent=`拡張子は元ファイルから自動保持：.${extFromRow(tr)}`;
+  };
+  window.applyTagPreviewV8=function(tr,kind){window.applyTagPreviewV9(tr,kind);};
+  window.applyTagPreviewV4=function(tr,kind){window.applyTagPreviewV9(tr,kind);};
+  window.updateManualTagPreviewV4=function(input,kind){window.applyTagPreviewV9(input.closest('tr'),kind);};
+  window.updateTagPreviewV4=function(el,kind){window.applyTagPreviewV9(el.closest('tr'),kind);};
+
+  function editableIndividualBlock(data){
+    const {year='26', school='上水高', original='IMG_2401.jpg', grade='3', klass='1', id='05', tag='本05'}=data;
+    const fp=fileParts(original,'jpg');
+    return `<div class="rename-component-grid no-ext">
+      <div class="field"><label>Year</label><input class="rn-year" value="${esc(year)}" oninput="applyTagPreviewV9(this.closest('tr'),'individual')"></div>
+      <div class="field"><label>School</label><input class="rn-school" value="${esc(school)}" oninput="applyTagPreviewV9(this.closest('tr'),'individual')"></div>
+      <div class="field"><label>Original File</label><input class="rn-original" value="${esc(original)}" oninput="applyTagPreviewV9(this.closest('tr'),'individual')"><div class="file-ext-note">拡張子は元ファイルから自動保持：.${esc(fp.ext)}</div></div>
+      <div class="field"><label>Grade</label><input class="rn-grade" value="${esc(grade)}" oninput="applyTagPreviewV9(this.closest('tr'),'individual')"></div>
+      <div class="field"><label>Class</label><input class="rn-class" value="${esc(klass)}" oninput="applyTagPreviewV9(this.closest('tr'),'individual')"></div>
+      <div class="field"><label>ID / Card No.</label><input class="rn-id" value="${esc(id)}" oninput="applyTagPreviewV9(this.closest('tr'),'individual')"></div>
+      <div class="field"><label>Photo Tag / Ranking</label>${tagInput(tag,'individual')}</div>
+    </div><div class="filename-preview-live"><div class="label">Rename Preview</div><div class="value tag-preview">${esc(year)}_${esc(school)}_${esc(fp.base)}_${esc(grade)}${esc(klass)}${esc(id)}_${esc(tag)}.${esc(fp.ext)}</div></div>`;
+  }
+  function editableTeacherBlock(data){
+    const {subject='国語科', teacher='高橋次郎', original='IMG0165.jpg', tag='本01'}=data;
+    const fp=fileParts(original,'jpg');
+    return `<div class="rename-component-grid no-ext">
+      <div class="field"><label>Subject</label><input class="rn-subject" value="${esc(subject)}" oninput="applyTagPreviewV9(this.closest('tr'),'teacher')"></div>
+      <div class="field"><label>Teacher Name</label><input class="rn-teacher" value="${esc(teacher)}" oninput="applyTagPreviewV9(this.closest('tr'),'teacher')"></div>
+      <div class="field"><label>Original File</label><input class="rn-original" value="${esc(original)}" oninput="applyTagPreviewV9(this.closest('tr'),'teacher')"><div class="file-ext-note">拡張子は元ファイルから自動保持：.${esc(fp.ext)}</div></div>
+      <div class="field"><label>Photo Tag / Ranking</label>${tagInput(tag,'teacher')}</div>
+    </div><div class="filename-preview-live"><div class="label">Rename Preview</div><div class="value tag-preview">${esc(subject)}_${esc(teacher)}_${esc(fp.base)}_${esc(tag)}.${esc(fp.ext)}</div></div>`;
+  }
+  function editableClubBlock(data){
+    const {club='バドミントン部', date='20260403', original='IMG0045.jpg', tag='本01'}=data;
+    const fp=fileParts(original,'jpg');
+    return `<div class="rename-component-grid no-ext">
+      <div class="field"><label>Club Name</label><input class="rn-club" value="${esc(club)}" oninput="applyTagPreviewV9(this.closest('tr'),'club')"></div>
+      <div class="field"><label>Shooting Date</label><input class="rn-date" value="${esc(date)}" oninput="applyTagPreviewV9(this.closest('tr'),'club')"></div>
+      <div class="field"><label>Original File</label><input class="rn-original" value="${esc(original)}" oninput="applyTagPreviewV9(this.closest('tr'),'club')"><div class="file-ext-note">拡張子は元ファイルから自動保持：.${esc(fp.ext)}</div></div>
+      <div class="field"><label>Photo Tag / Ranking</label>${tagInput(tag,'club')}</div>
+    </div><div class="filename-preview-live"><div class="label">Rename Preview</div><div class="value tag-preview">${esc(club)}_${esc(date)}_${esc(fp.base)}_${esc(tag)}.${esc(fp.ext)}</div></div>`;
+  }
+
+  window.toggleErrorEdit=function(id){
+    const row=document.getElementById(id);
+    if(!row) return;
+    row.classList.toggle('open');
+    toast(row.classList.contains('open')?'修正欄を表示しました':'修正欄を閉じました');
+  };
+
+  function individualErrorList(){
+    const items=[
+      {id:'indErr1', cls:'3年A組', file:'IMG_2401.jpg', issue:'番号札未検出', info:'ID不明', data:{original:'IMG_2401.jpg', grade:'3', klass:'1', id:'05', tag:'本05'}},
+      {id:'indErr2', cls:'3年B組', file:'IMG_3188.jpg', issue:'同一番号の候補複数', info:'12番候補が複数', data:{original:'IMG_3188.jpg', grade:'3', klass:'2', id:'12', tag:'本03'}}
+    ];
+    const rows=items.map((r,i)=>`<tr class="error-summary-row"><td>${esc(r.cls)}</td><td class="mono">${esc(r.file)}</td><td><span class="badge b-err">${esc(r.issue)}</span></td><td>${esc(r.info)}</td><td><button class="btn btn-primary btn-sm" onclick="toggleErrorEdit('${r.id}')">修正してリネーム</button></td></tr>
+      <tr id="${r.id}" class="error-edit-row"><td colspan="5"><div class="expand-edit-panel"><div class="expand-edit-head"><strong>${esc(r.file)} の修正内容</strong><span class="badge b-info">拡張子は自動保持</span></div>${editableIndividualBlock(r.data)}<div class="btn-row"><button class="btn btn-success btn-sm" onclick="toast('エラー行のリネームを確定しました')">確定</button><button class="btn btn-ghost btn-sm" onclick="toggleErrorEdit('${r.id}')">閉じる</button></div></div></td></tr>`).join('');
+    return `<div class="error-list-card"><div class="error-toolbar"><div><strong>エラーリネーム一覧</strong><div class="card-sub">まず一覧で確認し、必要な行だけ開いて修正します。</div></div><span class="badge b-err">2件</span></div><div class="table-wrap readable-table rename-table"><table><thead><tr><th>Class</th><th>Original File</th><th>Issue</th><th>Current Info</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }
+  function teacherErrorList(){
+    const items=[
+      {id:'teachErr1', file:'T_009.jpg', issue:'PDF未照合', info:'OCR: 高橋二郎 / PDF一致なし', data:{subject:'国語科', teacher:'高橋次郎', original:'T_009.jpg', tag:'本03'}},
+      {id:'teachErr2', file:'T_014.jpg', issue:'OCR信頼度低', info:'カード文字が不鮮明', data:{subject:'数学科', teacher:'田中一郎', original:'T_014.jpg', tag:'札02'}}
+    ];
+    const rows=items.map(r=>`<tr class="error-summary-row"><td class="mono">${esc(r.file)}</td><td><span class="badge b-warn">${esc(r.issue)}</span></td><td>${esc(r.info)}</td><td><button class="btn btn-primary btn-sm" onclick="toggleErrorEdit('${r.id}')">修正してリネーム</button></td></tr>
+      <tr id="${r.id}" class="error-edit-row"><td colspan="4"><div class="expand-edit-panel"><div class="expand-edit-head"><strong>${esc(r.file)} の修正内容</strong><span class="badge b-info">拡張子は自動保持</span></div>${editableTeacherBlock(r.data)}<div class="btn-row"><button class="btn btn-success btn-sm" onclick="toast('先生写真エラーのリネームを確定しました')">確定</button><button class="btn btn-ghost btn-sm" onclick="toggleErrorEdit('${r.id}')">閉じる</button></div></div></td></tr>`).join('');
+    return `<div class="error-list-card"><div class="error-toolbar"><div><strong>先生写真 エラーリネーム一覧</strong><div class="card-sub">まず一覧で確認し、必要な行だけ開いて修正します。</div></div><span class="badge b-warn">2件</span></div><div class="table-wrap readable-table rename-table"><table><thead><tr><th>Original File</th><th>Issue</th><th>Current Info</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }
+
+  window.individualReviewBody=function(){
+    const classIds=selectedIndividualClass==='all'?['3A','3B']:[selectedIndividualClass||'3A'];
+    const normalRows=classIds.flatMap(id=>individualClassData[id].rows.filter(r=>r[3]==='OK'||r[3]==='要確認').slice(0,4).map(r=>{
+      const no=(r[1].match(/(\d+)番/)||[])[1] || (id==='3A'?'05':'12');
+      const klass=id==='3A'?'1':'2';
+      return `<tr><td>${individualClassData[id].label}<div class="mini">${esc(r[1])}</div></td><td>${classBadgeForStatus(r[3])}<div class="mini">${esc(r[4])}</div></td><td>${editableIndividualBlock({original:r[0], grade:'3', klass, id:String(no).padStart(2,'0'), tag:r[2]})}</td></tr>`;
+    })).join('');
+    return `<div class="card"><div class="card-title">③ クラス別レビュー / ファイル名の構成要素を手動編集</div><div class="card-sub">通常候補とエラー候補を分けて確認します。Photo Tag / Ranking は直接入力できます。拡張子は元ファイルから自動保持します。</div>${individualClassTabs()}
+      <div class="naming-rule"><strong>個人写真 命名ルール：</strong><br>[Year]_[SchoolName]_[OriginalFileName]_[Grade][Class][ID]_[Tag].ext<br>例：<span class="mono">26_上水高_IMG_2337_3105_札01.jpg</span></div>
+      <div class="table-wrap readable-table rename-table" style="margin-top:12px"><table><thead><tr><th>Class / Student Ref.</th><th>Status</th><th>Editable filename parts</th></tr></thead><tbody>${normalRows}</tbody></table></div>${individualErrorList()}
+      <div class="btn-row"><button class="btn btn-success" onclick="toast('リネーム情報を保存しました')">修正を保存</button><button class="btn btn-primary" onclick="renderIndividualWorkflow(3)">リネーム確認へ</button></div></div>`;
+  };
+
+  window.editReviewBody=function(kind,icon){
+    if(kind!=='teacher')return '';
+    const normal=[
+      {subject:'国語科', teacher:'高橋次郎', original:'IMG0165.jpg', tag:'本01', status:'OK', note:'BestShot第1候補'},
+      {subject:'国語科', teacher:'高橋次郎', original:'IMG0166.jpg', tag:'本02', status:'OK', note:'BestShot第2候補'},
+      {subject:'国語科', teacher:'高橋次郎', original:'IMG0167.jpg', tag:'札01', status:'OK', note:'カード保持写真'}
+    ].map(r=>`<tr><td>${classBadgeForStatus(r.status)}<div class="mini">${esc(r.note)}</div></td><td>${editableTeacherBlock(r)}</td></tr>`).join('');
+    return `<div class="card"><div class="card-title">③ Review / Edit：先生写真のファイル名を手動編集</div><div class="card-sub">通常候補とエラー候補を分けて確認します。Photo Tag / Ranking は直接入力です。拡張子は元ファイルから自動保持します。</div>
+      <div class="naming-rule" style="margin-top:12px"><strong>先生写真 命名ルール：</strong><br>教科_先生名_元ファイル名_タグ<br>例：<span class="mono">国語科_高橋次郎_IMG0165_本01.jpg</span></div>
+      <div class="table-wrap readable-table rename-table" style="margin-top:12px"><table><thead><tr><th>Status</th><th>Editable filename parts</th></tr></thead><tbody>${normal}</tbody></table></div>${teacherErrorList()}
+      <div class="btn-row"><button class="btn btn-success" onclick="toast('先生写真のリネーム情報を保存しました')">修正を保存</button><button class="btn btn-primary" onclick="renderWorkflow('teacher',3)">次へ</button></div></div>`;
+  };
+
+  window.clubRenameBody=function(){
+    const rows=[
+      {club:'バドミントン部', date:'20260403', original:'IMG0045.jpg', tag:'本01', memo:'人数15 / 目つぶりなし'},
+      {club:'バドミントン部', date:'20260403', original:'IMG0046.jpg', tag:'本02', memo:'人数14 / 目つぶり1名候補'},
+      {club:'サッカー部', date:'20260403', original:'IMG1012.jpg', tag:'本01', memo:'人数18 / 目つぶりなし'}
+    ].map(r=>`<tr><td>${esc(r.memo)}</td><td>${editableClubBlock(r)}</td></tr>`).join('');
+    return `<div class="card"><div class="card-title">③ Rename / Output Preview</div><div class="card-sub">クラブ写真はReview/Editステップを分けず、この画面でファイル名を直接修正し、出力構成を確認します。拡張子は元ファイルから自動保持します。</div>
+      <div class="naming-rule" style="margin-top:12px"><strong>クラブ写真 命名ルール：</strong><br>フォルダ名_撮影日_元ファイル名_タグ<br>例：<span class="mono">バドミントン部_20260403_IMG0045_本01.jpg</span></div>
+      <div class="table-wrap readable-table rename-table" style="margin-top:12px"><table><thead><tr><th>AI Check</th><th>Editable filename parts</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="output-tree" style="margin-top:12px">Club_Output/<br>├─ Clean/　マークなし画像<br>├─ Marked/　人数カウント・目つぶり赤枠付き画像<br>└─ Excel/　club_detection_result.xlsx</div>
+      <div class="btn-row"><button class="btn btn-success" onclick="toast('クラブ写真のリネーム情報を保存しました')">修正を保存</button><button class="btn btn-primary" onclick="renderClubWorkflow(3)">Exportへ</button></div></div>`;
+  };
+})();
+</script>
+
+<script>
+// ===== UX v10 fix: make Error Review list appear first and expand only after clicking 修正してリネーム =====
+(function(){
+  const style=document.createElement('style');
+  style.textContent=`
+  .v10-error-first{margin-top:12px;border:2px solid #fecaca;border-radius:14px;overflow:hidden;background:#fff}
+  .v10-error-first .error-toolbar{background:#fff7f7}
+  .v10-edit-row{display:none}
+  .v10-edit-row.open{display:table-row}
+  .v10-edit-row td{background:#fbfdff!important;border-top:1px dashed var(--line)}
+  .v10-expand-panel{padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .v10-expand-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .v10-normal-section{margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+  .v10-normal-head{padding:12px 14px;border-bottom:1px solid var(--line);background:#fbfdff}
+  .v10-direct-tag{width:150px!important;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .v10-file-note{font-size:11px;color:var(--ink2);margin-top:4px}
+  `;
+  document.head.appendChild(style);
+  function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function clean(s){return String(s??'').replace(/\s+/g,'').trim();}
+  function splitFile(raw){const m=String(raw||'').match(/^(.*)\.([A-Za-z0-9]+)$/);return m?{base:m[1],ext:m[2].toLowerCase()}:{base:String(raw||''),ext:'jpg'};}
+  function getv(panel,cls,fb=''){return clean(panel?.querySelector('.'+cls)?.value||fb)}
+  function buildIndividual(panel){const fp=splitFile(getv(panel,'v10-original','IMG_2401.jpg'));return `${getv(panel,'v10-year','26')}_${getv(panel,'v10-school','上水高')}_${fp.base}_${getv(panel,'v10-grade','3')}${getv(panel,'v10-class','1')}${getv(panel,'v10-id','05').padStart(2,'0')}_${getv(panel,'v10-tag','本05')}.${fp.ext}`;}
+  function buildTeacher(panel){const fp=splitFile(getv(panel,'v10-original','T_009.jpg'));return `${getv(panel,'v10-subject','国語科')}_${getv(panel,'v10-teacher','高橋次郎')}_${fp.base}_${getv(panel,'v10-tag','本03')}.${fp.ext}`;}
+  window.updateV10Preview=function(el,kind){const panel=el.closest('.v10-expand-panel')||el.closest('.filename-preview-live')?.parentElement; if(!panel)return; const out=panel.querySelector('.v10-preview'); if(!out)return; out.textContent=kind==='teacher'?buildTeacher(panel):buildIndividual(panel); const note=panel.querySelector('.v10-file-note'); const fp=splitFile(getv(panel,'v10-original','IMG_0001.jpg')); if(note)note.textContent=`拡張子は元ファイルから自動保持：.${fp.ext}`;}
+  window.toggleV10ErrorEdit=function(id){const row=document.getElementById(id); if(!row)return; row.classList.toggle('open'); row.style.display=row.classList.contains('open')?'table-row':'none'; toast(row.classList.contains('open')?'修正欄を表示しました':'修正欄を閉じました');}
+  function indEditPanel(d){const fp=splitFile(d.original);const preview=`${d.year||'26'}_${d.school||'上水高'}_${fp.base}_${d.grade||'3'}${d.klass||'1'}${String(d.id||'05').padStart(2,'0')}_${d.tag||'本05'}.${fp.ext}`;return `<div class="v10-expand-panel"><div class="v10-expand-head"><strong>${esc(d.original)} の修正内容</strong><span class="badge b-info">拡張子は自動保持</span></div><div class="rename-component-grid no-ext"><div class="field"><label>Year</label><input class="v10-year" value="${esc(d.year||'26')}" oninput="updateV10Preview(this,'individual')"></div><div class="field"><label>School</label><input class="v10-school" value="${esc(d.school||'上水高')}" oninput="updateV10Preview(this,'individual')"></div><div class="field"><label>Original File</label><input class="v10-original" value="${esc(d.original)}" oninput="updateV10Preview(this,'individual')"><div class="v10-file-note">拡張子は元ファイルから自動保持：.${esc(fp.ext)}</div></div><div class="field"><label>Grade</label><input class="v10-grade" value="${esc(d.grade||'3')}" oninput="updateV10Preview(this,'individual')"></div><div class="field"><label>Class</label><input class="v10-class" value="${esc(d.klass||'1')}" oninput="updateV10Preview(this,'individual')"></div><div class="field"><label>ID / Card No.</label><input class="v10-id" value="${esc(d.id||'05')}" oninput="updateV10Preview(this,'individual')"></div><div class="field"><label>Photo Tag / Ranking</label><input class="v10-direct-tag v10-tag" value="${esc(d.tag||'本05')}" oninput="updateV10Preview(this,'individual')"><div class="direct-tag-help">本01・本02・本05・札03などを直接入力</div></div></div><div class="filename-preview-live"><div class="label">Rename Preview</div><div class="value v10-preview">${esc(preview)}</div></div><div class="btn-row"><button class="btn btn-success btn-sm" onclick="toast('エラー行のリネームを確定しました')">確定</button><button class="btn btn-ghost btn-sm" onclick="toggleV10ErrorEdit(this.closest('tr').id)">閉じる</button></div></div>`;}
+  function teacherEditPanel(d){const fp=splitFile(d.original);const preview=`${d.subject||'国語科'}_${d.teacher||'高橋次郎'}_${fp.base}_${d.tag||'本03'}.${fp.ext}`;return `<div class="v10-expand-panel"><div class="v10-expand-head"><strong>${esc(d.original)} の修正内容</strong><span class="badge b-info">拡張子は自動保持</span></div><div class="rename-component-grid no-ext"><div class="field"><label>Subject</label><input class="v10-subject" value="${esc(d.subject||'国語科')}" oninput="updateV10Preview(this,'teacher')"></div><div class="field"><label>Teacher Name</label><input class="v10-teacher" value="${esc(d.teacher||'高橋次郎')}" oninput="updateV10Preview(this,'teacher')"></div><div class="field"><label>Original File</label><input class="v10-original" value="${esc(d.original)}" oninput="updateV10Preview(this,'teacher')"><div class="v10-file-note">拡張子は元ファイルから自動保持：.${esc(fp.ext)}</div></div><div class="field"><label>Photo Tag / Ranking</label><input class="v10-direct-tag v10-tag" value="${esc(d.tag||'本03')}" oninput="updateV10Preview(this,'teacher')"><div class="direct-tag-help">本01・本02・本05・札03などを直接入力</div></div></div><div class="filename-preview-live"><div class="label">Rename Preview</div><div class="value v10-preview">${esc(preview)}</div></div><div class="btn-row"><button class="btn btn-success btn-sm" onclick="toast('先生写真エラーのリネームを確定しました')">確定</button><button class="btn btn-ghost btn-sm" onclick="toggleV10ErrorEdit(this.closest('tr').id)">閉じる</button></div></div>`;}
+  function v10IndividualErrorList(){const items=[{id:'v10IndErr1',cls:'3年A組',file:'IMG_2401.jpg',issue:'番号札未検出',info:'ID不明',data:{original:'IMG_2401.jpg',grade:'3',klass:'1',id:'05',tag:'本05'}},{id:'v10IndErr2',cls:'3年B組',file:'IMG_3188.jpg',issue:'同一番号の候補複数',info:'12番候補が複数',data:{original:'IMG_3188.jpg',grade:'3',klass:'2',id:'12',tag:'本03'}}]; const rows=items.map(r=>`<tr class="error-summary-row"><td>${esc(r.cls)}</td><td class="mono">${esc(r.file)}</td><td><span class="badge b-err">${esc(r.issue)}</span></td><td>${esc(r.info)}</td><td><button class="btn btn-primary btn-sm" onclick="toggleV10ErrorEdit('${r.id}')">修正してリネーム</button></td></tr><tr id="${r.id}" class="v10-edit-row"><td colspan="5">${indEditPanel(r.data)}</td></tr>`).join('');return `<div class="v10-error-first"><div class="error-toolbar"><div><strong>エラーリネーム一覧</strong><div class="card-sub">まず一覧で確認し、必要な行だけ「修正してリネーム」で開きます。</div></div><span class="badge b-err">2件</span></div><div class="table-wrap readable-table rename-table"><table><thead><tr><th>Class</th><th>Original File</th><th>Issue</th><th>Current Info</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;}
+  function v10TeacherErrorList(){const items=[{id:'v10TeachErr1',file:'T_009.jpg',issue:'PDF未照合',info:'OCR: 高橋二郎 / PDF一致なし',data:{subject:'国語科',teacher:'高橋次郎',original:'T_009.jpg',tag:'本03'}},{id:'v10TeachErr2',file:'T_014.jpg',issue:'OCR信頼度低',info:'カード文字が不鮮明',data:{subject:'数学科',teacher:'田中一郎',original:'T_014.jpg',tag:'札02'}}]; const rows=items.map(r=>`<tr class="error-summary-row"><td class="mono">${esc(r.file)}</td><td><span class="badge b-warn">${esc(r.issue)}</span></td><td>${esc(r.info)}</td><td><button class="btn btn-primary btn-sm" onclick="toggleV10ErrorEdit('${r.id}')">修正してリネーム</button></td></tr><tr id="${r.id}" class="v10-edit-row"><td colspan="4">${teacherEditPanel(r.data)}</td></tr>`).join('');return `<div class="v10-error-first"><div class="error-toolbar"><div><strong>先生写真 エラーリネーム一覧</strong><div class="card-sub">まず一覧で確認し、必要な行だけ「修正してリネーム」で開きます。</div></div><span class="badge b-warn">2件</span></div><div class="table-wrap readable-table rename-table"><table><thead><tr><th>Original File</th><th>Issue</th><th>Current Info</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;}
+  function normalIndividualTable(){const classIds=selectedIndividualClass==='all'?['3A','3B']:[selectedIndividualClass||'3A']; const rows=classIds.flatMap(id=>individualClassData[id].rows.filter(r=>r[3]==='OK'||r[3]==='要確認').slice(0,3).map(r=>`<tr><td>${individualClassData[id].label}</td><td class="mono">${esc(r[0])}</td><td>${esc(r[1])}</td><td>${classBadgeForStatus(r[3])}</td><td>${esc(r[4])}</td></tr>`)).join('');return `<div class="v10-normal-section"><div class="v10-normal-head"><strong>通常候補</strong><div class="card-sub">通常候補は確認用として表示します。エラー修正は上の一覧から開きます。</div></div><div class="table-wrap"><table><thead><tr><th>Class</th><th>Original File</th><th>Student Ref.</th><th>Status</th><th>Comment</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;}
+  function normalTeacherTable(){const rows=[['IMG0165.jpg','国語科 / 高橋次郎','OK','BestShot第1候補'],['IMG0166.jpg','国語科 / 高橋次郎','OK','BestShot第2候補'],['IMG0167.jpg','国語科 / 高橋次郎','OK','カード保持写真']].map(r=>`<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${classBadgeForStatus(r[2])}</td><td>${r[3]}</td></tr>`).join('');return `<div class="v10-normal-section"><div class="v10-normal-head"><strong>通常候補</strong><div class="card-sub">通常候補は確認用として表示します。エラー修正は上の一覧から開きます。</div></div><div class="table-wrap"><table><thead><tr><th>Original File</th><th>Teacher / Subject</th><th>Status</th><th>Comment</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;}
+  window.individualReviewBody=function(){return `<div class="card"><div class="card-title">③ クラス別レビュー / エラーリネーム</div><div class="card-sub">エラーはまず一覧で表示します。必要な行だけ開いて、ファイル名の構成要素を直接入力します。拡張子は元ファイルから自動保持します。</div>${individualClassTabs()}<div class="naming-rule"><strong>個人写真 命名ルール：</strong><br>[Year]_[SchoolName]_[OriginalFileName]_[Grade][Class][ID]_[Tag].ext<br>例：<span class="mono">26_上水高_IMG_2337_3105_札01.jpg</span></div>${v10IndividualErrorList()}${normalIndividualTable()}<div class="btn-row"><button class="btn btn-success" onclick="toast('リネーム情報を保存しました')">修正を保存</button><button class="btn btn-primary" onclick="renderIndividualWorkflow(3)">リネーム確認へ</button></div></div>`;}
+  window.editReviewBody=function(kind,icon){if(kind!=='teacher')return ''; return `<div class="card"><div class="card-title">③ Review / Edit：先生写真エラーリネーム</div><div class="card-sub">エラーはまず一覧で表示します。必要な行だけ開いて、教科・先生名・元ファイル名・タグを直接入力します。拡張子は元ファイルから自動保持します。</div><div class="naming-rule" style="margin-top:12px"><strong>先生写真 命名ルール：</strong><br>教科_先生名_元ファイル名_タグ<br>例：<span class="mono">国語科_高橋次郎_IMG0165_本01.jpg</span></div>${v10TeacherErrorList()}${normalTeacherTable()}<div class="btn-row"><button class="btn btn-success" onclick="toast('先生写真のリネーム情報を保存しました')">修正を保存</button><button class="btn btn-primary" onclick="renderWorkflow('teacher',3)">次へ</button></div></div>`;}
+})();
+</script>
+
+<script>
+// ===== UX v11: keep all existing functions, only tidy the picture-name edit UI =====
+(function(){
+  const style=document.createElement('style');
+  style.textContent=`
+  .v11-error-list{margin-top:14px;border:1px solid #fecaca;border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+  .v11-error-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;background:#fff7f7;border-bottom:1px solid #fee2e2}
+  .v11-error-head strong{font-size:14px;color:var(--ink1)}
+  .v11-edit-row{display:none}.v11-edit-row.open{display:table-row}.v11-edit-row>td{background:#f8fafc!important;padding:0!important}
+  .v11-edit-panel{margin:12px;border:1px solid var(--line);border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+  .v11-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;background:#f8fbff;border-bottom:1px solid var(--line)}
+  .v11-panel-head .title{font-weight:900;color:var(--ink1)}
+  .v11-panel-head .sub{font-size:12px;color:var(--ink2);margin-top:2px}
+  .v11-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px}
+  .v11-edit-card{border:1px solid var(--line);border-radius:14px;background:#fff;padding:12px}
+  .v11-edit-card-title{font-weight:800;color:var(--ink1);font-size:13px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+  .v11-field-grid{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:10px}
+  .v11-field label{display:block;font-size:11px;font-weight:800;color:var(--ink2);margin-bottom:4px}
+  .v11-field input{width:100%;border:1px solid var(--line);border-radius:9px;padding:8px 9px;font-size:13px;background:#fff}
+  .v11-field input:focus{outline:2px solid rgba(13,140,140,.18);border-color:var(--teal)}
+  .v11-tag-help{font-size:11px;color:var(--ink2);margin-top:4px}
+  .v11-preview{margin:0 14px 14px;border:1px solid #bae6fd;background:#f0f9ff;border-radius:14px;padding:12px 14px}
+  .v11-preview .label{font-size:11px;font-weight:800;color:#0369a1;margin-bottom:6px}
+  .v11-preview .value{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:#0f172a;word-break:break-all}
+  .v11-panel-actions{display:flex;gap:8px;flex-wrap:wrap;padding:0 14px 14px}
+  .v11-normal{margin-top:14px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+  .v11-normal .v11-normal-head{padding:12px 14px;background:#fbfdff;border-bottom:1px solid var(--line)}
+  .v11-note{font-size:12px;color:var(--ink2)}
+  @media(max-width:900px){.v11-edit-grid{grid-template-columns:1fr}.v11-field-grid{grid-template-columns:1fr}}
+  `;
+  document.head.appendChild(style);
+
+  function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function clean(s){return String(s??'').replace(/\s+/g,'').trim();}
+  function splitFile(raw){const m=String(raw||'').match(/^(.*)\.([A-Za-z0-9]+)$/);return m?{base:m[1],ext:m[2].toLowerCase()}:{base:String(raw||''),ext:'jpg'};}
+  function val(panel,cls,fb=''){return clean(panel?.querySelector('.'+cls)?.value||fb);}
+  function buildInd(panel){const fp=splitFile(val(panel,'v11-original','IMG_2401.jpg'));return `${val(panel,'v11-year','26')}_${val(panel,'v11-school','上水高')}_${fp.base}_${val(panel,'v11-grade','3')}${val(panel,'v11-class','1')}${val(panel,'v11-id','05').padStart(2,'0')}_${val(panel,'v11-tag','本05')}.${fp.ext}`;}
+  function buildTeacher(panel){const fp=splitFile(val(panel,'v11-original','T_009.jpg'));return `${val(panel,'v11-subject','国語科')}_${val(panel,'v11-teacher','高橋次郎')}_${fp.base}_${val(panel,'v11-tag','本03')}.${fp.ext}`;}
+  window.updateV11RenamePreview=function(el,kind){const panel=el.closest('.v11-edit-panel');if(!panel)return;const out=panel.querySelector('.v11-preview .value');if(!out)return;out.textContent=kind==='teacher'?buildTeacher(panel):buildInd(panel);const fp=splitFile(val(panel,'v11-original','IMG_0001.jpg'));const note=panel.querySelector('.v11-extension-note');if(note)note.textContent=`拡張子は元ファイルから自動保持：.${fp.ext}`;}
+  window.toggleV11ErrorEdit=function(id){const row=document.getElementById(id);if(!row)return;row.classList.toggle('open');row.style.display=row.classList.contains('open')?'table-row':'none';toast(row.classList.contains('open')?'修正欄を表示しました':'修正欄を閉じました');}
+
+  function indPanel(d){const fp=splitFile(d.original);const preview=`${d.year||'26'}_${d.school||'上水高'}_${fp.base}_${d.grade||'3'}${d.klass||'1'}${String(d.id||'05').padStart(2,'0')}_${d.tag||'本05'}.${fp.ext}`;return `<div class="v11-edit-panel"><div class="v11-panel-head"><div><div class="title">${esc(d.original)} のリネーム修正</div><div class="sub v11-extension-note">拡張子は元ファイルから自動保持：.${esc(fp.ext)}</div></div><span class="badge b-info">手入力で修正</span></div><div class="v11-edit-grid"><div class="v11-edit-card"><div class="v11-edit-card-title">① 基本情報</div><div class="v11-field-grid"><div class="v11-field"><label>Year</label><input class="v11-year" value="${esc(d.year||'26')}" oninput="updateV11RenamePreview(this,'individual')"></div><div class="v11-field"><label>School</label><input class="v11-school" value="${esc(d.school||'上水高')}" oninput="updateV11RenamePreview(this,'individual')"></div><div class="v11-field" style="grid-column:1/-1"><label>Original File</label><input class="v11-original" value="${esc(d.original)}" oninput="updateV11RenamePreview(this,'individual')"></div></div></div><div class="v11-edit-card"><div class="v11-edit-card-title">② クラス・番号・タグ</div><div class="v11-field-grid"><div class="v11-field"><label>Grade</label><input class="v11-grade" value="${esc(d.grade||'3')}" oninput="updateV11RenamePreview(this,'individual')"></div><div class="v11-field"><label>Class</label><input class="v11-class" value="${esc(d.klass||'1')}" oninput="updateV11RenamePreview(this,'individual')"></div><div class="v11-field"><label>ID / Card No.</label><input class="v11-id" value="${esc(d.id||'05')}" oninput="updateV11RenamePreview(this,'individual')"></div><div class="v11-field"><label>Photo Tag / Ranking</label><input class="v11-tag" value="${esc(d.tag||'本05')}" oninput="updateV11RenamePreview(this,'individual')"><div class="v11-tag-help">例：本01 / 本05 / 札03</div></div></div></div></div><div class="v11-preview"><div class="label">Rename Preview</div><div class="value">${esc(preview)}</div></div><div class="v11-panel-actions"><button class="btn btn-success btn-sm" onclick="toast('エラー行のリネームを確定しました')">確定</button><button class="btn btn-ghost btn-sm" onclick="toggleV11ErrorEdit(this.closest('tr').id)">閉じる</button></div></div>`;}
+
+  function teacherPanel(d){const fp=splitFile(d.original);const preview=`${d.subject||'国語科'}_${d.teacher||'高橋次郎'}_${fp.base}_${d.tag||'本03'}.${fp.ext}`;return `<div class="v11-edit-panel"><div class="v11-panel-head"><div><div class="title">${esc(d.original)} のリネーム修正</div><div class="sub v11-extension-note">拡張子は元ファイルから自動保持：.${esc(fp.ext)}</div></div><span class="badge b-info">手入力で修正</span></div><div class="v11-edit-grid"><div class="v11-edit-card"><div class="v11-edit-card-title">① 先生情報</div><div class="v11-field-grid"><div class="v11-field"><label>Subject</label><input class="v11-subject" value="${esc(d.subject||'国語科')}" oninput="updateV11RenamePreview(this,'teacher')"></div><div class="v11-field"><label>Teacher Name</label><input class="v11-teacher" value="${esc(d.teacher||'高橋次郎')}" oninput="updateV11RenamePreview(this,'teacher')"></div></div></div><div class="v11-edit-card"><div class="v11-edit-card-title">② ファイル・タグ</div><div class="v11-field-grid"><div class="v11-field"><label>Original File</label><input class="v11-original" value="${esc(d.original)}" oninput="updateV11RenamePreview(this,'teacher')"></div><div class="v11-field"><label>Photo Tag / Ranking</label><input class="v11-tag" value="${esc(d.tag||'本03')}" oninput="updateV11RenamePreview(this,'teacher')"><div class="v11-tag-help">例：本01 / 本05 / 札03</div></div></div></div></div><div class="v11-preview"><div class="label">Rename Preview</div><div class="value">${esc(preview)}</div></div><div class="v11-panel-actions"><button class="btn btn-success btn-sm" onclick="toast('先生写真エラーのリネームを確定しました')">確定</button><button class="btn btn-ghost btn-sm" onclick="toggleV11ErrorEdit(this.closest('tr').id)">閉じる</button></div></div>`;}
+
+  function v11IndividualErrorList(){const items=[{id:'v11IndErr1',cls:'3年A組',file:'IMG_2401.jpg',issue:'番号札未検出',info:'ID不明',data:{original:'IMG_2401.jpg',grade:'3',klass:'1',id:'05',tag:'本05'}},{id:'v11IndErr2',cls:'3年B組',file:'IMG_3188.jpg',issue:'同一番号の候補複数',info:'12番候補が複数',data:{original:'IMG_3188.jpg',grade:'3',klass:'2',id:'12',tag:'本03'}}];const rows=items.map(r=>`<tr class="error-summary-row"><td>${esc(r.cls)}</td><td class="mono">${esc(r.file)}</td><td><span class="badge b-err">${esc(r.issue)}</span></td><td>${esc(r.info)}</td><td><button class="btn btn-primary btn-sm" onclick="toggleV11ErrorEdit('${r.id}')">修正してリネーム</button></td></tr><tr id="${r.id}" class="v11-edit-row"><td colspan="5">${indPanel(r.data)}</td></tr>`).join('');return `<div class="v11-error-list"><div class="v11-error-head"><div><strong>エラーリネーム一覧</strong><div class="card-sub">一覧から必要な行だけ開いて修正します。最初から入力欄を並べないため、画面がすっきりします。</div></div><span class="badge b-err">2件</span></div><div class="table-wrap readable-table"><table><thead><tr><th>Class</th><th>Original File</th><th>Issue</th><th>Current Info</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;}
+  function v11TeacherErrorList(){const items=[{id:'v11TeachErr1',file:'T_009.jpg',issue:'PDF未照合',info:'OCR: 高橋二郎 / PDF一致なし',data:{subject:'国語科',teacher:'高橋次郎',original:'T_009.jpg',tag:'本03'}},{id:'v11TeachErr2',file:'T_014.jpg',issue:'OCR信頼度低',info:'カード文字が不鮮明',data:{subject:'数学科',teacher:'田中一郎',original:'T_014.jpg',tag:'札02'}}];const rows=items.map(r=>`<tr class="error-summary-row"><td class="mono">${esc(r.file)}</td><td><span class="badge b-warn">${esc(r.issue)}</span></td><td>${esc(r.info)}</td><td><button class="btn btn-primary btn-sm" onclick="toggleV11ErrorEdit('${r.id}')">修正してリネーム</button></td></tr><tr id="${r.id}" class="v11-edit-row"><td colspan="4">${teacherPanel(r.data)}</td></tr>`).join('');return `<div class="v11-error-list"><div class="v11-error-head"><div><strong>先生写真 エラーリネーム一覧</strong><div class="card-sub">一覧から必要な行だけ開いて、教科・先生名・タグを修正します。</div></div><span class="badge b-warn">2件</span></div><div class="table-wrap readable-table"><table><thead><tr><th>Original File</th><th>Issue</th><th>Current Info</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;}
+
+  function normalIndividualTable(){const classIds=selectedIndividualClass==='all'?['3A','3B']:[selectedIndividualClass||'3A'];const rows=classIds.flatMap(id=>individualClassData[id].rows.filter(r=>r[3]==='OK'||r[3]==='要確認').slice(0,3).map(r=>`<tr><td>${individualClassData[id].label}</td><td class="mono">${esc(r[0])}</td><td>${esc(r[1])}</td><td>${classBadgeForStatus(r[3])}</td><td>${esc(r[4])}</td></tr>`)).join('');return `<div class="v11-normal"><div class="v11-normal-head"><strong>通常候補</strong><div class="v11-note">通常候補は確認用です。エラー修正は上の一覧から開きます。</div></div><div class="table-wrap"><table><thead><tr><th>Class</th><th>Original File</th><th>Student Ref.</th><th>Status</th><th>Comment</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;}
+  function normalTeacherTable(){const rows=[['IMG0165.jpg','国語科 / 高橋次郎','OK','BestShot第1候補'],['IMG0166.jpg','国語科 / 高橋次郎','OK','BestShot第2候補'],['IMG0167.jpg','国語科 / 高橋次郎','OK','カード保持写真']].map(r=>`<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${classBadgeForStatus(r[2])}</td><td>${r[3]}</td></tr>`).join('');return `<div class="v11-normal"><div class="v11-normal-head"><strong>通常候補</strong><div class="v11-note">通常候補は確認用です。エラー修正は上の一覧から開きます。</div></div><div class="table-wrap"><table><thead><tr><th>Original File</th><th>Teacher / Subject</th><th>Status</th><th>Comment</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;}
+
+  window.individualReviewBody=function(){return `<div class="card"><div class="card-title">③ クラス別レビュー / エラーリネーム</div><div class="card-sub">機能はそのままに、編集画面だけ整理しました。エラーは一覧から必要な行だけ開いて、ファイル名の構成要素を直接入力します。</div>${individualClassTabs()}<div class="naming-rule"><strong>個人写真 命名ルール：</strong><br>[Year]_[SchoolName]_[OriginalFileName]_[Grade][Class][ID]_[Tag].ext<br>例：<span class="mono">26_上水高_IMG_2337_3105_札01.jpg</span></div>${v11IndividualErrorList()}${normalIndividualTable()}<div class="btn-row"><button class="btn btn-success" onclick="toast('リネーム情報を保存しました')">修正を保存</button><button class="btn btn-primary" onclick="renderIndividualWorkflow(3)">リネーム確認へ</button></div></div>`;}
+  window.editReviewBody=function(kind,icon){if(kind!=='teacher')return '';return `<div class="card"><div class="card-title">③ Review / Edit：先生写真エラーリネーム</div><div class="card-sub">機能はそのままに、編集画面だけ整理しました。必要な行だけ開いて、教科・先生名・元ファイル名・タグを直接入力します。</div><div class="naming-rule" style="margin-top:12px"><strong>先生写真 命名ルール：</strong><br>教科_先生名_元ファイル名_タグ<br>例：<span class="mono">国語科_高橋次郎_IMG0165_本01.jpg</span></div>${v11TeacherErrorList()}${normalTeacherTable()}<div class="btn-row"><button class="btn btn-success" onclick="toast('先生写真のリネーム情報を保存しました')">修正を保存</button><button class="btn btn-primary" onclick="renderWorkflow('teacher',3)">次へ</button></div></div>`;}
+})();
+</script>
+</body>
+</html>
