@@ -2,16 +2,27 @@
 
 FastAPI + static frontend app for Snap Photos and Teacher Photos pipelines.
 
-## Run locally
+## Run locally (macOS/Linux)
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# set OPENAI_API_KEY in .env for Teacher pipeline
 uvicorn backend.app:app --reload --host 127.0.0.1 --port 8000
 ```
+
+## Run locally (Windows PowerShell)
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env
+uvicorn backend.app:app --reload --host 127.0.0.1 --port 8000
+```
+
+Teacher pipeline reads `OPENAI_API_KEY` from backend `.env` only at runtime when `POST /api/teacher/run` is called.
 
 Open: http://127.0.0.1:8000
 
