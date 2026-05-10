@@ -200,8 +200,7 @@ def download_outputs() -> FileResponse:
     return FileResponse(latest_zip_path, media_type="application/zip", filename="snap_outputs.zip")
 
 
+app.include_router(teacher_router)
+
 if (FRONTEND_DIR / "index.html").exists():
     app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
-
-
-app.include_router(teacher_router)
