@@ -10,12 +10,14 @@ from typing import Any
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from uuid import uuid4
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from backend.teacher_jobs import router as teacher_router
 from openpyxl import Workbook
 
 from backend.snap_pipeline import SnapPipeline
+from backend.club_pipeline import run_club_pipeline
 
 ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = ROOT / "frontend"
@@ -199,6 +201,53 @@ def download_outputs() -> FileResponse:
         raise HTTPException(status_code=404, detail="No output zip available. Run /api/snap/run first.")
     return FileResponse(latest_zip_path, media_type="application/zip", filename="snap_outputs.zip")
 
+
+
+
+@app.post("/api/club/run")
+async def run_club(folder_zip: UploadFile = File(...)) -> dict[str, Any]:
+    if not folder_zip.filename or not folder_zip.filename.lower().endswith(".zip"):
+        raise HTTPException(status_code=400, detail="Please upload one .zip file.")
+
+    job_id = f"club_{uuid4().hex[:12]}"
+    job_root = APP_STATE_DIR / "club_jobs" / job_id
+    input_dir = job_root / "input"
+    output_dir = job_root / "output"
+    input_dir.mkdir(parents=True, exist_ok=True)
+
+    zip_path = _save_upload(folder_zip, input_dir)
+    result = run_club_pipeline(str(zip_path), str(output_dir))
+
+    output_zip = job_root / "club_output.zip"
+    with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zf:
+        club_output_dir = Path(result["output_dir"])
+        for p in club_output_dir.rglob("*"):
+            if p.is_file():
+                zf.write(p, p.relative_to(club_output_dir.parent))
+
+    return {
+        "job_id": job_id,
+        "status": result["status"],
+        "summary": result["summary"],
+        "excel_url": f"/api/club/{job_id}/excel",
+        "output_zip_url": f"/api/club/{job_id}/download",
+    }
+
+
+@app.get("/api/club/{job_id}/excel")
+def download_club_excel(job_id: str) -> FileResponse:
+    excel_path = APP_STATE_DIR / "club_jobs" / job_id / "output" / "Club_Output" / "club_result.xlsx"
+    if not excel_path.exists():
+        raise HTTPException(status_code=404, detail="Club Excel not found.")
+    return FileResponse(excel_path, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename="club_result.xlsx")
+
+
+@app.get("/api/club/{job_id}/download")
+def download_club_output(job_id: str) -> FileResponse:
+    zip_path = APP_STATE_DIR / "club_jobs" / job_id / "club_output.zip"
+    if not zip_path.exists():
+        raise HTTPException(status_code=404, detail="Club output zip not found.")
+    return FileResponse(zip_path, media_type="application/zip", filename="club_output.zip")
 
 app.include_router(teacher_router)
 
