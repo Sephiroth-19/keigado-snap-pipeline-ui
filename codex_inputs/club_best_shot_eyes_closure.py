@@ -41,7 +41,7 @@ print("OK")
 # =========================
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-client = OpenAI()
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 MODEL_NAME = "gpt-5.4"
 
