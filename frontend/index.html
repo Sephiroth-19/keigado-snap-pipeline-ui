@@ -1495,5 +1495,93 @@ window.runTeacherPipeline=runTeacherPipeline;window.runSnapPipeline=runSnapPipel
 window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFolder=downloadTeacherOutputFolder;window.downloadSnapFolder=downloadSnapFolder;window.downloadAllSnapResults=downloadAllSnapResults;
 </script>
 
+<script>
+// ===== Club API wiring (minimal integration) =====
+(function(){
+  const state={file:null,running:false,error:'',result:null};
+  function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
+  function sum(key, fallback=0){
+    const v=state.result?.summary?.[key];
+    return Number.isFinite(Number(v)) ? Number(v) : fallback;
+  }
+  function baseUrl(){ return window.location.origin; }
+  function absUrl(path){ if(!path) return '#'; return /^https?:\/\//.test(path) ? path : `${baseUrl()}${path}`; }
+
+  window.onClubZipSelected=function(input){
+    const f=input.files && input.files[0];
+    state.error='';
+    if(!f){ state.file=null; window.renderClubWorkflow(0); return; }
+    if(!f.name.toLowerCase().endsWith('.zip')){ state.file=null; state.error='ZIPファイル（.zip）のみアップロードできます。'; input.value=''; }
+    else state.file=f;
+    window.renderClubWorkflow(0);
+  };
+
+  window.runClubPipeline=async function(){
+    if(state.running) return;
+    state.error='';
+    if(!state.file){ state.error='先にZIPファイルを選択してください。'; window.renderClubWorkflow(0); return; }
+    state.running=true; state.result=null; window.renderClubWorkflow(1);
+    try{
+      const fd=new FormData(); fd.append('folder_zip', state.file);
+      const res=await fetch('/api/club/run',{method:'POST',body:fd});
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(data?.detail || 'クラブ写真の処理に失敗しました。');
+      state.result=data;
+      state.running=false;
+      window.renderClubWorkflow(3);
+      toast('クラブ写真の処理が完了しました');
+    }catch(e){
+      state.running=false;
+      state.error=e?.message || 'クラブ写真の処理に失敗しました。';
+      window.renderClubWorkflow(0);
+    }
+  };
+
+  window.clubUploadBody=function(){
+    const fileName=state.file?esc(state.file.name):'未選択';
+    const status=state.running?'<span class="badge b-blue">処理中...</span>':state.result?'<span class="badge b-ok">処理完了</span>':'<span class="badge b-gray">待機中</span>';
+    const err=state.error?`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(state.error)}</div></div>`:'';
+    return `<div class="card"><div class="card-title">① ZIPアップロード</div><div class="card-sub">クラブ写真はZIP 1ファイルのみ対応です。ZIPのトップ階層フォルダ名をクラブ名として扱います。</div>
+      <div class="field" style="margin-top:12px"><label>Club ZIP</label><input type="file" accept=".zip,application/zip" onchange="onClubZipSelected(this)"></div>
+      <div class="panel" style="margin-top:10px"><strong>選択中：</strong>${fileName}<br><strong>ステータス：</strong>${status}</div>${err}
+      <div class="btn-row"><button class="btn btn-primary" onclick="runClubPipeline()">AI処理を開始</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
+  };
+
+  window.clubAiBody=function(){
+    return `<div class="card"><div class="card-title">② AI Detection / Ranking</div><div class="card-sub">クラブ写真をバックエンドで処理しています。完了後に自動でExport表示へ移動します。</div><div class="alert a-blue" style="margin-top:12px"><span>⏳</span><div>処理中です。しばらくお待ちください...</div></div></div>`;
+  };
+
+  window.clubExportBody=function(){
+    const res=state.result;
+    if(!res){
+      return `<div class="card"><div class="alert a-warn"><span>⚠️</span><div>まだ処理結果がありません。UploadからZIPを実行してください。</div></div><div class="btn-row"><button class="btn btn-primary" onclick="renderClubWorkflow(0)">Uploadへ戻る</button></div></div>`;
+    }
+    const clubs=sum('total_clubs');
+    const photos=sum('total_images');
+    const closed=sum('eyes_closed_count');
+    const ranked=photos;
+    return `<div class="card"><div class="alert a-ok"><span>✅</span><div><strong>クラブ写真の処理が完了しました。</strong></div></div>
+      <div class="summary-box" style="margin-top:12px">
+        <div class="summary-row"><strong>クラブ数</strong><span>${clubs}</span></div>
+        <div class="summary-row"><strong>写真枚数</strong><span>${photos}</span></div>
+        <div class="summary-row"><strong>目つぶり候補</strong><span>${closed}</span></div>
+        <div class="summary-row"><strong>BestShot出力数</strong><span>${ranked}</span></div>
+      </div>
+      <div class="btn-row"><a class="btn btn-success" href="${absUrl(res.excel_url)}">Excelをダウンロード</a><a class="btn btn-primary" href="${absUrl(res.output_zip_url)}">出力ZIPをダウンロード</a><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div>
+    </div>`;
+  };
+
+  window.renderClubWorkflow=function(step){
+    const sec=document.getElementById('sec-club');
+    const steps=['Upload','AI Detection / Ranking','Rename / Output Preview','Export'];
+    if(state.running) step=1;
+    if(state.result && step<3) step=3;
+    const tabs=steps.map((s,i)=>`<button class="wf-tab ${i===step?'on':''}" onclick="renderClubWorkflow(${i})">${i+1} ${s}</button>`).join('');
+    const body=step===0?clubUploadBody():(step===1?clubAiBody():clubExportBody());
+    sec.innerHTML=`<div class="alert a-info"><span>🏆</span><div><strong>クラブ写真：</strong>ZIPアップロード後に一括でAI処理し、完了後に結果をダウンロードできます。</div></div><div class="wf-tabs">${tabs}</div>${body}`;
+  };
+})();
+</script>
+
 </body>
 </html>
