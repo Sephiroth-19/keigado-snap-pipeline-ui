@@ -55,3 +55,19 @@ OPENAI_MODEL_VISION=gpt-5.4
 Teacher upload format:
 - One ZIP containing teacher card + portrait photos.
 - One PDF roster file.
+
+## Club APIs (first backend version)
+
+- `POST /api/club/run` (multipart: `folder_zip`)
+- `GET /api/club/{job_id}/excel`
+- `GET /api/club/{job_id}/download`
+
+Club upload format:
+- One ZIP where each top-level folder is one club name.
+- Images can be in nested folders under each club.
+
+Example test command:
+```bash
+curl -X POST "http://127.0.0.1:8000/api/club/run" \
+  -F "folder_zip=@/path/to/club_photos.zip"
+```
