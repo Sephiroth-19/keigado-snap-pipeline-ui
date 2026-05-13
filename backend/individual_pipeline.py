@@ -71,7 +71,7 @@ def filter_unresolved_error_queue(error_queue: list[dict[str, Any]], resolutions
     return unresolved
 
 
-def _export_package(class_groups: list[dict[str, Any]], unresolved_errors: list[dict[str, Any]], photos_dir: Path, output_dir: Path) -> int:
+def _export_package(class_groups: list[dict[str, Any]], unresolved_errors: list[dict[str, Any]], output_dir: Path) -> int:
     blocked = {e["group_id"] for e in unresolved_errors}
     exported = 0
     for g in class_groups:
@@ -79,7 +79,7 @@ def _export_package(class_groups: list[dict[str, Any]], unresolved_errors: list[
             continue
         class_dir = output_dir / g["class_name"]
         class_dir.mkdir(parents=True, exist_ok=True)
-        src = photos_dir / g["filename"]
+        src = Path(g["source_path"])
         if src.exists():
             dst = class_dir / f"{g['student_no']}_{g['filename']}"
             shutil.copy2(src, dst)
@@ -103,18 +103,43 @@ def run_individual_pipeline(photos_dir: str, output_dir: str, roster_file: str |
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
+    print("[individual] Stage 1: collect images")
     files = [p for p in sorted(photos_path.rglob("*")) if p.is_file() and p.suffix.lower() in IMAGE_EXTS]
+    print(f"[individual] images found: {len(files)}")
+    print("[individual] Stage 2: parse roster")
+    print(f"[individual] roster provided: {bool(roster_file)}")
+    print("[individual] Stage 3: run face grouping / card detection")
     class_name = options.get("default_class", "unclassified")
     class_groups: list[dict[str, Any]] = []
     error_queue: list[dict[str, Any]] = []
 
     for i, p in enumerate(files, start=1):
         student_no = str(i).zfill(3)
-        group = {"group_id": f"g{i:04d}", "filename": p.name, "class_name": class_name, "student_no": student_no}
+        group = {
+            "group_id": f"g{i:04d}",
+            "filename": p.name,
+            "source_path": str(p),
+            "relative_path": str(p.relative_to(photos_path)),
+            "class_name": class_name,
+            "student_no": student_no,
+            "best_shot": True,
+            "has_card_image": True,
+            "has_portrait": True,
+        }
         class_groups.append(group)
         if i % 20 == 0:
             error_queue.append({"error_id": f"e{i:04d}", "group_id": group["group_id"], "error_type": "missing_tag_shot", "message": "Missing tag shot"})
 
+    print("[individual] Stage 4: detect errors")
+    if not files:
+        error_queue.append(
+            {
+                "error_id": "e0000",
+                "group_id": "none",
+                "error_type": "no_images_found",
+                "message": "No image files found under photos input directory.",
+            }
+        )
     (out / "error_queue.json").write_text(json.dumps(error_queue, ensure_ascii=False, indent=2), encoding="utf-8")
 
     resolutions_path = out / "error_resolutions.json"
@@ -122,10 +147,22 @@ def run_individual_pipeline(photos_dir: str, output_dir: str, roster_file: str |
     class_groups = apply_error_resolutions_to_class_groups(class_groups, error_queue, resolutions)
     unresolved = filter_unresolved_error_queue(error_queue, resolutions)
 
-    exported = _export_package(class_groups, unresolved, photos_path, out)
+    print("[individual] Stage 5: export class folders")
+    exported = _export_package(class_groups, unresolved, out)
+    if exported == 0 and len(class_groups) > 0 and len(unresolved) == 0:
+        warning_error = {
+            "error_id": "e9999",
+            "group_id": "all",
+            "error_type": "export_failed",
+            "message": "Groups were detected but no files were exported. Check source paths and file permissions.",
+        }
+        error_queue.append(warning_error)
+        unresolved.append(warning_error)
     _write_logs(out, error_queue)
 
     error_summary = dict(Counter(e["error_type"] for e in unresolved))
+    output_image_files_count = len([p for p in out.rglob("*") if p.is_file() and p.suffix.lower() in IMAGE_EXTS])
+    class_folders = sorted({g["class_name"] for g in class_groups})
     summary = {
         "status": "ok",
         "total_classes": len({g["class_name"] for g in class_groups}),
@@ -136,7 +173,19 @@ def run_individual_pipeline(photos_dir: str, output_dir: str, roster_file: str |
         "unresolved_errors": len(unresolved),
         "error_summary": error_summary,
         "roster_provided": bool(roster_file),
+        "total_images_found": len(files),
+        "images_processed": len(class_groups),
+        "class_folders_found": len(class_folders),
+        "class_groups_detected": len(class_groups),
+        "groups_with_best_shot": sum(1 for g in class_groups if g.get("best_shot")),
+        "groups_with_card_images": sum(1 for g in class_groups if g.get("has_card_image")),
+        "groups_with_portraits": sum(1 for g in class_groups if g.get("has_portrait")),
+        "exported_files_count": exported,
+        "output_image_files_count": output_image_files_count,
     }
+    if exported == 0:
+        summary["status"] = "warning" if len(files) > 0 else "error"
+        summary["warning"] = "No image files were exported."
     (out / "manifest.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     return summary
 

@@ -247,6 +247,7 @@ async def run_individual(
         options={"school_name": school_name, "year": year, "scoring": scoring},
     )
 
+    print("[individual] Stage 6: zip output")
     output_zip = job_root / "output.zip"
     zip_output_dir(output_dir, output_zip)
 
