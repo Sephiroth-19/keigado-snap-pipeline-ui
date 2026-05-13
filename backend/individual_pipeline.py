@@ -110,6 +110,35 @@ def _summarize_class_groups(class_groups, limit: int = 3):
     return rows
 
 
+def resolve_pipeline_photos_dir(raw_photos_dir: Path) -> tuple[Path, dict]:
+    raw_photos_dir = Path(raw_photos_dir)
+    recursive_images = [p for p in raw_photos_dir.rglob("*") if p.is_file() and p.suffix.lower() in IMAGE_EXTS]
+    direct_images = [p for p in raw_photos_dir.iterdir() if p.is_file() and p.suffix.lower() in IMAGE_EXTS] if raw_photos_dir.exists() else []
+    top_level_dirs = [p for p in raw_photos_dir.iterdir() if p.is_dir()] if raw_photos_dir.exists() else []
+
+    chosen = raw_photos_dir
+    reason = "default_raw_dir"
+    if direct_images:
+        chosen = raw_photos_dir
+        reason = "images_directly_under_raw_dir"
+    elif len(top_level_dirs) == 1:
+        only_dir = top_level_dirs[0]
+        only_dir_direct_images = [p for p in only_dir.iterdir() if p.is_file() and p.suffix.lower() in IMAGE_EXTS]
+        if only_dir_direct_images:
+            chosen = only_dir
+            reason = "single_top_level_dir_with_direct_images"
+
+    debug = {
+        "raw_photos_dir": str(raw_photos_dir),
+        "resolved_photos_dir": str(chosen),
+        "total_images_found_recursive": len(recursive_images),
+        "direct_images_in_raw_dir": len(direct_images),
+        "top_level_dirs": [str(p) for p in top_level_dirs],
+        "chosen_reason": reason,
+    }
+    return chosen, debug
+
+
 def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None=None, options:dict|None=None)->dict:
     load_dotenv()
     options = options or {}
@@ -117,7 +146,11 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
     out.mkdir(parents=True, exist_ok=True)
 
     try:
-        input_images = _list_input_images(photos_dir)
+        raw_photos_path = Path(photos_dir)
+        resolved_photos_path, photos_resolution_debug = resolve_pipeline_photos_dir(raw_photos_path)
+        _safe_dump(out / "debug_photos_dir_resolution.json", photos_resolution_debug)
+        input_images = _list_input_images(str(raw_photos_path))
+        resolved_direct_images = _list_input_images(str(resolved_photos_path))
         print(f"[individual][debug] total input images: {len(input_images)}")
         _safe_dump(out / "debug_input_images.json", {"total": len(input_images), "images": input_images})
 
@@ -141,7 +174,7 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
 
         openai_client = OpenAI(api_key=openai_api_key) if (scoring == "openai" and openai_api_key) else None
         grouper = FaceGrouper(valid_numbers=set(), scoring=scoring, openai_client=openai_client, roster=roster)
-        class_groups = grouper.process_folder(photos_dir)
+        class_groups = grouper.process_folder(str(resolved_photos_path))
         class_groups_count = len(class_groups) if hasattr(class_groups, "__len__") else -1
         print(f"[individual][debug] class_groups type={type(class_groups).__name__} len={class_groups_count}")
         _safe_dump(out / "debug_class_groups_raw.json", {
@@ -151,6 +184,8 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
         })
         if class_groups_count == 0:
             reason = "FaceGrouper.process_folder returned 0 class_groups"
+            if len(resolved_direct_images) > 0:
+                reason = "FaceGrouper received image folder correctly but detected no groups"
             summary = {
                 "status": "error",
                 "pipeline_mode": "real_pipeline_debug",
@@ -159,12 +194,17 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
                 "total_images_found": len(input_images),
                 "class_groups_count": 0,
                 "exported": 0,
+                "raw_photos_dir": str(raw_photos_path),
+                "resolved_photos_dir": str(resolved_photos_path),
+                "direct_images_count": len([p for p in raw_photos_path.glob('*') if p.is_file() and p.suffix.lower() in IMAGE_EXTS]),
+                "recursive_images_count": len(input_images),
+                "first_5_direct_image_filenames": [Path(p).name for p in resolved_direct_images[:5]],
             }
             _safe_dump(out / "summary.json", summary)
             return summary
 
-        print(f"[individual] calling detect_pipeline_errors with args: class_groups={type(class_groups).__name__}, roster={type(roster).__name__}, photos_dir={photos_dir}")
-        error_queue = detect_pipeline_errors(class_groups, roster, photos_dir)
+        print(f"[individual] calling detect_pipeline_errors with args: class_groups={type(class_groups).__name__}, roster={type(roster).__name__}, photos_dir={resolved_photos_path}")
+        error_queue = detect_pipeline_errors(class_groups, roster, str(resolved_photos_path))
         print(f"[individual][debug] error_queue len={len(error_queue)}")
         _safe_dump(out / "debug_error_queue_after_detection.json", error_queue)
         save_error_queue(error_queue, out / "error_queue.json")
@@ -239,6 +279,10 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
             "class_groups_count": class_groups_count,
             "exportable_groups_count": len(exportable) if hasattr(exportable, "__len__") else -1,
             "output_image_files_count": len(out_images),
+            "raw_photos_dir": str(raw_photos_path),
+            "resolved_photos_dir": str(resolved_photos_path),
+            "direct_images_count": len([p for p in raw_photos_path.glob('*') if p.is_file() and p.suffix.lower() in IMAGE_EXTS]),
+            "recursive_images_count": len(input_images),
         }
         (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
         return summary
