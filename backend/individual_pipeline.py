@@ -4,6 +4,8 @@ import csv, json, os, re, shutil, zipfile
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
+from dotenv import load_dotenv
+from backend.individual.colab_runtime import load_colab_module
 
 IMAGE_EXTS={".jpg",".jpeg",".png",".webp",".bmp",".tif",".tiff",".heic",".heif"}
 
@@ -84,7 +86,7 @@ def build_exportable_class_groups(class_groups:list[dict[str,Any]], unresolved:l
     blocked={e['group_id'] for e in unresolved}
     return [g for g in class_groups if g['group_id'] not in blocked and not g.get('deleted')]
 
-def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None=None, options:dict|None=None)->dict:
+def _run_scaffold_fallback(photos_dir:str, output_dir:str, roster_file:str|None=None, options:dict|None=None)->dict:
     print('[individual] Stage 1: collect images')
     options=options or {}
     photos=Path(photos_dir); out=Path(output_dir); out.mkdir(parents=True, exist_ok=True)
@@ -142,7 +144,7 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
     status='ok'
     if exported==0 and images: status='warning'
     if not images: status='error'
-    pipeline_mode='real_colab' if any(g['class_name']!='unclassified' for g in class_groups) else 'scaffold'
+    pipeline_mode='scaffold_fallback'
     summary={
         'status':status,'pipeline_mode':pipeline_mode,
         'total_classes':len({g['class_name'] for g in class_groups}) if class_groups else 0,
@@ -155,6 +157,84 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
     }
     (out/'manifest.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
     return summary
+
+
+def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None=None, options:dict|None=None)->dict:
+    load_dotenv()
+    options = options or {}
+    try:
+        m = load_colab_module()
+        required = ["parse_roster", "FaceGrouper", "detect_pipeline_errors", "export_all_classes"]
+        if not all(hasattr(m, x) for x in required):
+            raise RuntimeError(f"Missing required symbols: {required}")
+
+        out = Path(output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        print("PHASE 1: Scanning images for class separators")
+        roster = m.parse_roster(roster_file) if roster_file else []
+        if hasattr(m, "save_roster_json"):
+            m.save_roster_json(roster, str(out / "roster.json"))
+        else:
+            (out / "roster.json").write_text(json.dumps(roster, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        print("PHASE 2: Detecting faces + reading cards")
+        valid_numbers = set()
+        scoring = options.get("scoring", "local")
+        grouper = m.FaceGrouper(valid_numbers=valid_numbers, scoring=scoring, roster=roster)
+        class_groups = grouper.process_folder(photos_dir)
+
+        print("PHASE 3: Building person groups from face clusters")
+        error_queue = m.detect_pipeline_errors(class_groups) if hasattr(m, "detect_pipeline_errors") else []
+        (out / "error_queue.json").write_text(json.dumps(error_queue, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        print("PHASE 4: Assigning groups to classes")
+        resolutions = load_error_resolutions(out / "error_resolutions.json")
+        if hasattr(m, "apply_error_resolutions_to_class_groups"):
+            class_groups = m.apply_error_resolutions_to_class_groups(class_groups, error_queue, resolutions)
+        unresolved = m.filter_unresolved_error_queue(error_queue, resolutions) if hasattr(m, "filter_unresolved_error_queue") else error_queue
+        exportable = m.build_exportable_class_groups(class_groups, unresolved) if hasattr(m, "build_exportable_class_groups") else class_groups
+
+        print("PHASE 5: Exporting class folders")
+        if hasattr(m, "export_error_items"):
+            m.export_error_items(unresolved, str(out))
+        if hasattr(m, "write_error_log_json"):
+            m.write_error_log_json(error_queue, str(out / "error_log.json"))
+        else:
+            (out / "error_log.json").write_text(json.dumps(error_queue, ensure_ascii=False, indent=2), encoding="utf-8")
+        if hasattr(m, "write_error_log_csv"):
+            m.write_error_log_csv(error_queue, str(out / "error_log.csv"))
+        else:
+            with (out / "error_log.csv").open("w", encoding="utf-8", newline="") as f:
+                w = csv.DictWriter(f, fieldnames=["error_id", "group_id", "error_type", "message"]); w.writeheader()
+                for e in error_queue: w.writerow({k:e.get(k,"") for k in w.fieldnames})
+
+        m.export_all_classes(exportable, str(out))
+        if hasattr(m, "process_manifest_offsets"):
+            try:
+                m.process_manifest_offsets(str(out / "manifest.json"))
+            except Exception:
+                pass
+
+        out_images=[p for p in out.rglob("*") if p.is_file() and p.suffix.lower() in IMAGE_EXTS]
+        summary = {
+            "status": "ok" if out_images else "warning",
+            "pipeline_mode": "real_colab",
+            "total_classes": len({g.get("class_name","unclassified") for g in class_groups}) if isinstance(class_groups, list) else 0,
+            "total_student_groups": len(class_groups) if isinstance(class_groups, list) else 0,
+            "identified_students": len(class_groups) if isinstance(class_groups, list) else 0,
+            "need_review": len(unresolved) if isinstance(unresolved, list) else 0,
+            "exported": len(out_images),
+            "unresolved_errors": len(unresolved) if isinstance(unresolved, list) else 0,
+            "error_summary": dict(Counter(e.get("error_type","unknown") for e in unresolved)) if isinstance(unresolved, list) else {},
+            "roster_provided": bool(roster_file),
+        }
+        (out / "manifest.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        return summary
+    except Exception as e:
+        print(f"[individual] real_colab path failed, fallback scaffold: {e}")
+        s = _run_scaffold_fallback(photos_dir, output_dir, roster_file, options)
+        s["pipeline_mode"] = "scaffold_fallback"
+        return s
 
 def zip_output_dir(output_dir:Path, zip_path:Path)->Path:
     if zip_path.exists(): zip_path.unlink()
