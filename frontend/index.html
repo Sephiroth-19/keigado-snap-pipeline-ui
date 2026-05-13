@@ -603,12 +603,57 @@ function renderIndividualWorkflow(step){
   else if(step===3) body=individualRenamePreviewBody();
   else body=individualExportBody();
   sec.innerHTML=`<div class="alert a-info"><span>👤</span><div><strong>個人写真：</strong>アップロードしたクラスフォルダごとに処理し、結果もクラス別に確認・出力します。</div></div><div class="wf-tabs">${tabs}</div>${body}`;
+  if(step===0) bindIndividualUploadInputs();
+}
+const individualUploadState={photosZip:null,rosterFile:null,running:false,result:null,error:''};
+function bindIndividualUploadInputs(){
+  const p=document.getElementById('individual-photos-zip');
+  const r=document.getElementById('individual-roster-file');
+  if(p) p.onchange=()=>{individualUploadState.photosZip=p.files?.[0]||null; renderIndividualWorkflow(0);};
+  if(r) r.onchange=()=>{individualUploadState.rosterFile=r.files?.[0]||null; renderIndividualWorkflow(0);};
+}
+async function runIndividualPipeline(){
+  individualUploadState.error='';
+  individualUploadState.result=null;
+  if(!individualUploadState.photosZip){individualUploadState.error='photos_zip（.zip）は必須です。'; renderIndividualWorkflow(0); return;}
+  individualUploadState.running=true; renderIndividualWorkflow(0);
+  try{
+    const fd=new FormData();
+    fd.append('photos_zip',individualUploadState.photosZip);
+    if(individualUploadState.rosterFile) fd.append('roster_file',individualUploadState.rosterFile);
+    fd.append('school_name',document.getElementById('individual-school-name')?.value||'');
+    fd.append('year',document.getElementById('individual-year')?.value||'');
+    fd.append('scoring',document.getElementById('individual-scoring')?.value||'local');
+    const res=await fetch('/api/individual/run',{method:'POST',body:fd});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.detail||'実行に失敗しました');
+    individualUploadState.result=data;
+  }catch(e){individualUploadState.error=e?.message||'実行に失敗しました';}
+  finally{individualUploadState.running=false; renderIndividualWorkflow(0);}
 }
 function individualUploadBody(){
-  return `<div class="card"><div class="card-title">① クラス別フォルダをアップロード</div><div class="card-sub">例：3年A組/ と 3年B組/ をアップロードした場合、次の処理結果もクラス別に表示されます。</div>
-    <div class="drop" style="margin-top:12px" onclick="toast('クラスフォルダを追加しました')">☁️ クラス別フォルダを追加</div>
-    <div class="file-list"><div class="file-row"><span class="file-icon">📁</span><div class="file-info"><div class="file-name">3年A組/</div><div class="file-meta">47枚 · class folder</div></div></div><div class="file-row"><span class="file-icon">📁</span><div class="file-info"><div class="file-name">3年B組/</div><div class="file-meta">42枚 · class folder</div></div></div><div class="file-row"><span class="file-icon">📄</span><div class="file-info"><div class="file-name">名簿Excel_上水高校.xlsx</div><div class="file-meta">任意 · class/student list</div></div></div></div>
-    <div class="btn-row"><button class="btn btn-primary" onclick="renderIndividualWorkflow(1);toast('クラス別にAI処理を開始しました')">AI処理を開始</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
+  const photosName=individualUploadState.photosZip?individualUploadState.photosZip.name:'未選択';
+  const rosterName=individualUploadState.rosterFile?individualUploadState.rosterFile.name:'未選択';
+  const result=individualUploadState.result;
+  const summary=result?`<div class="summary-box" style="margin-top:12px">
+      <div class="summary-row"><strong>job_id</strong><span class="mono">${result.job_id||'-'}</span></div>
+      <div class="summary-row"><strong>status</strong><span>${result.status||'-'}</span></div>
+      <div class="summary-row"><strong>total_classes</strong><span>${result.total_classes??0}</span></div>
+      <div class="summary-row"><strong>total_student_groups</strong><span>${result.total_student_groups??0}</span></div>
+      <div class="summary-row"><strong>exported</strong><span>${result.exported??0}</span></div>
+      <div class="summary-row"><strong>unresolved_errors</strong><span>${result.unresolved_errors??0}</span></div>
+      <div class="summary-row"><strong>error_summary</strong><span class="mono">${JSON.stringify(result.error_summary||{})}</span></div>
+    </div><div class="btn-row" style="margin-top:12px">${result.output_zip_url?`<a class="btn btn-success" href="${result.output_zip_url}">output.zip をダウンロード</a>`:''}</div>`:'<div class="card-sub" style="margin-top:10px">結果はここに表示されます。</div>';
+  return `<div class="card"><div class="card-title">① アップロード</div><div class="card-sub">個人写真ZIP（必須）と名簿ファイル（任意）を指定して処理を開始します。</div>
+    <div class="formgrid" style="margin-top:12px"><div class="field"><label>school_name</label><input id="individual-school-name" placeholder="上水高校"></div><div class="field"><label>year</label><input id="individual-year" placeholder="2026"></div><div class="field"><label>scoring</label><select id="individual-scoring"><option value="local">local</option><option value="openai">openai</option></select></div></div>
+    <div class="btn-row" style="margin-top:12px"><input id="individual-photos-zip" type="file" accept=".zip,application/zip" class="btn btn-ghost"></div>
+    <div class="card-sub">photos_zip: <span class="mono">${photosName}</span></div>
+    <div class="btn-row"><input id="individual-roster-file" type="file" accept=".xlsx,.xls,.pdf,.json" class="btn btn-ghost"></div>
+    <div class="card-sub">roster_file: <span class="mono">${rosterName}</span></div>
+    <div class="card-sub" style="margin-top:8px">status: ${individualUploadState.running?'実行中...':'待機中'}</div>
+    ${individualUploadState.error?`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${individualUploadState.error}</div></div>`:''}
+    ${summary}
+    <div class="btn-row"><button class="btn btn-primary" onclick="runIndividualPipeline()" ${individualUploadState.running?'disabled':''}>AI処理を開始</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
 }
 function individualClassResultBody(){
   const rows=Object.entries(individualClassData).map(([id,d])=>`<tr><td><strong>${d.label}</strong><div class="card-sub">${d.folder}</div></td><td>${d.uploaded}</td><td><span class="badge b-ok">OK ${d.ok}</span></td><td><span class="badge b-err">エラー ${d.missing}</span></td><td><span class="badge b-warn">要確認 ${d.duplicate}</span></td><td><button class="btn btn-primary btn-sm" onclick="selectedIndividualClass='${id}';renderIndividualWorkflow(2)">${d.label}をレビュー</button></td></tr>`).join('');
@@ -1584,84 +1629,6 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
 </script>
 
 
-<script>
-(function(){
-  const state={photosZip:null, rosterFile:null, running:false, result:null, error:''};
-  function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));}
-  function setInputBindings(){
-    const p=document.getElementById('individual-photos-zip');
-    const r=document.getElementById('individual-roster-file');
-    if(p) p.onchange=()=>{state.photosZip=p.files?.[0]||null; renderIndividualUploadCard();};
-    if(r) r.onchange=()=>{state.rosterFile=r.files?.[0]||null; renderIndividualUploadCard();};
-  }
-  function renderSummary(result){
-    if(!result) return '<div class="card-sub">結果はここに表示されます。</div>';
-    const dl=result.output_zip_url?`<a class="btn btn-success" href="${esc(result.output_zip_url)}">output.zip をダウンロード</a>`:'';
-    return `<div class="summary-box" style="margin-top:12px">
-      <div class="summary-row"><strong>job_id</strong><span class="mono">${esc(result.job_id||'-')}</span></div>
-      <div class="summary-row"><strong>status</strong><span>${esc(result.status||'-')}</span></div>
-      <div class="summary-row"><strong>total_classes</strong><span>${esc(result.total_classes??0)}</span></div>
-      <div class="summary-row"><strong>total_student_groups</strong><span>${esc(result.total_student_groups??0)}</span></div>
-      <div class="summary-row"><strong>exported</strong><span>${esc(result.exported??0)}</span></div>
-      <div class="summary-row"><strong>unresolved_errors</strong><span>${esc(result.unresolved_errors??0)}</span></div>
-      <div class="summary-row"><strong>error_summary</strong><span class="mono">${esc(JSON.stringify(result.error_summary||{}))}</span></div>
-    </div><div class="btn-row" style="margin-top:12px">${dl}</div>`;
-  }
-  function renderIndividualUploadCard(){
-    const sec=document.getElementById('sec-individual');
-    const card=sec?.querySelector('.card');
-    if(!card) return;
-    const photosName=state.photosZip?state.photosZip.name:'未選択';
-    const rosterName=state.rosterFile?state.rosterFile.name:'未選択';
-    const errorHtml=state.error?`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(state.error)}</div></div>`:'';
-    const status=state.running?'実行中...':'待機中';
-    card.innerHTML=`<div class="card-title">① Upload</div>
-      <div class="card-sub">個人写真ZIP（必須）と名簿ファイル（任意）を指定して処理を開始します。</div>
-      <div class="formgrid" style="margin-top:12px">
-        <div class="field"><label>School Name</label><input id="individual-school-name" placeholder="上水高校"></div>
-        <div class="field"><label>Year</label><input id="individual-year" placeholder="2026"></div>
-        <div class="field"><label>Scoring</label><select id="individual-scoring"><option value="local">local</option><option value="openai">openai</option></select></div>
-      </div>
-      <div class="btn-row" style="margin-top:12px"><input id="individual-photos-zip" type="file" accept=".zip,application/zip" class="btn btn-ghost"></div>
-      <div class="card-sub">photos_zip: <span class="mono">${esc(photosName)}</span></div>
-      <div class="btn-row" style="margin-top:8px"><input id="individual-roster-file" type="file" accept=".xlsx,.xls,.pdf,.json" class="btn btn-ghost"></div>
-      <div class="card-sub">roster_file: <span class="mono">${esc(rosterName)}</span></div>
-      <div class="card-sub" style="margin-top:8px">status: ${status}</div>
-      ${errorHtml}
-      ${renderSummary(state.result)}
-      <div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" id="individual-run-btn" ${state.running?'disabled':''}>AI処理を開始</button></div>`;
-    setInputBindings();
-    const runBtn=document.getElementById('individual-run-btn');
-    if(runBtn) runBtn.onclick=runIndividualPipeline;
-  }
-  async function runIndividualPipeline(){
-    state.error='';
-    state.result=null;
-    if(!state.photosZip){state.error='photos_zip（.zip）は必須です。'; renderIndividualUploadCard(); return;}
-    state.running=true; renderIndividualUploadCard();
-    try{
-      const fd=new FormData();
-      fd.append('photos_zip',state.photosZip);
-      if(state.rosterFile) fd.append('roster_file',state.rosterFile);
-      fd.append('school_name',document.getElementById('individual-school-name')?.value||'');
-      fd.append('year',document.getElementById('individual-year')?.value||'');
-      fd.append('scoring',document.getElementById('individual-scoring')?.value||'local');
-      const res=await fetch('/api/individual/run',{method:'POST',body:fd});
-      const data=await res.json();
-      if(!res.ok) throw new Error(data.detail||'実行に失敗しました');
-      state.result=data;
-    }catch(e){
-      state.error=e?.message||'実行に失敗しました';
-    }finally{state.running=false; renderIndividualUploadCard();}
-  }
-
-  const oldRenderWorkflow=window.renderWorkflow;
-  window.renderWorkflow=function(kind,step){
-    oldRenderWorkflow(kind,step);
-    if(kind==='individual'&&step===0){ renderIndividualUploadCard(); }
-  };
-})();
-</script>
 
 </body>
 </html>
