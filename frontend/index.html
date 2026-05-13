@@ -1585,3 +1585,27 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
 
 </body>
 </html>
+<script>
+async function runIndividualPipeline(){
+  const zip=document.getElementById('individual-photos-zip')?.files?.[0];
+  if(!zip){alert('写真ZIPを選択してください');return;}
+  const fd=new FormData(); fd.append('photos_zip',zip);
+  const roster=document.getElementById('individual-roster-file')?.files?.[0]; if(roster) fd.append('roster_file',roster);
+  fd.append('school_name',document.getElementById('individual-school')?.value||'');
+  fd.append('year',document.getElementById('individual-year')?.value||'');
+  fd.append('scoring',document.getElementById('individual-scoring')?.value||'local');
+  const res=await fetch('/api/individual/run',{method:'POST',body:fd}); const data=await res.json();
+  document.getElementById('individual-summary-json').textContent=JSON.stringify(data,null,2);
+  if(data.output_zip_url){const a=document.getElementById('individual-download-link');a.href=data.output_zip_url;a.style.display='inline-flex';}
+}
+(function(){
+const prev=window.renderWorkflow;
+window.renderWorkflow=function(kind,step){
+  prev(kind,step);
+  if(kind==='individual'&&step===0){
+    const card=document.querySelector('#sec-individual .card'); if(!card) return;
+    card.innerHTML=`<div class="card-title">アップロード</div><div class="btn-row"><input id="individual-photos-zip" type="file" accept=".zip"></div><div class="btn-row"><input id="individual-roster-file" type="file" accept=".xlsx,.xls,.pdf"></div><div class="formgrid"><div class="field"><label>School</label><input id="individual-school"></div><div class="field"><label>Year</label><input id="individual-year"></div><div class="field"><label>Scoring</label><select id="individual-scoring"><option>local</option><option>openai</option></select></div></div><pre id="individual-summary-json" class="panel">結果はここに表示</pre><div class="btn-row"><button class="btn btn-primary" onclick="runIndividualPipeline()">実行</button><a id="individual-download-link" class="btn btn-success" style="display:none">ZIPダウンロード</a></div>`;
+  }
+}
+})();
+</script>
