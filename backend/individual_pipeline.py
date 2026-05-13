@@ -5,7 +5,22 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 from dotenv import load_dotenv
-from backend.individual.colab_runtime import load_colab_module
+from openai import OpenAI
+from backend.individual.roster_parser import parse_roster, save_roster_json
+from backend.individual.face_grouper import FaceGrouper
+from backend.individual.error_handling import (
+    detect_pipeline_errors,
+    save_error_queue,
+    attach_error_tags_to_groups,
+    load_error_resolutions,
+    apply_error_resolutions_to_class_groups,
+    filter_unresolved_error_queue,
+    build_exportable_class_groups,
+    export_error_items,
+    write_error_log_json,
+    write_error_log_csv,
+)
+from backend.individual.package_exporter import export_all_classes
 
 IMAGE_EXTS={".jpg",".jpeg",".png",".webp",".bmp",".tif",".tiff",".heic",".heif"}
 
@@ -162,106 +177,49 @@ def _run_scaffold_fallback(photos_dir:str, output_dir:str, roster_file:str|None=
 def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None=None, options:dict|None=None)->dict:
     load_dotenv()
     options = options or {}
-    allow_fallback = bool(options.get("allow_fallback", False))
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
     try:
-        m = load_colab_module()
-        required = ["parse_roster", "FaceGrouper", "detect_pipeline_errors", "export_all_classes"]
-        if not all(hasattr(m, x) for x in required):
-            raise RuntimeError(f"Missing required symbols: {required}")
-
-        out = Path(output_dir)
-        out.mkdir(parents=True, exist_ok=True)
-        print("PHASE 1: Scanning images for class separators")
         school_name = options.get("school_name")
         year = options.get("year")
-        openai_api_key = os.getenv("OPENAI_API_KEY")
-        roster = m.parse_roster(roster_file, school_name=school_name, openai_api_key=openai_api_key) if roster_file else []
-        if hasattr(m, "save_roster_json"):
-            m.save_roster_json(roster, str(out / "roster.json"))
-        else:
-            (out / "roster.json").write_text(json.dumps(roster, ensure_ascii=False, indent=2), encoding="utf-8")
-
-        print("PHASE 2: Detecting faces + reading cards")
-        valid_numbers = set()
         scoring = options.get("scoring", "local")
-        grouper = m.FaceGrouper(valid_numbers=valid_numbers, scoring=scoring, openai_client=None, roster=roster)
+        class_mapping = options.get("class_mapping")
+        max_backups = int(options.get("max_backups", 0))
+        openai_api_key = options.get("openai_api_key") or os.getenv("OPENAI_API_KEY")
+
+        roster = parse_roster(roster_file, school_name=school_name, openai_api_key=openai_api_key) if roster_file else {}
+        save_roster_json(roster, out / "roster.json")
+
+        openai_client = OpenAI(api_key=openai_api_key) if (scoring == "openai" and openai_api_key) else None
+        grouper = FaceGrouper(valid_numbers=set(), scoring=scoring, openai_client=openai_client, roster=roster)
         class_groups = grouper.process_folder(photos_dir)
 
-        print("PHASE 3: Building person groups from face clusters")
-        error_queue = m.detect_pipeline_errors(class_groups, roster, photos_dir) if hasattr(m, "detect_pipeline_errors") else []
-        (out / "error_queue.json").write_text(json.dumps(error_queue, ensure_ascii=False, indent=2), encoding="utf-8")
+        error_queue = detect_pipeline_errors(class_groups, roster, photos_dir)
+        save_error_queue(error_queue, out / "error_queue.json")
+        attach_error_tags_to_groups(class_groups, error_queue)
 
-        print("PHASE 4: Assigning groups to classes")
         resolutions = load_error_resolutions(out / "error_resolutions.json")
-        if hasattr(m, "apply_error_resolutions_to_class_groups"):
-            class_groups = m.apply_error_resolutions_to_class_groups(class_groups, resolutions)
-        unresolved = m.filter_unresolved_error_queue(error_queue, resolutions) if hasattr(m, "filter_unresolved_error_queue") else error_queue
-        exportable = m.build_exportable_class_groups(class_groups, unresolved) if hasattr(m, "build_exportable_class_groups") else class_groups
+        resolved_class_groups = apply_error_resolutions_to_class_groups(class_groups, resolutions)
+        unresolved = filter_unresolved_error_queue(error_queue, resolutions)
+        exportable = build_exportable_class_groups(resolved_class_groups, unresolved)
 
-        print("PHASE 5: Exporting class folders")
-        if hasattr(m, "export_error_items"):
-            m.export_error_items(unresolved, str(out))
-        if hasattr(m, "write_error_log_json"):
-            m.write_error_log_json(error_queue, str(out / "error_log.json"))
-        else:
-            (out / "error_log.json").write_text(json.dumps(error_queue, ensure_ascii=False, indent=2), encoding="utf-8")
-        if hasattr(m, "write_error_log_csv"):
-            m.write_error_log_csv(error_queue, str(out / "error_log.csv"))
-        else:
-            with (out / "error_log.csv").open("w", encoding="utf-8", newline="") as f:
-                w = csv.DictWriter(f, fieldnames=["error_id", "group_id", "error_type", "message"]); w.writeheader()
-                for e in error_queue: w.writerow({k:e.get(k,"") for k in w.fieldnames})
-
-        class_mapping = options.get("class_mapping")
-        max_backups = int(options.get("max_backups", 5))
-        m.export_all_classes(
-            exportable,
-            roster,
-            str(out),
-            school_name=school_name,
-            year=year,
-            class_mapping=class_mapping,
-            max_backups=max_backups,
-        )
-        if hasattr(m, "process_manifest_offsets"):
-            try:
-                m.process_manifest_offsets(package_root=str(out))
-            except Exception:
-                pass
+        export_error_items(unresolved, out)
+        write_error_log_json(error_queue, out / "error_log.json")
+        write_error_log_csv(error_queue, out / "error_log.csv")
+        export_all_classes(exportable, roster, out, school_name=school_name, year=year, class_mapping=class_mapping, max_backups=max_backups)
 
         out_images=[p for p in out.rglob("*") if p.is_file() and p.suffix.lower() in IMAGE_EXTS]
-        summary = {
-            "status": "ok" if out_images else "warning",
-            "pipeline_mode": "real_colab",
-            "total_classes": len({g.get("class_name","unclassified") for g in class_groups}) if isinstance(class_groups, list) else 0,
-            "total_student_groups": len(class_groups) if isinstance(class_groups, list) else 0,
-            "identified_students": len(class_groups) if isinstance(class_groups, list) else 0,
-            "need_review": len(unresolved) if isinstance(unresolved, list) else 0,
-            "exported": len(out_images),
-            "unresolved_errors": len(unresolved) if isinstance(unresolved, list) else 0,
-            "error_summary": dict(Counter(e.get("error_type","unknown") for e in unresolved)) if isinstance(unresolved, list) else {},
-            "roster_provided": bool(roster_file),
-        }
+        summary = {"status": "ok" if out_images else "warning", "pipeline_mode": "real_pipeline", "exported": len(out_images), "unresolved_errors": len(unresolved), "error_summary": dict(Counter(e.get("error_type","unknown") for e in unresolved))}
         (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
         return summary
     except Exception as e:
         reason = str(e)
-        dep_names = ["mediapipe", "easyocr", "insightface", "onnxruntime"]
+        dep_names = ["mediapipe", "easyocr", "insightface", "onnxruntime", "openai", "fitz"]
         missing = next((d for d in dep_names if d in reason.lower()), None)
-        if allow_fallback:
-            print(f"[individual] real_colab path failed, fallback scaffold: {reason}")
-            s = _run_scaffold_fallback(photos_dir, output_dir, roster_file, options)
-            s["pipeline_mode"] = "scaffold_fallback"
-            s["reason"] = reason
-            return s
-        return {
-            "status": "error",
-            "pipeline_mode": "real_colab_failed",
-            "reason": f"missing dependency: {missing}" if missing else reason,
-            "exported": 0,
-            "unresolved_errors": 0,
-            "error_summary": {},
-        }
+        summary = {"status": "error", "pipeline_mode": "real_pipeline_failed", "reason": reason, "missing_dependency_hint": f"Install/verify dependency: {missing}" if missing else None, "exported": 0}
+        (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        (out / "error_log.json").write_text(json.dumps([{"error_type":"pipeline_failure","message":reason}], ensure_ascii=False, indent=2), encoding="utf-8")
+        return summary
 
 def zip_output_dir(output_dir:Path, zip_path:Path)->Path:
     if zip_path.exists(): zip_path.unlink()
