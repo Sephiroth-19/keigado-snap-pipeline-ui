@@ -13,7 +13,7 @@ from backend.individual.error_handling import (
     detect_pipeline_errors,
     save_error_queue,
     attach_error_tags_to_groups,
-    load_error_resolutions,
+    load_error_resolutions as _load_error_resolutions_impl,
     apply_error_resolutions_to_class_groups,
     filter_unresolved_error_queue,
     build_exportable_class_groups,
@@ -23,6 +23,59 @@ from backend.individual.error_handling import (
 )
 from backend.individual.package_exporter import export_all_classes
 
+
+
+# Compatibility wrappers used by backend.app manual-resolution endpoints
+def save_error_resolutions(path: Path | str, resolutions):
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(resolutions, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def load_error_resolutions(path: Path | str):
+    p = Path(path)
+    if not p.exists():
+        return []
+    try:
+        return _load_error_resolutions_impl(p)
+    except Exception:
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            return []
+
+
+def resolve_no_card_detected(resolutions, error_id, class_name, student_no):
+    resolutions = list(resolutions or [])
+    resolutions.append({
+        "error_id": error_id,
+        "resolution_type": "manual_student_number",
+        "class_id": class_name,
+        "student_no": str(student_no),
+        "status": "resolved",
+    })
+    return resolutions
+
+
+def resolve_multiple_card_detected(resolutions, error_id, selected_student_no):
+    resolutions = list(resolutions or [])
+    resolutions.append({
+        "error_id": error_id,
+        "resolution_type": "manual_candidate_selection",
+        "student_no": str(selected_student_no),
+        "status": "resolved",
+    })
+    return resolutions
+
+
+def mark_error_deleted(resolutions, error_id):
+    resolutions = list(resolutions or [])
+    resolutions.append({
+        "error_id": error_id,
+        "resolution_type": "manual_delete",
+        "status": "deleted",
+    })
+    return resolutions
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff", ".heic", ".heif"}
 
 
