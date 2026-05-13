@@ -7,7 +7,7 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from uuid import uuid4
@@ -18,6 +18,13 @@ from openpyxl import Workbook
 
 from backend.snap_pipeline import SnapPipeline
 from backend.club_pipeline import run_club_pipeline
+from backend.individual_pipeline import (
+    filter_unresolved_error_queue,
+    load_error_resolutions,
+    run_individual_pipeline,
+    save_error_resolutions,
+    zip_output_dir,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = ROOT / "frontend"
@@ -202,6 +209,99 @@ def download_outputs() -> FileResponse:
     return FileResponse(latest_zip_path, media_type="application/zip", filename="snap_outputs.zip")
 
 
+
+
+
+
+@app.post("/api/individual/run")
+async def run_individual(
+    photos_zip: UploadFile = File(...),
+    roster_file: UploadFile | None = File(default=None),
+    school_name: str | None = Form(default=None),
+    year: str | None = Form(default=None),
+    scoring: str = Form(default="local"),
+) -> dict[str, Any]:
+    if not photos_zip.filename or not photos_zip.filename.lower().endswith(".zip"):
+        raise HTTPException(status_code=400, detail="photos_zip must be .zip")
+
+    job_id = f"ind_{uuid4().hex[:12]}"
+    job_root = APP_STATE_DIR / "individual_jobs" / job_id
+    photos_dir = job_root / "input" / "photos"
+    roster_dir = job_root / "input" / "roster"
+    output_dir = job_root / "output"
+    photos_dir.mkdir(parents=True, exist_ok=True)
+    roster_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    photos_zip_path = _save_upload(photos_zip, job_root / "input")
+    _extract_zip(photos_zip_path, photos_dir)
+
+    roster_path = None
+    if roster_file and roster_file.filename:
+        roster_path = _save_upload(roster_file, roster_dir)
+
+    summary = run_individual_pipeline(
+        photos_dir=str(photos_dir),
+        output_dir=str(output_dir),
+        roster_file=str(roster_path) if roster_path else None,
+        options={"school_name": school_name, "year": year, "scoring": scoring},
+    )
+
+    print("[individual] Stage 6: zip output")
+    output_zip = job_root / "output.zip"
+    zip_output_dir(output_dir, output_zip)
+
+    return {
+        "job_id": job_id,
+        **summary,
+        "output_zip_url": f"/api/individual/{job_id}/download",
+        "manifest_url": f"/api/individual/{job_id}/result",
+    }
+
+
+@app.get("/api/individual/{job_id}/result")
+def get_individual_result(job_id: str) -> dict[str, Any]:
+    manifest = APP_STATE_DIR / "individual_jobs" / job_id / "output" / "manifest.json"
+    if not manifest.exists():
+        raise HTTPException(status_code=404, detail="manifest not found")
+    return json.loads(manifest.read_text(encoding="utf-8"))
+
+
+@app.get("/api/individual/{job_id}/download")
+def download_individual_output(job_id: str) -> FileResponse:
+    zip_path = APP_STATE_DIR / "individual_jobs" / job_id / "output.zip"
+    if not zip_path.exists():
+        raise HTTPException(status_code=404, detail="output zip not found")
+    return FileResponse(zip_path, media_type="application/zip", filename="individual_output.zip")
+
+
+@app.get("/api/individual/{job_id}/errors")
+def get_individual_errors(job_id: str) -> dict[str, Any]:
+    out = APP_STATE_DIR / "individual_jobs" / job_id / "output"
+    queue = json.loads((out / "error_queue.json").read_text(encoding="utf-8")) if (out / "error_queue.json").exists() else []
+    resolutions = load_error_resolutions(out / "error_resolutions.json")
+    return {"errors": filter_unresolved_error_queue(queue, resolutions)}
+
+
+@app.post("/api/individual/{job_id}/resolve")
+def resolve_individual_errors(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    out = APP_STATE_DIR / "individual_jobs" / job_id / "output"
+    out.mkdir(parents=True, exist_ok=True)
+    path = out / "error_resolutions.json"
+    existing = load_error_resolutions(path)
+    existing.update(payload.get("resolutions", {}))
+    save_error_resolutions(path, existing)
+    return {"status": "ok", "count": len(existing)}
+
+
+@app.post("/api/individual/{job_id}/reexport")
+def reexport_individual(job_id: str) -> dict[str, Any]:
+    root = APP_STATE_DIR / "individual_jobs" / job_id
+    photos_dir = root / "input" / "photos"
+    out = root / "output"
+    summary = run_individual_pipeline(str(photos_dir), str(out), None, {})
+    zip_output_dir(out, root / "output.zip")
+    return {"job_id": job_id, **summary}
 
 
 @app.post("/api/club/run")
