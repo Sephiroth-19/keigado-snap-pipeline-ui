@@ -150,141 +150,114 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
         resolved_photos_path, photos_resolution_debug = resolve_pipeline_photos_dir(raw_photos_path)
         _safe_dump(out / "debug_photos_dir_resolution.json", photos_resolution_debug)
         input_images = _list_input_images(str(raw_photos_path))
-        resolved_direct_images = _list_input_images(str(resolved_photos_path))
-        print(f"[individual][debug] total input images: {len(input_images)}")
-        _safe_dump(out / "debug_input_images.json", {"total": len(input_images), "images": input_images})
 
-        school_name = options.get("school_name")
-        year = options.get("year")
-        scoring = options.get("scoring", "local")
-        class_mapping = options.get("class_mapping")
-        max_backups = int(options.get("max_backups", 0))
-        openai_api_key = options.get("openai_api_key") or os.getenv("OPENAI_API_KEY")
+        SCHOOL_NAME = options.get("school_name")
+        YEAR = str(options.get("year") or "").strip()
+        if len(YEAR) == 4 and YEAR.isdigit():
+            YEAR = YEAR[-2:]
+        SCORING = options.get("scoring", "local")
+        MAX_BACKUPS = int(options.get("max_backups", 0))
+        CLASS_MAPPING = options.get("class_mapping")
+        OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+        if not SCHOOL_NAME:
+            raise ValueError("SCHOOL_NAME is required (options['school_name']).")
+        if not YEAR:
+            raise ValueError("YEAR is required (options['year']).")
 
-        roster = parse_roster(roster_file, school_name=school_name, openai_api_key=openai_api_key) if roster_file else {}
-        save_roster_json(roster, out / "roster.json")
-        classes = (roster.get("classes") or {}) if isinstance(roster, dict) else {}
-        student_count = sum(len((v or {}).get("students", [])) for v in classes.values()) if isinstance(classes, dict) else 0
-        print(f"[individual][debug] roster type={type(roster).__name__} classes={len(classes)} students={student_count}")
-        _safe_dump(out / "debug_roster_summary.json", {
-            "roster_type": type(roster).__name__,
-            "classes_count": len(classes),
-            "students_count": student_count,
-        })
+        # Stage 1
+        roster = None
+        if roster_file:
+            ext = Path(roster_file).suffix.lower()
+            if ext == ".json":
+                with open(roster_file, encoding="utf-8") as f:
+                    roster = json.load(f)
+            else:
+                roster = parse_roster(roster_file, school_name=SCHOOL_NAME, openai_api_key=OPENAI_API_KEY)
+            save_roster_json(roster, out / "roster.json")
 
-        openai_client = OpenAI(api_key=openai_api_key) if (scoring == "openai" and openai_api_key) else None
-        grouper = FaceGrouper(valid_numbers=set(), scoring=scoring, openai_client=openai_client, roster=roster)
-        class_groups = grouper.process_folder(str(resolved_photos_path))
-        class_groups_count = len(class_groups) if hasattr(class_groups, "__len__") else -1
-        print(f"[individual][debug] class_groups type={type(class_groups).__name__} len={class_groups_count}")
-        _safe_dump(out / "debug_class_groups_raw.json", {
-            "type": type(class_groups).__name__,
-            "len": class_groups_count,
-            "sample": _summarize_class_groups(class_groups),
-        })
-        if class_groups_count == 0:
-            reason = "FaceGrouper.process_folder returned 0 class_groups"
-            if len(resolved_direct_images) > 0:
-                reason = "FaceGrouper received image folder correctly but detected no groups"
-            summary = {
-                "status": "error",
-                "pipeline_mode": "real_pipeline_debug",
-                "reason": reason,
-                "debug_stage": "face_grouper",
-                "total_images_found": len(input_images),
-                "class_groups_count": 0,
-                "exported": 0,
-                "raw_photos_dir": str(raw_photos_path),
-                "resolved_photos_dir": str(resolved_photos_path),
-                "direct_images_count": len([p for p in raw_photos_path.glob('*') if p.is_file() and p.suffix.lower() in IMAGE_EXTS]),
-                "recursive_images_count": len(input_images),
-                "first_5_direct_image_filenames": [Path(p).name for p in resolved_direct_images[:5]],
-            }
-            _safe_dump(out / "summary.json", summary)
-            return summary
+        # Stage 2
+        valid_numbers: set[int] = set()
+        if roster:
+            for cls_data in roster["classes"].values():
+                for s in cls_data["students"]:
+                    valid_numbers.add(s["number"])
 
-        print(f"[individual] calling detect_pipeline_errors with args: class_groups={type(class_groups).__name__}, roster={type(roster).__name__}, photos_dir={resolved_photos_path}")
-        error_queue = detect_pipeline_errors(class_groups, roster, str(resolved_photos_path))
-        print(f"[individual][debug] error_queue len={len(error_queue)}")
-        _safe_dump(out / "debug_error_queue_after_detection.json", error_queue)
+        openai_client = None
+        if OPENAI_API_KEY:
+            openai_client = OpenAI(api_key=OPENAI_API_KEY)
+        elif SCORING == "openai":
+            raise ValueError("SCORING = 'openai' but no OPENAI_API_KEY was provided.")
+
+        processor = FaceGrouper(
+            valid_numbers=valid_numbers,
+            scoring=SCORING,
+            openai_client=openai_client,
+            roster=roster,
+        )
+        class_groups = processor.process_folder(str(resolved_photos_path))
+        class_groups_count = len(class_groups)
+        error_queue = detect_pipeline_errors(
+            class_groups=class_groups,
+            roster=roster,
+            photos_path=str(resolved_photos_path),
+        )
         save_error_queue(error_queue, out / "error_queue.json")
         attach_error_tags_to_groups(class_groups, error_queue)
 
-        resolutions = load_error_resolutions(out / "error_resolutions.json")
-        if not isinstance(resolutions, list):
-            resolutions = []
+        # Stage 3
+        error_resolutions = load_error_resolutions(out / "error_resolutions.json")
+        if not isinstance(error_resolutions, list):
+            error_resolutions = []
+        resolved_class_groups = apply_error_resolutions_to_class_groups(
+            class_groups=class_groups,
+            resolutions=error_resolutions,
+        )
+        remaining_error_queue = filter_unresolved_error_queue(
+            error_queue=error_queue,
+            resolutions=error_resolutions,
+        )
+        exportable_class_groups = build_exportable_class_groups(
+            class_groups=resolved_class_groups,
+            error_queue=remaining_error_queue,
+        )
+        all_manifests = export_all_classes(
+            class_groups=exportable_class_groups,
+            roster=roster,
+            output_dir=out,
+            school_name=SCHOOL_NAME,
+            year=YEAR,
+            class_mapping=CLASS_MAPPING,
+            max_backups=MAX_BACKUPS,
+        )
+        copied_error_files = export_error_items(remaining_error_queue, out)
+        write_error_log_json(remaining_error_queue, out / "error_log.json")
+        write_error_log_csv(remaining_error_queue, out / "error_log.csv")
 
-        try:
-            print(f"[individual] calling apply_error_resolutions_to_class_groups with args: class_groups={type(class_groups).__name__}, resolutions={len(resolutions)}")
-            resolved_class_groups = apply_error_resolutions_to_class_groups(class_groups, resolutions)
-            print(f"[individual][debug] class_groups after resolution len={len(resolved_class_groups)}")
-            _safe_dump(out / "debug_class_groups_after_resolution.json", {
-                "len": len(resolved_class_groups),
-                "sample": _summarize_class_groups(resolved_class_groups),
-            })
-
-            print(f"[individual] calling filter_unresolved_error_queue with args: error_queue={len(error_queue)}, resolutions={len(resolutions)}")
-            unresolved = filter_unresolved_error_queue(error_queue, resolutions)
-            print(f"[individual][debug] unresolved len={len(unresolved)}")
-            _safe_dump(out / "debug_unresolved_errors.json", unresolved)
-
-            print(f"[individual] calling build_exportable_class_groups with args: class_groups={type(resolved_class_groups).__name__}, error_queue={len(unresolved)}")
-            exportable = build_exportable_class_groups(resolved_class_groups, unresolved)
-            _safe_dump(out / "debug_exportable_groups.json", {
-                "len": len(exportable) if hasattr(exportable, "__len__") else -1,
-                "sample": _summarize_class_groups(exportable),
-            })
-        except Exception as resolution_exc:
-            resolution_reason = f"error-resolution step failed: {resolution_exc}"
-            unresolved = error_queue
-            resolved_class_groups = class_groups
-            exportable = class_groups
-            (out / "summary.json").write_text(json.dumps({
-                "status": "warning",
-                "pipeline_mode": "real_pipeline",
-                "reason": resolution_reason,
-                "resolution_step_failed": True,
-            }, ensure_ascii=False, indent=2), encoding="utf-8")
-            _safe_dump(out / "debug_unresolved_errors.json", unresolved)
-            _safe_dump(out / "debug_exportable_groups.json", {"len": len(exportable) if hasattr(exportable, "__len__") else -1})
-
-        export_error_items(unresolved, out)
-        write_error_log_json(error_queue, out / "error_log.json")
-        write_error_log_csv(error_queue, out / "error_log.csv")
-
-        print(f"[individual][debug] export_all_classes signature: {inspect.signature(export_all_classes)}")
-        print(f"[individual] calling export_all_classes with args: class_groups_len={len(exportable) if hasattr(exportable,'__len__') else -1}, roster_type={type(roster).__name__}, output_dir={out}, school_name={school_name}, year={year}, class_mapping={class_mapping}, max_backups={max_backups}")
-        export_all_classes(exportable, roster, out, school_name=school_name, year=year, class_mapping=class_mapping, max_backups=max_backups)
-
-        out_images=[p for p in out.rglob("*") if p.is_file() and p.suffix.lower() in IMAGE_EXTS]
-        _safe_dump(out / "debug_output_files_after_export.json", {"count": len(out_images), "files": [str(p) for p in out_images]})
-        reason = None
-        if len(input_images) == 0:
-            reason = "no_input_images"
-        elif class_groups_count == 0:
-            reason = "face_grouper_returned_empty"
-        elif hasattr(exportable, "__len__") and len(exportable) == 0:
-            reason = "no_exportable_groups"
-        elif len(out_images) == 0:
-            reason = "export_all_classes_created_no_files"
+        out_images = [p for p in out.rglob("*") if p.is_file() and p.suffix.lower() in IMAGE_EXTS]
         summary = {
             "status": "ok" if out_images else "warning",
-            "pipeline_mode": "real_pipeline_debug",
-            "exported": len(out_images),
-            "unresolved_errors": len(unresolved),
-            "error_summary": dict(Counter(e.get("error_type", "unknown") for e in unresolved)),
-            "reason": reason,
-            "debug_stage": "post_export",
+            "pipeline_mode": "real_pipeline",
+            "reason": None if out_images else "export_all_classes_created_no_files",
             "total_images_found": len(input_images),
             "class_groups_count": class_groups_count,
-            "exportable_groups_count": len(exportable) if hasattr(exportable, "__len__") else -1,
-            "output_image_files_count": len(out_images),
+            "error_queue_count": len(error_queue),
+            "remaining_error_queue_count": len(remaining_error_queue),
+            "exported_count": len(out_images),
+            "exported": len(out_images),
+            "openai_api_key_present": bool(OPENAI_API_KEY),
+            "openai_client_created": openai_client is not None,
+            "scoring": SCORING,
+            "photos_path": str(resolved_photos_path),
+            "output_path": str(out),
             "raw_photos_dir": str(raw_photos_path),
             "resolved_photos_dir": str(resolved_photos_path),
             "direct_images_count": len([p for p in raw_photos_path.glob('*') if p.is_file() and p.suffix.lower() in IMAGE_EXTS]),
             "recursive_images_count": len(input_images),
+            "all_manifests_count": len(all_manifests) if isinstance(all_manifests, dict) else 0,
+            "copied_error_files": copied_error_files,
+            "export_all_classes_signature": str(inspect.signature(export_all_classes)),
         }
-        (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        _safe_dump(out / "summary.json", summary)
         return summary
     except Exception as e:
         reason = str(e)
