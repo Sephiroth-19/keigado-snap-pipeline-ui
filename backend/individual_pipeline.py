@@ -4,6 +4,7 @@ import inspect
 import json, os, zipfile
 from collections import Counter
 from pathlib import Path
+import re
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -89,6 +90,44 @@ def _safe_dump(path: Path, payload):
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
 
 
+def normalize_card_label_with_folder_context(card_label: str, folder_class_context: str | None):
+    trans = str.maketrans("０１２３４５６７８９ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ－ー", "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ--")
+    label = str(card_label or "").translate(trans).strip().upper()
+    if not label or not folder_class_context:
+        return None
+    context = str(folder_class_context).strip().upper()
+    m_ctx = re.match(r"^(\d+)\s*([A-Z])$", context)
+    if not m_ctx:
+        return None
+    klass = m_ctx.group(2)
+    m = re.match(r"^([A-Z])\s*[-]?\s*(\d{1,3})$", label.replace(" ", ""))
+    if m:
+        card_letter, digits = m.group(1), m.group(2)
+        return {
+            "class_id": context,
+            "student_number": int(digits),
+            "normalized_label": f"{context}_{int(digits):03d}",
+            "letter_mismatch": card_letter != klass,
+        }
+    return None
+
+
+def _detect_class_folders(raw_photos_path: Path) -> list[Path]:
+    if not raw_photos_path.exists():
+        return []
+    direct = [p for p in sorted(raw_photos_path.iterdir()) if p.is_dir() and re.match(r"^\d+[A-Za-z]$", p.name)]
+    if direct:
+        return direct
+    nested: list[Path] = []
+    for p in sorted(raw_photos_path.iterdir()):
+        if not p.is_dir():
+            continue
+        for c in sorted(p.iterdir()):
+            if c.is_dir() and re.match(r"^\d+[A-Za-z]$", c.name):
+                nested.append(c)
+    return nested
+
+
 def _summarize_class_groups(class_groups, limit: int = 3):
     rows = []
     if not isinstance(class_groups, dict):
@@ -165,6 +204,7 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
             raise ValueError("YEAR is required (options['year']).")
 
         # Stage 1
+        no_roster_mode = bool(options.get("no_roster_mode", False) or not roster_file)
         roster = None
         if roster_file:
             ext = Path(roster_file).suffix.lower()
@@ -182,6 +222,10 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
                 for s in cls_data["students"]:
                     valid_numbers.add(s["number"])
 
+        class_folders = _detect_class_folders(raw_photos_path) if no_roster_mode else []
+        top_level_dirs = [p.name for p in class_folders] if class_folders else ([p.name for p in sorted(raw_photos_path.iterdir()) if p.is_dir()] if raw_photos_path.exists() else [])
+        folder_class_context = top_level_dirs[0] if len(top_level_dirs) == 1 else None
+
         openai_client = None
         if OPENAI_API_KEY:
             openai_client = OpenAI(api_key=OPENAI_API_KEY)
@@ -194,13 +238,47 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
             openai_client=openai_client,
             roster=roster,
         )
-        class_groups = processor.process_folder(str(resolved_photos_path))
+        if no_roster_mode and class_folders:
+            class_groups = {}
+            for folder in class_folders:
+                sub_groups = processor.process_folder(str(folder))
+                merged_students = []
+                template_group = None
+                for cg in sub_groups.values():
+                    template_group = template_group or cg
+                    for st in getattr(cg, "students", []) or []:
+                        card_text = str(getattr(st, "attendance_number", "") or "")
+                        normalized = normalize_card_label_with_folder_context(card_text, folder.name)
+                        if normalized:
+                            st.attendance_number = normalized["student_number"]
+                        merged_students.append(st)
+                if template_group is not None:
+                    template_group.class_label = folder.name.upper()
+                    template_group.students = merged_students
+                    template_group.teacher = None
+                    class_groups[folder.name.upper()] = template_group
+            class_groups = {k: v for k, v in class_groups.items() if v is not None}
+        else:
+            class_groups = processor.process_folder(str(resolved_photos_path))
         class_groups_count = len(class_groups)
         error_queue = detect_pipeline_errors(
             class_groups=class_groups,
             roster=roster,
             photos_path=str(resolved_photos_path),
         )
+        missing_tag_shot_warning_count = 0
+        if no_roster_mode and class_folders:
+            converted = []
+            for err in error_queue:
+                if err.get("error_type") == "missing_tag_shot":
+                    missing_tag_shot_warning_count += 1
+                    e = dict(err)
+                    e["severity"] = "warning"
+                    e["needs_review"] = True
+                    converted.append(e)
+                else:
+                    converted.append(err)
+            error_queue = converted
         save_error_queue(error_queue, out / "error_queue.json")
         attach_error_tags_to_groups(class_groups, error_queue)
 
@@ -216,9 +294,12 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
             error_queue=error_queue,
             resolutions=error_resolutions,
         )
+        hard_error_queue = remaining_error_queue
+        if no_roster_mode and class_folders:
+            hard_error_queue = [e for e in remaining_error_queue if e.get("error_type") != "missing_tag_shot"]
         exportable_class_groups = build_exportable_class_groups(
             class_groups=resolved_class_groups,
-            error_queue=remaining_error_queue,
+            error_queue=hard_error_queue,
         )
         all_manifests = export_all_classes(
             class_groups=exportable_class_groups,
@@ -229,9 +310,43 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
             class_mapping=CLASS_MAPPING,
             max_backups=MAX_BACKUPS,
         )
-        copied_error_files = export_error_items(remaining_error_queue, out)
-        write_error_log_json(remaining_error_queue, out / "error_log.json")
-        write_error_log_csv(remaining_error_queue, out / "error_log.csv")
+        copied_error_files = export_error_items(hard_error_queue, out)
+        if no_roster_mode:
+            manifest_path = out / "manifest.json"
+            if manifest_path.exists():
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                for class_id, class_data in (manifest.get("classes") or {}).items():
+                    unk_idx = 0
+                    for entry in class_data.get("entries", []):
+                        num = entry.get("number")
+                        number_token = None
+                        if isinstance(num, int) and num > 0:
+                            number_token = f"{num:03d}"
+                            entry["name"] = f"{class_id}_{number_token}"
+                        else:
+                            number_token = f"UNK{unk_idx:03d}"
+                            entry["name"] = f"{class_id}_{number_token}"
+                            entry["needs_review"] = True
+                            unk_idx += 1
+                        files = entry.get("files", {})
+                        for tag, old_name in list(files.items()):
+                            old_path = out / class_id / old_name
+                            if not old_path.exists():
+                                continue
+                            stem = Path(old_name).stem
+                            ext = old_path.suffix or ".JPG"
+                            parts = stem.split("_")
+                            orig = "_".join(parts[2:-2]) if len(parts) >= 5 else Path(old_name).stem
+                            if not orig:
+                                orig = Path(old_name).stem
+                            new_name = f"{YEAR}_{SCHOOL_NAME}_{orig}_{class_id}_{number_token}_{tag}{ext.upper()}"
+                            new_path = old_path.with_name(new_name)
+                            if new_path != old_path:
+                                old_path.rename(new_path)
+                            files[tag] = new_name
+                manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+        write_error_log_json(hard_error_queue, out / "error_log.json")
+        write_error_log_csv(hard_error_queue, out / "error_log.csv")
 
         out_images = [p for p in out.rglob("*") if p.is_file() and p.suffix.lower() in IMAGE_EXTS]
         summary = {
@@ -242,6 +357,10 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
             "class_groups_count": class_groups_count,
             "error_queue_count": len(error_queue),
             "remaining_error_queue_count": len(remaining_error_queue),
+            "hard_error_count": len(hard_error_queue),
+            "warnings_count": len([e for e in error_queue if str(e.get("severity", "")).lower() == "warning"]),
+            "needs_review_count": len([e for e in error_queue if e.get("needs_review")]),
+            "missing_tag_shot_warning_count": missing_tag_shot_warning_count,
             "exported_count": len(out_images),
             "exported": len(out_images),
             "openai_api_key_present": bool(OPENAI_API_KEY),
@@ -256,7 +375,25 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
             "all_manifests_count": len(all_manifests) if isinstance(all_manifests, dict) else 0,
             "copied_error_files": copied_error_files,
             "export_all_classes_signature": str(inspect.signature(export_all_classes)),
+            "no_roster_mode": no_roster_mode,
+            "roster_file_used": bool(roster_file),
+            "folder_class_context": folder_class_context,
+            "class_folders_detected": top_level_dirs,
+            "normalized_card_labels_count": 0,
+            "normalized_card_label_examples": [],
         }
+        if no_roster_mode and folder_class_context:
+            normalized_count = 0
+            examples: list[str] = []
+            for group in class_groups.values():
+                for student in getattr(group, "students", []) or []:
+                    card_text = str(getattr(student, "attendance_number", "") or "")
+                    if normalize_card_label_with_folder_context(card_text, folder_class_context):
+                        normalized_count += 1
+                        if len(examples) < 5:
+                            examples.append(f"{folder_class_context}:{card_text}")
+            summary["normalized_card_labels_count"] = normalized_count
+            summary["normalized_card_label_examples"] = examples
         _safe_dump(out / "summary.json", summary)
         return summary
     except Exception as e:
