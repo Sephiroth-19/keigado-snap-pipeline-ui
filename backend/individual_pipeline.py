@@ -89,6 +89,22 @@ def _safe_dump(path: Path, payload):
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
 
 
+def normalize_card_label_with_folder_context(card_label: str, folder_class_context: str | None):
+    label = str(card_label or "").strip().upper()
+    if not label or not folder_class_context:
+        return None
+    context = str(folder_class_context).strip().upper()
+    if len(context) < 2 or not context[0].isdigit() or not context[-1].isalpha():
+        return None
+    grade = context[0]
+    klass = context[-1]
+    if label.startswith(klass):
+        digits = "".join(ch for ch in label[1:] if ch.isdigit())
+        if digits:
+            return {"class_name": context, "student_number": digits}
+    return None
+
+
 def _summarize_class_groups(class_groups, limit: int = 3):
     rows = []
     if not isinstance(class_groups, dict):
@@ -165,6 +181,7 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
             raise ValueError("YEAR is required (options['year']).")
 
         # Stage 1
+        no_roster_mode = bool(options.get("no_roster_mode", False) or not roster_file)
         roster = None
         if roster_file:
             ext = Path(roster_file).suffix.lower()
@@ -181,6 +198,9 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
             for cls_data in roster["classes"].values():
                 for s in cls_data["students"]:
                     valid_numbers.add(s["number"])
+
+        top_level_dirs = [p.name for p in sorted(raw_photos_path.iterdir()) if p.is_dir()] if raw_photos_path.exists() else []
+        folder_class_context = top_level_dirs[0] if len(top_level_dirs) == 1 else None
 
         openai_client = None
         if OPENAI_API_KEY:
@@ -256,7 +276,20 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
             "all_manifests_count": len(all_manifests) if isinstance(all_manifests, dict) else 0,
             "copied_error_files": copied_error_files,
             "export_all_classes_signature": str(inspect.signature(export_all_classes)),
+            "no_roster_mode": no_roster_mode,
+            "roster_file_used": bool(roster_file),
+            "folder_class_context": folder_class_context,
+            "class_folders_detected": top_level_dirs,
+            "normalized_card_labels_count": 0,
         }
+        if no_roster_mode and folder_class_context:
+            normalized_count = 0
+            for group in class_groups.values():
+                for student in getattr(group, "students", []) or []:
+                    card_text = str(getattr(student, "attendance_number", "") or "")
+                    if normalize_card_label_with_folder_context(card_text, folder_class_context):
+                        normalized_count += 1
+            summary["normalized_card_labels_count"] = normalized_count
         _safe_dump(out / "summary.json", summary)
         return summary
     except Exception as e:
