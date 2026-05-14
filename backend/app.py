@@ -217,12 +217,27 @@ def download_outputs() -> FileResponse:
 async def run_individual(
     photos_zip: UploadFile = File(...),
     roster_file: UploadFile | None = File(default=None),
-    school_name: str | None = Form(default=None),
-    year: str | None = Form(default=None),
+    school_name: str = Form(default=""),
+    year: str = Form(default=""),
     scoring: str = Form(default="local"),
 ) -> dict[str, Any]:
     if not photos_zip.filename or not photos_zip.filename.lower().endswith(".zip"):
         raise HTTPException(status_code=400, detail="photos_zip must be .zip")
+
+    missing_fields: list[str] = []
+    if not school_name or not school_name.strip():
+        missing_fields.append("school_name")
+    if not year or not year.strip():
+        missing_fields.append("year")
+    if missing_fields:
+        return {
+            "status": "error",
+            "reason": "missing_required_form_field",
+            "missing_fields": missing_fields,
+            "received_school_name": school_name,
+            "received_year": year,
+            "received_scoring": scoring,
+        }
 
     job_id = f"ind_{uuid4().hex[:12]}"
     job_root = APP_STATE_DIR / "individual_jobs" / job_id
@@ -240,11 +255,21 @@ async def run_individual(
     if roster_file and roster_file.filename:
         roster_path = _save_upload(roster_file, roster_dir)
 
+    print("[individual/app] received school_name=", school_name)
+    print("[individual/app] received year=", year)
+    print("[individual/app] received scoring=", scoring)
+
     summary = run_individual_pipeline(
         photos_dir=str(photos_dir),
         output_dir=str(output_dir),
         roster_file=str(roster_path) if roster_path else None,
-        options={"school_name": school_name, "year": year, "scoring": scoring},
+        options={
+            "school_name": school_name,
+            "year": year,
+            "scoring": scoring,
+            "max_backups": 0,
+            "class_mapping": None,
+        },
     )
 
     print("[individual] Stage 6: zip output")
@@ -254,6 +279,9 @@ async def run_individual(
     return {
         "job_id": job_id,
         **summary,
+        "received_school_name": school_name,
+        "received_year": year,
+        "received_scoring": scoring,
         "output_zip_url": f"/api/individual/{job_id}/download",
         "manifest_url": f"/api/individual/{job_id}/result",
     }

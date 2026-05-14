@@ -618,15 +618,27 @@ async function runIndividualPipeline(){
   if(!individualUploadState.photosZip){individualUploadState.error='photos_zip（.zip）は必須です。'; renderIndividualWorkflow(0); return;}
   individualUploadState.running=true; renderIndividualWorkflow(0);
   try{
+    const schoolName = document.getElementById("individual-school-name")?.value?.trim() || "上水高校";
+    const year = document.getElementById("individual-year")?.value?.trim() || "2026";
+    const scoring = document.getElementById("individual-scoring")?.value || "local";
+    const photosZipFile = individualUploadState.photosZip;
+    const rosterFile = individualUploadState.rosterFile;
+
     const fd=new FormData();
-    fd.append('photos_zip',individualUploadState.photosZip);
-    if(individualUploadState.rosterFile) fd.append('roster_file',individualUploadState.rosterFile);
-    fd.append('school_name',document.getElementById('individual-school-name')?.value||'');
-    fd.append('year',document.getElementById('individual-year')?.value||'');
-    fd.append('scoring',document.getElementById('individual-scoring')?.value||'local');
+    fd.append("photos_zip", photosZipFile);
+    if (rosterFile) fd.append("roster_file", rosterFile);
+    fd.append("school_name", schoolName);
+    fd.append("year", year);
+    fd.append("scoring", scoring);
+    for (const [k, v] of fd.entries()) {
+      console.log('[individual/form]', k, v instanceof File ? v.name : v);
+    }
     const res=await fetch('/api/individual/run',{method:'POST',body:fd});
     const data=await res.json();
-    if(!res.ok) throw new Error(data.detail||'実行に失敗しました');
+    if(!res.ok){
+      const detail=(typeof data?.detail==='string')?data.detail:JSON.stringify(data?.detail??data);
+      throw new Error(detail||'実行に失敗しました');
+    }
     individualUploadState.result=data;
   }catch(e){individualUploadState.error=e?.message||'実行に失敗しました';}
   finally{individualUploadState.running=false; renderIndividualWorkflow(0);}
@@ -643,6 +655,13 @@ function individualUploadBody(){
       <div class="summary-row"><strong>exported</strong><span>${result.exported??0}</span></div>
       <div class="summary-row"><strong>unresolved_errors</strong><span>${result.unresolved_errors??0}</span></div>
       <div class="summary-row"><strong>error_summary</strong><span class="mono">${JSON.stringify(result.error_summary||{})}</span></div>
+      <div class="summary-row"><strong>pipeline_mode</strong><span>${result.pipeline_mode||'-'}</span></div>
+      <div class="summary-row"><strong>reason</strong><span class="mono">${result.reason||'-'}</span></div>
+      <div class="summary-row"><strong>debug_stage</strong><span>${result.debug_stage||'-'}</span></div>
+      <div class="summary-row"><strong>total_images_found</strong><span>${result.total_images_found??'-'}</span></div>
+      <div class="summary-row"><strong>class_groups_count</strong><span>${result.class_groups_count??'-'}</span></div>
+      <div class="summary-row"><strong>exportable_groups_count</strong><span>${result.exportable_groups_count??'-'}</span></div>
+      <div class="summary-row"><strong>output_image_files_count</strong><span>${result.output_image_files_count??'-'}</span></div>
     </div><div class="btn-row" style="margin-top:12px">${result.output_zip_url?`<a class="btn btn-success" href="${result.output_zip_url}">output.zip をダウンロード</a>`:''}</div>`:'<div class="card-sub" style="margin-top:10px">結果はここに表示されます。</div>';
   return `<div class="card"><div class="card-title">① アップロード</div><div class="card-sub">個人写真ZIP（必須）と名簿ファイル（任意）を指定して処理を開始します。</div>
     <div class="formgrid" style="margin-top:12px"><div class="field"><label>school_name</label><input id="individual-school-name" placeholder="上水高校"></div><div class="field"><label>year</label><input id="individual-year" placeholder="2026"></div><div class="field"><label>scoring</label><select id="individual-scoring"><option value="local">local</option><option value="openai">openai</option></select></div></div>
