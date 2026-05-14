@@ -621,12 +621,18 @@ async function runIndividualPipeline(){
     const fd=new FormData();
     fd.append('photos_zip',individualUploadState.photosZip);
     if(individualUploadState.rosterFile) fd.append('roster_file',individualUploadState.rosterFile);
-    fd.append('school_name',document.getElementById('individual-school-name')?.value||'');
-    fd.append('year',document.getElementById('individual-year')?.value||'');
+    fd.append('school_name',document.getElementById('individual-school-name')?.value||'上水高校');
+    fd.append('year',document.getElementById('individual-year')?.value||'2026');
     fd.append('scoring',document.getElementById('individual-scoring')?.value||'local');
+    for (const [k, v] of fd.entries()) {
+      console.log('[individual/form]', k, v instanceof File ? v.name : v);
+    }
     const res=await fetch('/api/individual/run',{method:'POST',body:fd});
     const data=await res.json();
-    if(!res.ok) throw new Error(data.detail||'実行に失敗しました');
+    if(!res.ok){
+      const detail=(typeof data?.detail==='string')?data.detail:JSON.stringify(data?.detail??data);
+      throw new Error(detail||'実行に失敗しました');
+    }
     individualUploadState.result=data;
   }catch(e){individualUploadState.error=e?.message||'実行に失敗しました';}
   finally{individualUploadState.running=false; renderIndividualWorkflow(0);}

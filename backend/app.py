@@ -217,8 +217,8 @@ def download_outputs() -> FileResponse:
 async def run_individual(
     photos_zip: UploadFile = File(...),
     roster_file: UploadFile | None = File(default=None),
-    school_name: str = Form(...),
-    year: str = Form(...),
+    school_name: str = Form(default=""),
+    year: str = Form(default=""),
     scoring: str = Form(default="local"),
 ) -> dict[str, Any]:
     if not photos_zip.filename or not photos_zip.filename.lower().endswith(".zip"):
@@ -255,9 +255,9 @@ async def run_individual(
     if roster_file and roster_file.filename:
         roster_path = _save_upload(roster_file, roster_dir)
 
-    print("[individual/app] school_name=", school_name)
-    print("[individual/app] year=", year)
-    print("[individual/app] scoring=", scoring)
+    print("[individual/app] received school_name=", school_name)
+    print("[individual/app] received year=", year)
+    print("[individual/app] received scoring=", scoring)
 
     summary = run_individual_pipeline(
         photos_dir=str(photos_dir),
