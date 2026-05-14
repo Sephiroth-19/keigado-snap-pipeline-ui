@@ -618,12 +618,18 @@ async function runIndividualPipeline(){
   if(!individualUploadState.photosZip){individualUploadState.error='photos_zip（.zip）は必須です。'; renderIndividualWorkflow(0); return;}
   individualUploadState.running=true; renderIndividualWorkflow(0);
   try{
+    const schoolName = document.getElementById("individual-school-name")?.value?.trim() || "上水高校";
+    const year = document.getElementById("individual-year")?.value?.trim() || "2026";
+    const scoring = document.getElementById("individual-scoring")?.value || "local";
+    const photosZipFile = individualUploadState.photosZip;
+    const rosterFile = individualUploadState.rosterFile;
+
     const fd=new FormData();
-    fd.append('photos_zip',individualUploadState.photosZip);
-    if(individualUploadState.rosterFile) fd.append('roster_file',individualUploadState.rosterFile);
-    fd.append('school_name',document.getElementById('individual-school-name')?.value||'上水高校');
-    fd.append('year',document.getElementById('individual-year')?.value||'2026');
-    fd.append('scoring',document.getElementById('individual-scoring')?.value||'local');
+    fd.append("photos_zip", photosZipFile);
+    if (rosterFile) fd.append("roster_file", rosterFile);
+    fd.append("school_name", schoolName);
+    fd.append("year", year);
+    fd.append("scoring", scoring);
     for (const [k, v] of fd.entries()) {
       console.log('[individual/form]', k, v instanceof File ? v.name : v);
     }
