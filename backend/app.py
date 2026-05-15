@@ -269,6 +269,7 @@ async def run_individual(
             "scoring": scoring,
             "max_backups": 0,
             "class_mapping": None,
+            "no_roster_mode": roster_path is None,
         },
     )
 
