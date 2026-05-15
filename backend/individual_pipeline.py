@@ -5,6 +5,8 @@ import json, os, zipfile
 from collections import Counter
 from pathlib import Path
 import re
+import base64
+import mimetypes
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -110,6 +112,54 @@ def normalize_card_label_with_folder_context(card_label: str, folder_class_conte
             "letter_mismatch": card_letter != klass,
         }
     return None
+
+
+def read_card_label_openai(image_path: str, folder_class_context: str, client: OpenAI | None, model: str):
+    empty = {
+        "has_card": False,
+        "raw_label": "",
+        "class_letter": "",
+        "student_number": None,
+        "confidence": 0.0,
+        "reason": "no clear card visible",
+    }
+    if not client or not image_path:
+        return empty
+    try:
+        mime = mimetypes.guess_type(image_path)[0] or "image/jpeg"
+        b64 = base64.b64encode(Path(image_path).read_bytes()).decode("utf-8")
+        prompt = (
+            "Read ONLY the physical student card held in this photo. "
+            f"Folder class context is {folder_class_context}. "
+            "Return strict JSON only with keys: has_card, raw_label, class_letter, student_number, confidence, reason. "
+            "Accept patterns like A1, D15, H32. If unclear/no card, has_card=false."
+        )
+        resp = client.chat.completions.create(
+            model=model,
+            temperature=0,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": "You are a strict OCR extractor. Return valid JSON only."},
+                {"role": "user", "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
+                ]},
+            ],
+        )
+        raw = resp.choices[0].message.content or "{}"
+        obj = json.loads(raw)
+        return {
+            "has_card": bool(obj.get("has_card")),
+            "raw_label": str(obj.get("raw_label") or "").strip(),
+            "class_letter": str(obj.get("class_letter") or "").strip().upper(),
+            "student_number": int(obj["student_number"]) if obj.get("student_number") is not None else None,
+            "confidence": float(obj.get("confidence") or 0.0),
+            "reason": str(obj.get("reason") or ""),
+        }
+    except Exception as e:
+        out = dict(empty)
+        out["reason"] = f"openai_error: {e}"
+        return out
 
 
 def _detect_class_folders(raw_photos_path: Path) -> list[Path]:
@@ -238,6 +288,10 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
             openai_client=openai_client,
             roster=roster,
         )
+        card_ocr_model = os.getenv("CARD_LABEL_OCR_MODEL", "gpt-5.4")
+        card_ocr_debug: list[dict] = []
+        card_ocr_used_count = 0
+        card_ocr_fallback_count = 0
         if no_roster_mode and class_folders:
             class_groups = {}
             for folder in class_folders:
@@ -247,10 +301,36 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
                 for cg in sub_groups.values():
                     template_group = template_group or cg
                     for st in getattr(cg, "students", []) or []:
-                        card_text = str(getattr(st, "attendance_number", "") or "")
-                        normalized = normalize_card_label_with_folder_context(card_text, folder.name)
+                        normalized = None
+                        raw_label = ""
+                        if getattr(st, "card_images", None):
+                            ocr_result = read_card_label_openai(st.card_images[0], folder.name, openai_client if OPENAI_API_KEY else None, card_ocr_model)
+                            card_ocr_used_count += 1 if OPENAI_API_KEY else 0
+                            raw_label = ocr_result.get("raw_label") or ""
+                            if ocr_result.get("has_card") and raw_label:
+                                normalized = normalize_card_label_with_folder_context(raw_label, folder.name)
+                                if normalized and normalized.get("letter_mismatch"):
+                                    normalized = None
+                        if not normalized:
+                            card_ocr_fallback_count += 1
+                            card_text = str(getattr(st, "attendance_number", "") or "")
+                            normalized = normalize_card_label_with_folder_context(card_text, folder.name)
                         if normalized:
                             st.attendance_number = normalized["student_number"]
+                        else:
+                            st.attendance_number = None
+                        card_ocr_debug.append({
+                            "image_filename": Path(st.card_images[0]).name if getattr(st, "card_images", None) else "",
+                            "folder_class_context": folder.name.upper(),
+                            "has_card": bool(normalized),
+                            "raw_label": raw_label,
+                            "normalized_class_id": normalized.get("class_id") if normalized else folder.name.upper(),
+                            "normalized_student_number": normalized.get("student_number") if normalized else None,
+                            "confidence": ocr_result.get("confidence", 0.0) if 'ocr_result' in locals() else 0.0,
+                            "backend": "openai" if OPENAI_API_KEY else "fallback_local",
+                            "model": card_ocr_model if OPENAI_API_KEY else "",
+                            "reason": (ocr_result.get("reason", "") if 'ocr_result' in locals() else "fallback_local"),
+                        })
                         merged_students.append(st)
                 if template_group is not None:
                     template_group.class_label = folder.name.upper()
@@ -347,6 +427,8 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
                 manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         write_error_log_json(hard_error_queue, out / "error_log.json")
         write_error_log_csv(hard_error_queue, out / "error_log.csv")
+        if card_ocr_debug:
+            _safe_dump(out / "card_label_ocr_debug.json", card_ocr_debug)
 
         out_images = [p for p in out.rglob("*") if p.is_file() and p.suffix.lower() in IMAGE_EXTS]
         summary = {
@@ -381,6 +463,11 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
             "class_folders_detected": top_level_dirs,
             "normalized_card_labels_count": 0,
             "normalized_card_label_examples": [],
+            "card_label_ocr_backend": "openai" if (no_roster_mode and class_folders and OPENAI_API_KEY) else "fallback_local",
+            "card_label_ocr_model": card_ocr_model if (no_roster_mode and class_folders and OPENAI_API_KEY) else "",
+            "card_label_ocr_used_count": card_ocr_used_count,
+            "card_label_ocr_fallback_count": card_ocr_fallback_count,
+            "card_label_ocr_examples": [d for d in card_ocr_debug[:5]],
         }
         if no_roster_mode and folder_class_context:
             normalized_count = 0
