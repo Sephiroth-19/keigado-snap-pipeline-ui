@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 from backend.teacher_jobs import router as teacher_router
 from openpyxl import Workbook
 
-from backend.snap_pipeline import SnapPipeline
+from backend.snap_pipeline import DEFAULT_BEST_SHOT_COUNT, SnapPipeline
 from backend.club_pipeline import run_club_pipeline
 from backend.individual_pipeline import (
     filter_unresolved_error_queue,
@@ -104,6 +104,14 @@ def _discover_event_dirs(input_root: Path) -> list[tuple[str, Path]]:
     return []
 
 
+def _parse_snap_best_shot_count(value: str | None) -> int:
+    if value is None or value == "":
+        return DEFAULT_BEST_SHOT_COUNT
+    if not re.fullmatch(r"[1-9]\d*", value.strip()):
+        raise HTTPException(status_code=400, detail="Best Shot Count must be a positive whole number.")
+    return int(value.strip())
+
+
 def _write_all_events_summary(output_root: Path, event_summaries: list[dict[str, Any]]) -> None:
     (output_root / "all_events_summary.json").write_text(
         json.dumps(event_summaries, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -118,6 +126,7 @@ def _write_all_events_summary(output_root: Path, event_summaries: list[dict[str,
         "total_clusters",
         "total_representative_candidates",
         "dedup_reduction_rate",
+        "best_shot_count",
         "final_selected_count",
         "ng_count_after_menna",
         "other_passing_count",
@@ -132,11 +141,14 @@ def _write_all_events_summary(output_root: Path, event_summaries: list[dict[str,
 async def run_snap_pipeline(
     images: list[UploadFile] | None = File(default=None),
     folder_zip: UploadFile | None = File(default=None),
+    best_shot_count: str | None = Form(default=None),
 ) -> dict[str, Any]:
     global latest_summary, latest_zip_path
 
     if not images and not folder_zip:
         raise HTTPException(status_code=400, detail="Upload image files or one zip folder.")
+
+    parsed_best_shot_count = _parse_snap_best_shot_count(best_shot_count)
 
     _reset_dirs()
 
@@ -156,7 +168,7 @@ async def run_snap_pipeline(
 
     for event_name, event_input_dir in events:
         event_output_dir = OUTPUT_DIR / event_name
-        summary = pipeline.run(event_input_dir, event_output_dir)
+        summary = pipeline.run(event_input_dir, event_output_dir, best_shot_count=parsed_best_shot_count)
         event_summaries.append({"event_name": event_name, **summary.__dict__})
 
     if not event_summaries:
@@ -167,6 +179,7 @@ async def run_snap_pipeline(
                 "total_clusters": 0,
                 "total_representative_candidates": 0,
                 "dedup_reduction_rate": 0.0,
+                "best_shot_count": parsed_best_shot_count,
                 "final_selected_count": 0,
                 "ng_count_after_menna": 0,
                 "other_passing_count": 0,
@@ -181,6 +194,7 @@ async def run_snap_pipeline(
         "total_clusters": sum(e["total_clusters"] for e in event_summaries),
         "total_representative_candidates": sum(e["total_representative_candidates"] for e in event_summaries),
         "dedup_reduction_rate": 0.0,
+        "best_shot_count": parsed_best_shot_count,
         "final_selected_count": sum(e["final_selected_count"] for e in event_summaries),
         "ng_count_after_menna": sum(e["ng_count_after_menna"] for e in event_summaries),
         "other_passing_count": sum(e["other_passing_count"] for e in event_summaries),
