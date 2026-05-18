@@ -28,8 +28,7 @@ WEIGHT_TECHNICAL = 0.30
 WEIGHT_EXPRESSION = 0.25
 WEIGHT_COMPOSITION = 0.25
 WEIGHT_RARITY = 0.20
-MIN_FINAL_PHOTOS = 20
-MAX_FINAL_PHOTOS = 25
+DEFAULT_BEST_SHOT_COUNT = 25
 
 
 @dataclass
@@ -38,6 +37,7 @@ class PipelineResult:
     total_clusters: int
     total_representative_candidates: int
     dedup_reduction_rate: float
+    best_shot_count: int
     final_selected_count: int
     ng_count_after_menna: int
     other_passing_count: int
@@ -265,15 +265,19 @@ class SnapPipeline:
         scored.sort(key=lambda x: x[1], reverse=True)
         return scored
 
-    def _select_buckets(self, reps: list[ImageRecord]) -> tuple[list[ImageRecord], list[ImageRecord], list[ImageRecord]]:
+    def _select_buckets(
+        self, reps: list[ImageRecord], best_shot_count: int = DEFAULT_BEST_SHOT_COUNT
+    ) -> tuple[list[ImageRecord], list[ImageRecord], list[ImageRecord]]:
         if not reps:
             return [], [], []
 
         scored = self._score_representatives(reps)
         ordered = [r for r, _ in scored]
 
-        final_target = min(MAX_FINAL_PHOTOS, max(MIN_FINAL_PHOTOS, len(ordered)))
-        final_count = min(final_target, len(ordered))
+        if not isinstance(best_shot_count, int) or best_shot_count < 1:
+            raise ValueError("best_shot_count must be a positive integer.")
+
+        final_count = min(best_shot_count, len(ordered))
         final = ordered[:final_count]
 
         remaining = ordered[final_count:]
@@ -360,13 +364,20 @@ class SnapPipeline:
 
         wb.save(output_dir / "snap_pipeline_report.xlsx")
 
-    def run(self, input_dir: Path, output_dir: Path) -> PipelineResult:
+    def run(
+        self,
+        input_dir: Path,
+        output_dir: Path,
+        best_shot_count: int = DEFAULT_BEST_SHOT_COUNT,
+    ) -> PipelineResult:
+        if not isinstance(best_shot_count, int) or best_shot_count < 1:
+            raise ValueError("best_shot_count must be a positive integer.")
         image_paths = self._collect_images(input_dir)
         records = self._load_records(image_paths)
         clusters = self._cluster_records(records)
 
         reps = [max(cluster, key=lambda x: x.focus_score) for cluster in clusters]
-        final, ng, other = self._select_buckets(reps)
+        final, ng, other = self._select_buckets(reps, best_shot_count)
 
         dedup_reduction_rate = 0.0
         if image_paths:
@@ -377,6 +388,7 @@ class SnapPipeline:
             total_clusters=len(clusters),
             total_representative_candidates=len(reps),
             dedup_reduction_rate=dedup_reduction_rate,
+            best_shot_count=best_shot_count,
             final_selected_count=len(final),
             ng_count_after_menna=len(ng),
             other_passing_count=len(other),
@@ -389,4 +401,4 @@ class SnapPipeline:
         return summary
 
 
-__all__ = ["SnapPipeline", "PipelineResult"]
+__all__ = ["SnapPipeline", "PipelineResult", "DEFAULT_BEST_SHOT_COUNT"]
