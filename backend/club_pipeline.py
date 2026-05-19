@@ -13,6 +13,7 @@ import cv2
 import numpy as np
 from openpyxl import Workbook
 from PIL import ExifTags, Image, ImageDraw
+from backend.excel_labels import CLUB_SHEET_LABELS, excel_label
 
 try:
     from insightface.app import FaceAnalysis
@@ -281,8 +282,8 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
 
     wb = Workbook()
     ws = wb.active
-    ws.title = "Summary"
-    ws.append(["club_count", "photo_count", "closed_eye_photo_count", "closed_eye_face_count", "ranked_output_count"])
+    ws.title = CLUB_SHEET_LABELS["Summary"]
+    ws.append([excel_label("club_count"), excel_label("photo_count"), excel_label("closed_eye_photo_count"), excel_label("closed_eye_face_count"), excel_label("ranked_output_count")])
     ws.append([
         len(by_club),
         len(results),
@@ -291,24 +292,24 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
         len(results),
     ])
 
-    eye_ws = wb.create_sheet("Eye Closure Summary")
-    eye_ws.append(["club", "file", "person_count", "closed_eye_faces", "eyes_closed_photo"])
+    eye_ws = wb.create_sheet(CLUB_SHEET_LABELS["Eye Closure Summary"])
+    eye_ws.append([excel_label("club"), excel_label("file_name"), excel_label("person_count"), excel_label("closed_eye_faces"), excel_label("eyes_closed_photo")])
     for r in results:
         eye_ws.append([r.club_name, r.path.name, r.person_count, r.closed_eye_face_count, r.eyes_closed_photo])
 
-    face_ws = wb.create_sheet("Face Detail")
-    face_ws.append(["club", "file", "face_index", "bbox", "left_eye_ratio", "right_eye_ratio", "eye_closed"])
+    face_ws = wb.create_sheet(CLUB_SHEET_LABELS["Face Detail"])
+    face_ws.append([excel_label("club"), excel_label("file_name"), excel_label("face_index"), excel_label("bbox"), excel_label("left_eye_ratio"), excel_label("right_eye_ratio"), excel_label("eye_closed")])
     for r in results:
         for f in r.face_details:
             face_ws.append([r.club_name, r.path.name, f.face_index, str(f.bbox), f.left_eye_ratio, f.right_eye_ratio, f.eye_closed])
 
-    rank_ws = wb.create_sheet("Best Shot Ranking")
-    rank_ws.append(["club", "rank", "file", "formality", "quality", "expression", "gesture_penalty", "obscured_penalty", "ng_flag", "total_score"])
+    rank_ws = wb.create_sheet(CLUB_SHEET_LABELS["Best Shot Ranking"])
+    rank_ws.append([excel_label("club"), excel_label("rank"), excel_label("file_name"), excel_label("formality"), excel_label("quality"), excel_label("expression"), excel_label("gesture_penalty"), excel_label("obscured_penalty"), excel_label("ng_flag"), excel_label("total_score")])
     for r in sorted(results, key=lambda x: (x.club_name, x.rank)):
         rank_ws.append([r.club_name, r.rank, r.path.name, r.formality_score, r.quality_score, r.expression_score, r.gesture_penalty, r.obscured_penalty, r.ng_flag, r.total_score])
 
-    rename_ws = wb.create_sheet("Rename Output")
-    rename_ws.append(["club", "original_file", "renamed_file", "shooting_date", "rank"])
+    rename_ws = wb.create_sheet(CLUB_SHEET_LABELS["Rename Output"])
+    rename_ws.append([excel_label("club"), excel_label("original_file"), excel_label("renamed_file"), excel_label("shooting_date"), excel_label("rank")])
     for r in sorted(results, key=lambda x: (x.club_name, x.rank)):
         rename_ws.append([r.club_name, r.path.name, r.renamed, r.shooting_date, r.rank])
 

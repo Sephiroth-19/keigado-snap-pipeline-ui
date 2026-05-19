@@ -13,6 +13,7 @@ import torch
 from openpyxl import Workbook
 from PIL import ExifTags, Image, ImageOps
 from torchvision import models, transforms
+from backend.excel_labels import SNAP_BUCKET_LABELS, SNAP_SHEET_LABELS, excel_label
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff", ".heic", ".heif"}
 
@@ -334,13 +335,13 @@ class SnapPipeline:
 
         wb = Workbook()
         ws = wb.active
-        ws.title = "summary"
-        ws.append(["metric", "value"])
+        ws.title = SNAP_SHEET_LABELS["summary"]
+        ws.append([excel_label("metric"), excel_label("value")])
         for key, val in summary.__dict__.items():
-            ws.append([key, val])
+            ws.append([excel_label(key), val])
 
-        ws2 = wb.create_sheet("clusters")
-        ws2.append(["cluster_id", "file_name", "capture_time", "is_representative"])
+        ws2 = wb.create_sheet(SNAP_SHEET_LABELS["clusters"])
+        ws2.append([excel_label("cluster_id"), excel_label("file_name"), excel_label("capture_time"), excel_label("is_representative")])
         for i, cluster in enumerate(clusters, start=1):
             cluster_rep = max(cluster, key=lambda x: x.focus_score)
             for rec in cluster:
@@ -353,14 +354,14 @@ class SnapPipeline:
                     ]
                 )
 
-        ws3 = wb.create_sheet("selection")
-        ws3.append(["bucket", "file_name"])
+        ws3 = wb.create_sheet(SNAP_SHEET_LABELS["selection"])
+        ws3.append([excel_label("bucket"), excel_label("file_name")])
         for rec in final:
-            ws3.append(["final_selected", rec.path.name])
+            ws3.append([SNAP_BUCKET_LABELS["final_selected"], rec.path.name])
         for rec in ng:
-            ws3.append(["ng", rec.path.name])
+            ws3.append([SNAP_BUCKET_LABELS["ng"], rec.path.name])
         for rec in other:
-            ws3.append(["other_passing", rec.path.name])
+            ws3.append([SNAP_BUCKET_LABELS["other_passing"], rec.path.name])
 
         wb.save(output_dir / "snap_pipeline_report.xlsx")
 

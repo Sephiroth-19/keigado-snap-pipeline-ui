@@ -1,0 +1,238 @@
+from __future__ import annotations
+
+GENERAL_COLUMN_LABELS = {
+    "Summary": "サマリー",
+    "metric": "項目",
+    "value": "値",
+    "file_name": "ファイル名",
+    "file": "ファイル名",
+    "original_file": "元ファイル名",
+    "renamed_file": "リネーム後ファイル名",
+    "shooting_date": "撮影日",
+    "rank": "順位",
+    "status": "ステータス",
+    "reason": "理由",
+    "description": "説明",
+    "comment": "コメント",
+    "error_type": "エラー種別",
+    "severity": "重要度",
+    "detection_layer": "検出レイヤー",
+    "detection_unit": "検出レイヤー",
+    "class_id": "クラス",
+    "group_key": "グループキー",
+    "group_idx": "グループ番号",
+    "student_number": "出席番号",
+    "image_path": "画像パス",
+    "group_keys": "関連グループキー",
+    "related_paths": "関連画像パス",
+    "message": "メッセージ",
+}
+
+SNAP_SHEET_LABELS = {
+    "all_events_summary": "全イベントサマリー",
+    "summary": "サマリー",
+    "clusters": "類似グループ",
+    "selection": "選定結果",
+}
+
+SNAP_COLUMN_LABELS = {
+    "event_name": "イベント名",
+    "total_input_images": "入力画像数",
+    "total_clusters": "類似グループ数",
+    "total_representative_candidates": "代表候補写真数",
+    "dedup_reduction_rate": "重複削減率",
+    "best_shot_count": "ベストショット指定枚数",
+    "final_selected_count": "ベストショット選定枚数",
+    "ng_count_after_menna": "NG写真枚数",
+    "other_passing_count": "通過写真枚数",
+    "cluster_id": "類似グループID",
+    "capture_time": "撮影日時",
+    "is_representative": "代表写真",
+    "bucket": "区分",
+}
+
+SNAP_BUCKET_LABELS = {
+    "final_selected": "ベストショット",
+    "ng": "NG写真",
+    "other_passing": "通過写真",
+}
+
+CLUB_SHEET_LABELS = {
+    "Summary": "サマリー",
+    "Eye Closure Summary": "目つぶり確認サマリー",
+    "Face Detail": "顔検出詳細",
+    "Best Shot Ranking": "ベストショット順位",
+    "Rename Output": "リネーム結果",
+}
+
+CLUB_COLUMN_LABELS = {
+    "club": "部活動名",
+    "club_count": "部活動数",
+    "photo_count": "写真枚数",
+    "closed_eye_photo_count": "目つぶり写真枚数",
+    "closed_eye_face_count": "目つぶり人数",
+    "ranked_output_count": "順位付け出力枚数",
+    "person_count": "人数",
+    "closed_eye_faces": "目つぶり人数",
+    "eyes_closed_photo": "目つぶり写真",
+    "face_index": "顔番号",
+    "bbox": "顔領域",
+    "left_eye_ratio": "左目開眼比率",
+    "right_eye_ratio": "右目開眼比率",
+    "eye_closed": "目つぶり",
+    "formality": "整列・構図",
+    "quality": "品質",
+    "expression": "表情",
+    "gesture_penalty": "ポーズ減点",
+    "obscured_penalty": "遮蔽減点",
+    "ng_flag": "NG判定",
+    "total_score": "総合スコア",
+}
+
+TEACHER_SHEET_LABELS = {
+    "Match Results": "照合結果",
+    "PDF Staff Master": "PDF教職員マスター",
+    "Final Name List": "最終氏名リスト",
+    "Best Shot Scores": "ベストショットスコア",
+    "Staff by Subject": "教科別教職員",
+}
+
+TEACHER_HEADER_LABELS = {
+    "Original Filename": "元ファイル名",
+    "Renamed Filename": "リネーム後ファイル名",
+    "Image Path": "画像パス",
+    "Card Name (OCR)": "札氏名（OCR）",
+    "Card Subject (OCR)": "札教科（OCR）",
+    "Match Score": "照合スコア",
+    "Status": "ステータス",
+    "Reason": "理由",
+    "Comment": "コメント",
+    "Subject": "教科",
+    "Role": "役職",
+    "Name": "氏名",
+    "Surname": "姓",
+    "Given Name": "名",
+    "Full Name": "氏名",
+    "Staff Name": "教職員名",
+    "Best Shot Score": "ベストショットスコア",
+    "Score": "スコア",
+    "Rank": "順位",
+    "File": "ファイル",
+    "Filename": "ファイル名",
+    "Teacher Name": "教員名",
+    "Card Name": "札氏名",
+    "Card Subject": "札教科",
+    "OCR Result": "OCR結果",
+    "Confidence": "信頼度",
+    "Final Name": "最終氏名",
+    "Final Filename": "最終ファイル名",
+    "Matched Name": "照合氏名",
+    "Matched Subject": "照合教科",
+    "Match Status": "照合ステータス",
+    "Match Results": "照合結果",
+    "Card OCR Confidence": "OCR信頼度",
+    "Card Uncertain Chars": "OCR不確実文字",
+    "Match Method": "照合方法",
+    "PDF Matched Name": "照合氏名",
+    "PDF Role / Admin Tags": "役職 / 管理タグ",
+    "PDF Academic Subjects": "PDF教科",
+    "PDF All Subjects (incl. roles)": "PDF全教科（役職含む）",
+    "PDF Classes / Grades": "PDF担当クラス・学年",
+    "PDF Presence": "在籍情報",
+    "PDF Source Types": "情報ソース種別",
+    "PDF Source Files": "PDF元ファイル",
+    "PDF Pages": "PDFページ",
+    "PDF Extraction Confidence": "PDF抽出信頼度",
+    "PDF Notes": "備考",
+    "PDF Name Aliases": "氏名別名",
+    "Destination": "出力先",
+    "Academic Subjects": "教科",
+    "Role / Admin Tags": "役職 / 管理タグ",
+    "All Subjects": "全教科",
+    "Classes / Grades": "担当クラス・学年",
+    "Presence": "在籍情報",
+    "Source Types": "情報ソース種別",
+    "Source Files": "情報元ファイル",
+    "PDF Extraction Conf": "PDF抽出信頼度",
+    "Notes": "備考",
+    "Name Aliases": "氏名別名",
+    "Final Teacher Name": "最終氏名",
+    "Name Source": "氏名ソース",
+    "Card OCR Name": "札氏名（OCR）",
+    "Teacher (roster name)": "教職員名（名簿）",
+    "Suitability (0-10)": "適正（0-10）",
+    "Beauty (0-10)": "品質（0-10）",
+    "Expression (0-10)": "表情（0-10）",
+    "Composite Score": "総合スコア",
+    "Is NG": "NG判定",
+    "NG Reason": "NG理由",
+    "Short Comment": "コメント",
+    "Selected Best Shot": "ベストショット選定",
+    "Subject / Role": "教科 / 役職",
+    "Extraction Confidence": "抽出信頼度",
+}
+
+REASON_DESCRIPTION_LABELS = {
+    "eyes closed": "目つぶり",
+    "unreadable": "読み取り不可",
+    "placard visible": "札写り込み",
+    "low-sharp": "ピント不足",
+    "blurry": "ピント不足",
+    "dark": "暗い",
+    "no face detected": "顔検出なし",
+    "gesture": "不適切なポーズの可能性",
+    "middle finger": "中指を立てている",
+    "obscene pose": "不適切なポーズ",
+    "improper pose": "不適切なポーズ",
+    "selected as best shot": "ベストショットとして選定",
+    "passed but not selected": "通過写真（ベストショット未選定）",
+    "NG photo": "NG写真",
+    "error": "エラー",
+    "warning": "警告",
+    "info": "情報",
+    "no_card_detected": "札検出なし",
+    "multiple_card_detected": "複数札検出",
+    "missing_tag_shot": "札写真不足",
+    "unresolved": "未解決",
+    "resolved": "解決済み",
+    "needs_review": "要確認",
+    "unknown": "不明",
+    "openai_error": "OpenAI OCRエラー",
+    "label_letter_mismatch": "クラス文字不一致",
+    "invalid_or_uncertain_label": "無効または不確実な札番号",
+    "no clear card visible": "明確な札が見えません",
+    "matched": "照合済み",
+    "unmatched": "未照合",
+    "assigned": "割当済み",
+    "unassigned": "未割当",
+    "best shot": "ベストショット",
+    "processed": "処理済み",
+    "no match": "一致なし",
+    "low confidence": "信頼度低",
+    "missing card": "札なし",
+    "OCR failed": "OCR失敗",
+    "face mismatch": "顔不一致",
+    "name mismatch": "氏名不一致",
+    "subject mismatch": "教科不一致",
+}
+
+
+def excel_label(value: str) -> str:
+    return (
+        GENERAL_COLUMN_LABELS.get(value)
+        or SNAP_COLUMN_LABELS.get(value)
+        or CLUB_COLUMN_LABELS.get(value)
+        or TEACHER_HEADER_LABELS.get(value)
+        or REASON_DESCRIPTION_LABELS.get(value)
+        or value
+    )
+
+
+def translate_display_value(value):
+    if isinstance(value, str):
+        out = value
+        for src, dst in REASON_DESCRIPTION_LABELS.items():
+            if src in out:
+                out = out.replace(src, dst)
+        return out
+    return value

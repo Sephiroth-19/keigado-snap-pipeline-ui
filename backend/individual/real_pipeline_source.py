@@ -27,6 +27,7 @@ from typing import Any, Optional
 
 import cv2
 import numpy as np
+from backend.excel_labels import excel_label, translate_display_value
 
 logger = logging.getLogger(__name__)
 
@@ -4431,14 +4432,15 @@ def write_error_log_csv(error_queue: list[dict], path: str | Path):
         "message",
     ]
 
+    localized_headers = [excel_label(k) for k in fieldnames]
     with open(path, "w", encoding="utf-8-sig", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=localized_headers)
         writer.writeheader()
         for err in error_queue:
             row = dict(err)
             row["group_keys"] = " | ".join(_ensure_list(row.get("group_keys", [])))
             row["related_paths"] = " | ".join(_ensure_list(row.get("related_paths", [])))
-            writer.writerow({k: row.get(k, "") for k in fieldnames})
+            writer.writerow({excel_label(k): translate_display_value(row.get(k, "")) for k in fieldnames})
 
 
 def summarize_error_queue(error_queue: list[dict]) -> dict[str, int]:
@@ -5381,4 +5383,3 @@ def apply_error_resolutions_to_class_groups(
             continue
 
     return updated
-
