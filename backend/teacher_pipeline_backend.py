@@ -56,6 +56,7 @@ import pandas as pd
 from PIL import Image
 import openpyxl
 from openpyxl.styles import PatternFill, Font, Alignment
+from backend.excel_labels import TEACHER_SHEET_LABELS, excel_label, translate_display_value
 
 from openai import OpenAI
 
@@ -1736,7 +1737,7 @@ def save_excel(match_rows: list, staff_master: list, output_path: str):
 
     # ── Sheet 1 — Match Results ───────────────────────────────────────────────
     ws1 = wb.active
-    ws1.title = "Match Results"
+    ws1.title = TEACHER_SHEET_LABELS["Match Results"]
     MATCH_HEADERS = [
         "Original Filename", "Renamed Filename", "Image Path",
         "Card Name (OCR)", "Card Subject (OCR)",
@@ -1758,7 +1759,7 @@ def save_excel(match_rows: list, staff_master: list, output_path: str):
         "pdf_source_files", "pdf_pages", "pdf_confidence",
         "pdf_notes", "pdf_aliases", "destination",
     ]
-    _write_header_row(ws1, MATCH_HEADERS)
+    _write_header_row(ws1, [excel_label(h) for h in MATCH_HEADERS])
     _freeze(ws1, "A2")
     for row_idx, row in enumerate(match_rows, start=2):
         status = row.get("status", "")
@@ -1768,20 +1769,20 @@ def save_excel(match_rows: list, staff_master: list, output_path: str):
                 unknown_fill if "manual review" in status else
                 error_fill)
         for col_idx, key in enumerate(MATCH_KEYS, start=1):
-            cell = ws1.cell(row=row_idx, column=col_idx, value=row.get(key))
+            cell = ws1.cell(row=row_idx, column=col_idx, value=translate_display_value(row.get(key)))
             cell.fill      = fill
             cell.alignment = Alignment(wrap_text=False)
     _autofit(ws1)
 
     # ── Sheet 2 — PDF Staff Master ────────────────────────────────────────────
-    ws2 = wb.create_sheet(title="PDF Staff Master")
+    ws2 = wb.create_sheet(title=TEACHER_SHEET_LABELS["PDF Staff Master"])
     STAFF_HEADERS = [
         "Teacher Name", "Academic Subjects", "Role / Admin Tags",
         "All Subjects", "Classes / Grades", "Presence",
         "Source Types", "Source Files", "PDF Pages",
         "Max Extraction Confidence", "Notes", "Name Aliases",
     ]
-    _write_header_row(ws2, STAFF_HEADERS, bg_hex="1A5276")
+    _write_header_row(ws2, [excel_label(h) for h in STAFF_HEADERS], bg_hex="1A5276")
     _freeze(ws2, "A2")
     for row_idx, t in enumerate(staff_master or [], start=2):
         subjects = t.get("subjects") or []
@@ -1810,14 +1811,14 @@ def save_excel(match_rows: list, staff_master: list, output_path: str):
     _autofit(ws2)
 
     # ── Sheet 3 — Final Name List ─────────────────────────────────────────────
-    ws3 = wb.create_sheet(title="Final Name List")
+    ws3 = wb.create_sheet(title=TEACHER_SHEET_LABELS["Final Name List"])
     FINAL_HEADERS = [
         "Original Filename", "Renamed Filename",
         "Final Teacher Name", "Subject", "Name Source",
         "Match Method", "Card OCR Name", "PDF Matched Name",
         "PDF Extraction Conf", "Notes",
     ]
-    _write_header_row(ws3, FINAL_HEADERS, bg_hex="1A5276")
+    _write_header_row(ws3, [excel_label(h) for h in FINAL_HEADERS], bg_hex="1A5276")
     _freeze(ws3, "A2")
     for row_idx, row in enumerate(match_rows, start=2):
         status    = row.get("status", "")
@@ -1853,7 +1854,7 @@ def save_excel(match_rows: list, staff_master: list, output_path: str):
             method, card_name, pdf_name, pdf_conf, notes_cell,
         ]
         for col_idx, val in enumerate(row_vals, start=1):
-            cell = ws3.cell(row=row_idx, column=col_idx, value=val)
+            cell = ws3.cell(row=row_idx, column=col_idx, value=translate_display_value(val))
             cell.fill      = fill
             cell.alignment = Alignment(wrap_text=False)
     _autofit(ws3)
@@ -1898,7 +1899,7 @@ def fill_manual_entries(results: list, output_path: str):
     sys.stdout.flush()
 
     wb  = openpyxl.load_workbook(output_path)
-    ws3 = wb["Final Name List"]
+    ws3 = wb[TEACHER_SHEET_LABELS["Final Name List"]]
     green = PatternFill("solid", fgColor="D5F5E3")
 
     # filename → sheet row lookup
@@ -2323,7 +2324,7 @@ def group_photos_by_teacher(
 # ══════════════════════════════════════════════════════════════════════════════
 
 def add_best_shot_sheet(wb, best_shot_rows: list):
-    ws = wb.create_sheet(title="Best Shot Scores")
+    ws = wb.create_sheet(title=TEACHER_SHEET_LABELS["Best Shot Scores"])
 
     HEADERS = [
         "Teacher (roster name)", "Card Subject",
@@ -2347,7 +2348,7 @@ def add_best_shot_sheet(wb, best_shot_rows: list):
     normal_fill = PatternFill("solid", fgColor="F9F9F9")
     unknown_fill= PatternFill("solid", fgColor="FEF9E7")
 
-    for col, h in enumerate(HEADERS, start=1):
+    for col, h in enumerate([excel_label(h) for h in HEADERS], start=1):
         cell = ws.cell(row=1, column=col, value=h)
         cell.fill      = header_fill
         cell.font      = header_font
@@ -2371,7 +2372,7 @@ def add_best_shot_sheet(wb, best_shot_rows: list):
             val = row.get(key)
             if isinstance(val, float):
                 val = round(val, 2)
-            cell = ws.cell(row=row_idx, column=col_idx, value=val)
+            cell = ws.cell(row=row_idx, column=col_idx, value=translate_display_value(val))
             cell.fill      = fill
             cell.alignment = Alignment(wrap_text=False)
 
@@ -2385,7 +2386,7 @@ def add_staff_by_subject_sheet(wb, staff_master: list):
     Sheet 5 — Staff grouped by primary subject.
     Coloured divider row between each subject group.
     """
-    ws = wb.create_sheet(title="Staff by Subject")
+    ws = wb.create_sheet(title=TEACHER_SHEET_LABELS["Staff by Subject"])
 
     HEADERS = [
         "Subject / Role", "Teacher Name", "All Subjects",
@@ -2403,7 +2404,7 @@ def add_staff_by_subject_sheet(wb, staff_master: list):
         "784212", "1B2631",
     ]
 
-    for col, h in enumerate(HEADERS, start=1):
+    for col, h in enumerate([excel_label(h) for h in HEADERS], start=1):
         cell = ws.cell(row=1, column=col, value=h)
         cell.fill      = header_fill
         cell.font      = header_font
@@ -2463,7 +2464,7 @@ def add_staff_by_subject_sheet(wb, staff_master: list):
                 notes,
             ]
             for col_idx, val in enumerate(row_vals, start=1):
-                cell = ws.cell(row=current_row, column=col_idx, value=val)
+                cell = ws.cell(row=current_row, column=col_idx, value=translate_display_value(val))
                 cell.fill      = row_fill
                 cell.alignment = Alignment(wrap_text=False)
             current_row += 1

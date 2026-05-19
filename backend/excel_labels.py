@@ -14,6 +14,18 @@ GENERAL_COLUMN_LABELS = {
     "reason": "理由",
     "description": "説明",
     "comment": "コメント",
+    "error_type": "エラー種別",
+    "severity": "重要度",
+    "detection_layer": "検出レイヤー",
+    "detection_unit": "検出レイヤー",
+    "class_id": "クラス",
+    "group_key": "グループキー",
+    "group_idx": "グループ番号",
+    "student_number": "出席番号",
+    "image_path": "画像パス",
+    "group_keys": "関連グループキー",
+    "related_paths": "関連画像パス",
+    "message": "メッセージ",
 }
 
 SNAP_SHEET_LABELS = {
@@ -77,6 +89,89 @@ CLUB_COLUMN_LABELS = {
     "total_score": "総合スコア",
 }
 
+TEACHER_SHEET_LABELS = {
+    "Match Results": "照合結果",
+    "PDF Staff Master": "PDF教職員マスター",
+    "Final Name List": "最終氏名リスト",
+    "Best Shot Scores": "ベストショットスコア",
+    "Staff by Subject": "教科別教職員",
+}
+
+TEACHER_HEADER_LABELS = {
+    "Original Filename": "元ファイル名",
+    "Renamed Filename": "リネーム後ファイル名",
+    "Image Path": "画像パス",
+    "Card Name (OCR)": "札氏名（OCR）",
+    "Card Subject (OCR)": "札教科（OCR）",
+    "Match Score": "照合スコア",
+    "Status": "ステータス",
+    "Reason": "理由",
+    "Comment": "コメント",
+    "Subject": "教科",
+    "Role": "役職",
+    "Name": "氏名",
+    "Surname": "姓",
+    "Given Name": "名",
+    "Full Name": "氏名",
+    "Staff Name": "教職員名",
+    "Best Shot Score": "ベストショットスコア",
+    "Score": "スコア",
+    "Rank": "順位",
+    "File": "ファイル",
+    "Filename": "ファイル名",
+    "Teacher Name": "教員名",
+    "Card Name": "札氏名",
+    "Card Subject": "札教科",
+    "OCR Result": "OCR結果",
+    "Confidence": "信頼度",
+    "Final Name": "最終氏名",
+    "Final Filename": "最終ファイル名",
+    "Matched Name": "照合氏名",
+    "Matched Subject": "照合教科",
+    "Match Status": "照合ステータス",
+    "Match Results": "照合結果",
+    "Card OCR Confidence": "OCR信頼度",
+    "Card Uncertain Chars": "OCR不確実文字",
+    "Match Method": "照合方法",
+    "PDF Matched Name": "照合氏名",
+    "PDF Role / Admin Tags": "役職 / 管理タグ",
+    "PDF Academic Subjects": "PDF教科",
+    "PDF All Subjects (incl. roles)": "PDF全教科（役職含む）",
+    "PDF Classes / Grades": "PDF担当クラス・学年",
+    "PDF Presence": "在籍情報",
+    "PDF Source Types": "情報ソース種別",
+    "PDF Source Files": "PDF元ファイル",
+    "PDF Pages": "PDFページ",
+    "PDF Extraction Confidence": "PDF抽出信頼度",
+    "PDF Notes": "備考",
+    "PDF Name Aliases": "氏名別名",
+    "Destination": "出力先",
+    "Academic Subjects": "教科",
+    "Role / Admin Tags": "役職 / 管理タグ",
+    "All Subjects": "全教科",
+    "Classes / Grades": "担当クラス・学年",
+    "Presence": "在籍情報",
+    "Source Types": "情報ソース種別",
+    "Source Files": "情報元ファイル",
+    "PDF Extraction Conf": "PDF抽出信頼度",
+    "Notes": "備考",
+    "Name Aliases": "氏名別名",
+    "Final Teacher Name": "最終氏名",
+    "Name Source": "氏名ソース",
+    "Card OCR Name": "札氏名（OCR）",
+    "Teacher (roster name)": "教職員名（名簿）",
+    "Suitability (0-10)": "適正（0-10）",
+    "Beauty (0-10)": "品質（0-10）",
+    "Expression (0-10)": "表情（0-10）",
+    "Composite Score": "総合スコア",
+    "Is NG": "NG判定",
+    "NG Reason": "NG理由",
+    "Short Comment": "コメント",
+    "Selected Best Shot": "ベストショット選定",
+    "Subject / Role": "教科 / 役職",
+    "Extraction Confidence": "抽出信頼度",
+}
+
 REASON_DESCRIPTION_LABELS = {
     "eyes closed": "目つぶり",
     "unreadable": "読み取り不可",
@@ -92,6 +187,33 @@ REASON_DESCRIPTION_LABELS = {
     "selected as best shot": "ベストショットとして選定",
     "passed but not selected": "通過写真（ベストショット未選定）",
     "NG photo": "NG写真",
+    "error": "エラー",
+    "warning": "警告",
+    "info": "情報",
+    "no_card_detected": "札検出なし",
+    "multiple_card_detected": "複数札検出",
+    "missing_tag_shot": "札写真不足",
+    "unresolved": "未解決",
+    "resolved": "解決済み",
+    "needs_review": "要確認",
+    "unknown": "不明",
+    "openai_error": "OpenAI OCRエラー",
+    "label_letter_mismatch": "クラス文字不一致",
+    "invalid_or_uncertain_label": "無効または不確実な札番号",
+    "no clear card visible": "明確な札が見えません",
+    "matched": "照合済み",
+    "unmatched": "未照合",
+    "assigned": "割当済み",
+    "unassigned": "未割当",
+    "best shot": "ベストショット",
+    "processed": "処理済み",
+    "no match": "一致なし",
+    "low confidence": "信頼度低",
+    "missing card": "札なし",
+    "OCR failed": "OCR失敗",
+    "face mismatch": "顔不一致",
+    "name mismatch": "氏名不一致",
+    "subject mismatch": "教科不一致",
 }
 
 
@@ -100,6 +222,17 @@ def excel_label(value: str) -> str:
         GENERAL_COLUMN_LABELS.get(value)
         or SNAP_COLUMN_LABELS.get(value)
         or CLUB_COLUMN_LABELS.get(value)
+        or TEACHER_HEADER_LABELS.get(value)
         or REASON_DESCRIPTION_LABELS.get(value)
         or value
     )
+
+
+def translate_display_value(value):
+    if isinstance(value, str):
+        out = value
+        for src, dst in REASON_DESCRIPTION_LABELS.items():
+            if src in out:
+                out = out.replace(src, dst)
+        return out
+    return value
