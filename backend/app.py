@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from backend.teacher_jobs import router as teacher_router
 from openpyxl import Workbook
+from backend.excel_labels import SNAP_SHEET_LABELS, excel_label
 
 from backend.snap_pipeline import DEFAULT_BEST_SHOT_COUNT, SnapPipeline
 from backend.club_pipeline import run_club_pipeline
@@ -119,7 +120,7 @@ def _write_all_events_summary(output_root: Path, event_summaries: list[dict[str,
 
     wb = Workbook()
     ws = wb.active
-    ws.title = "all_events_summary"
+    ws.title = SNAP_SHEET_LABELS["all_events_summary"]
     headers = [
         "event_name",
         "total_input_images",
@@ -131,7 +132,7 @@ def _write_all_events_summary(output_root: Path, event_summaries: list[dict[str,
         "ng_count_after_menna",
         "other_passing_count",
     ]
-    ws.append(headers)
+    ws.append([excel_label(h) for h in headers])
     for row in event_summaries:
         ws.append([row.get(k) for k in headers])
     wb.save(output_root / "all_events_summary.xlsx")
