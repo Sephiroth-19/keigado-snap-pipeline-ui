@@ -33,3 +33,32 @@ def test_prompt_allows_thumbs_up_but_rejects_obscene_pose():
     prompt = PHOTO_EVAL_PROMPT.lower()
     assert "thumbs up is acceptable" in prompt
     assert "middle finger" in prompt
+
+
+def test_ranked_marked_uses_marked_image_and_renamed_filename(tmp_path: Path, monkeypatch):
+    import numpy as np
+    import cv2
+    from backend import club_pipeline
+
+    z = _make_zip(tmp_path)
+
+    def fake_analyze_faces(image_bgr, face_app):
+        marked = image_bgr.copy()
+        marked[:, :] = (0, 0, 255)
+        return 1, 0, [], marked
+
+    monkeypatch.setattr(club_pipeline, "_analyze_faces", fake_analyze_faces)
+
+    out = run_club_pipeline(str(z), str(tmp_path / "out"))
+    club_output = Path(out["output_dir"])
+
+    ranked_files = sorted([p.relative_to(club_output / "ranked_photos") for p in (club_output / "ranked_photos").rglob("*.jpg")])
+    ranked_marked_files = sorted([p.relative_to(club_output / "ranked_photos_marked") for p in (club_output / "ranked_photos_marked").rglob("*.jpg")])
+    assert ranked_files == ranked_marked_files
+
+    sample_rel = ranked_marked_files[0]
+    clean_img = cv2.imread(str((club_output / "ranked_photos" / sample_rel)))
+    marked_img = cv2.imread(str((club_output / "ranked_photos_marked" / sample_rel)))
+    assert clean_img is not None
+    assert marked_img is not None
+    assert np.abs(clean_img.astype(np.int16) - marked_img.astype(np.int16)).sum() > 0

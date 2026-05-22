@@ -186,13 +186,18 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
             face_app=FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"]); face_app.prepare(ctx_id=0, det_size=(640, 640))
         except Exception: face_app=None
     client=_get_client(); results=[]
+    marked_outputs: dict[tuple[str, str], Path] = {}
     for club,images in clubs.items():
         for p in images:
             img=cv2.imread(str(p));
             if img is None: continue
             pc,cc,fd,vis=_analyze_faces(img,face_app)
             (marked/club).mkdir(parents=True,exist_ok=True); (clean/club).mkdir(parents=True,exist_ok=True)
-            cv2.imwrite(str((marked/club/p.name)), vis); cv2.imwrite(str((clean/club/p.name)), img)
+            marked_path = marked / club / p.name
+            clean_path = clean / club / p.name
+            cv2.imwrite(str(marked_path), vis)
+            cv2.imwrite(str(clean_path), img)
+            marked_outputs[(club, p.name)] = marked_path
             ev=_evaluate_with_gpt(client,p,pc) if client else None
             if not ev: ev=_fallback_eval(pc,cc)
             total,ng,reason=_score(ev,cc)
@@ -204,8 +209,9 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
         for i,r in enumerate(rows,1):
             r.rank=i; r.renamed=f"{club}_{r.shooting_date}_{r.path.stem}_{RANK_TOKEN}{i:02d}{r.path.suffix.lower()}"
             (ranked/club).mkdir(parents=True,exist_ok=True); (ranked_marked/club).mkdir(parents=True,exist_ok=True)
-            shutil.copy2(clean/club/r.path.name, ranked/club/r.renamed)
-            shutil.copy2(marked/club/r.path.name, ranked_marked/club/r.renamed)
+            shutil.copy2(clean / club / r.path.name, ranked / club / r.renamed)
+            marked_source = marked_outputs.get((club, r.path.name), marked / club / r.path.name)
+            shutil.copy2(marked_source, ranked_marked / club / r.renamed)
             if r.ng_flag:
                 (ng_root/club).mkdir(parents=True,exist_ok=True); shutil.copy2(clean/club/r.path.name, ng_root/club/r.path.name)
 
