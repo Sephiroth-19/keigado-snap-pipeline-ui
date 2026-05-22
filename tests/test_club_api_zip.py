@@ -28,4 +28,9 @@ def test_club_run_and_download_zip_contains_club_output():
     assert dl.status_code == 200
     with zipfile.ZipFile(io.BytesIO(dl.content), "r") as zf:
         names = zf.namelist()
-        assert any(n.startswith("Club_Output/") for n in names)
+        assert any(n.startswith("Club_Output/ranked_photos/") for n in names)
+        assert any(n.startswith("Club_Output/ranked_photos_marked/") for n in names)
+        assert "Club_Output/club_result.xlsx" in names
+        assert not any(n.startswith("Club_Output/clean_images/") for n in names)
+        assert not any(n.startswith("Club_Output/marked_images/") for n in names)
+        assert not any(n.startswith("Club_Output/ng_photos/") for n in names)
