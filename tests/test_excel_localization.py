@@ -49,7 +49,7 @@ def test_club_excel_labels_japanese(tmp_path: Path):
     out = run_club_pipeline(str(z), str(tmp_path / "out"))
     wb = load_workbook(out["excel_path"])
 
-    assert wb.sheetnames == ["サマリー", "目つぶり確認サマリー", "顔検出詳細", "ベストショット順位", "リネーム結果"]
+    assert wb.sheetnames == ["サマリー", "目つぶり確認サマリー", "顔検出詳細", "ベストショット順位", "リネーム結果", "NG写真・要確認"]
     assert [c.value for c in wb["リネーム結果"][1]] == ["部活動名", "元ファイル名", "リネーム後ファイル名", "撮影日", "順位"]
 
 
