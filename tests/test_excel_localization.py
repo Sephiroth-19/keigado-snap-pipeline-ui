@@ -49,7 +49,7 @@ def test_club_excel_labels_japanese(tmp_path: Path):
     out = run_club_pipeline(str(z), str(tmp_path / "out"))
     wb = load_workbook(out["excel_path"])
 
-    assert wb.sheetnames == ["サマリー", "目つぶり確認サマリー", "顔検出詳細", "ベストショット順位", "リネーム結果"]
+    assert wb.sheetnames == ["サマリー", "目つぶり確認サマリー", "顔検出詳細", "ベストショット順位", "リネーム結果", "NG写真・要確認"]
     assert [c.value for c in wb["リネーム結果"][1]] == ["部活動名", "元ファイル名", "リネーム後ファイル名", "撮影日", "順位"]
 
 
@@ -90,3 +90,31 @@ def test_teacher_label_mapping_localized():
     assert excel_label("Original Filename") == "元ファイル名"
     assert excel_label("Card Name (OCR)") == "札氏名（OCR）"
     assert translate_display_value("matched") == "照合済み"
+
+
+def test_club_ranking_sheet_localized_values(tmp_path: Path):
+    root = tmp_path / "in2"
+    club = root / "basket"
+    club.mkdir(parents=True)
+    Image.new("RGB", (32, 32), color=(180, 180, 180)).save(club / "x.jpg")
+
+    z = tmp_path / "club2.zip"
+    with zipfile.ZipFile(z, "w") as zf:
+        zf.write(club / "x.jpg", arcname="basket/x.jpg")
+
+    out = run_club_pipeline(str(z), str(tmp_path / "out2"))
+    wb = load_workbook(out["excel_path"])
+    ws = wb["ベストショット順位"]
+    headers = [c.value for c in ws[1]]
+    assert "画質・見栄え" in headers
+    assert "表情スコア" in headers
+    assert "雰囲気スコア" in headers
+    assert "人数スコア" in headers
+    assert "ポーズ減点" in headers
+    assert "コメント" in headers
+    assert "NG判定" in headers
+    assert "NG理由" in headers
+
+    ng_col = headers.index("NG判定") + 1
+    ng_value = ws.cell(row=2, column=ng_col).value
+    assert ng_value in {"はい", "いいえ"}

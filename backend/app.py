@@ -365,8 +365,12 @@ async def run_club(folder_zip: UploadFile = File(...)) -> dict[str, Any]:
     output_zip = job_root / "club_output.zip"
     with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zf:
         club_output_dir = Path(result["output_dir"])
+        allowed = {"ranked_photos", "ranked_photos_marked", "club_result.xlsx"}
         for p in club_output_dir.rglob("*"):
-            if p.is_file():
+            if not p.is_file():
+                continue
+            rel = p.relative_to(club_output_dir)
+            if rel.parts and rel.parts[0] in allowed:
                 zf.write(p, p.relative_to(club_output_dir.parent))
 
     return {
