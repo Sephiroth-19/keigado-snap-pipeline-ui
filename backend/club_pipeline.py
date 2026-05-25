@@ -15,7 +15,7 @@ import cv2
 import numpy as np
 from openpyxl import Workbook
 from PIL import ExifTags, Image
-from backend.excel_labels import CLUB_SHEET_LABELS, excel_label
+from backend.excel_labels import CLUB_SHEET_LABELS, excel_label, translate_display_value
 
 try:
     from insightface.app import FaceAnalysis
@@ -220,21 +220,21 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
     ws.append([excel_label("club_count"),excel_label("photo_count"),excel_label("closed_eye_photo_count"),excel_label("closed_eye_face_count"),excel_label("ranked_output_count")])
     ws.append([len(by),len(results),sum(1 for r in results if r.eyes_closed_photo),sum(r.closed_eye_face_count for r in results),len(results)])
     ews=wb.create_sheet(CLUB_SHEET_LABELS["Eye Closure Summary"]); ews.append([excel_label("club"),excel_label("file_name"),excel_label("person_count"),excel_label("closed_eye_faces"),excel_label("eyes_closed_photo")])
-    for r in results: ews.append([r.club_name,r.path.name,r.person_count,r.closed_eye_face_count,r.eyes_closed_photo])
+    for r in results: ews.append([r.club_name,r.path.name,r.person_count,r.closed_eye_face_count,translate_display_value(r.eyes_closed_photo)])
     fws=wb.create_sheet(CLUB_SHEET_LABELS["Face Detail"]); fws.append([excel_label("club"),excel_label("file_name"),excel_label("face_index"),excel_label("bbox"),excel_label("left_eye_ratio"),excel_label("right_eye_ratio"),excel_label("eye_closed")])
     for r in results:
         for f in r.face_details: fws.append([r.club_name,r.path.name,f.face_index,str(f.bbox),f.left_eye_ratio,f.right_eye_ratio,f.eye_closed])
     rws=wb.create_sheet(CLUB_SHEET_LABELS["Best Shot Ranking"])
-    rws.append([excel_label("club"),excel_label("rank"),excel_label("file_name"),"formality_score","beauty_score","expression_score","emotion_score","people_count_score","gesture_expression_penalty",excel_label("ng_flag"),excel_label("reason"),"short_comment",excel_label("total_score")])
+    rws.append([excel_label("club"),excel_label("rank"),excel_label("file_name"),excel_label("formality"),excel_label("beauty_score"),excel_label("expression_score"),excel_label("emotion_score"),excel_label("people_count_score"),excel_label("gesture_expression_penalty"),excel_label("is_ng"),excel_label("ng_reason"),excel_label("short_comment"),excel_label("total_score")])
     for r in sorted(results,key=lambda x:(x.club_name,x.rank)):
         ev=r.eval_data
-        rws.append([r.club_name,r.rank,r.path.name,ev.get("formality_score"),ev.get("beauty_score"),ev.get("expression_score"),ev.get("emotion_score"),ev.get("people_count_score"),ev.get("gesture_expression_penalty"),r.ng_flag,r.ng_reason,ev.get("short_comment"),r.total_score])
+        rws.append([r.club_name,r.rank,r.path.name,ev.get("formality_score"),ev.get("beauty_score"),ev.get("expression_score"),ev.get("emotion_score"),ev.get("people_count_score"),ev.get("gesture_expression_penalty"),translate_display_value(r.ng_flag),translate_display_value(r.ng_reason),translate_display_value(ev.get("short_comment")),r.total_score])
     nws=wb.create_sheet(CLUB_SHEET_LABELS["Rename Output"]); nws.append([excel_label("club"),excel_label("original_file"),excel_label("renamed_file"),excel_label("shooting_date"),excel_label("rank")])
     for r in sorted(results,key=lambda x:(x.club_name,x.rank)): nws.append([r.club_name,r.path.name,r.renamed,r.shooting_date,r.rank])
     ngs=wb.create_sheet("NG写真・要確認")
     ngs.append([excel_label("club"),excel_label("file_name"),excel_label("ng_flag"),excel_label("reason")])
     for r in sorted(results,key=lambda x:(x.club_name,x.rank)):
-        if r.ng_flag: ngs.append([r.club_name,r.path.name,r.ng_flag,r.ng_reason])
+        if r.ng_flag: ngs.append([r.club_name,r.path.name,translate_display_value(r.ng_flag),translate_display_value(r.ng_reason)])
     wb.save(excel)
     jsonp.write_text(json.dumps({"summary":{"club_count":len(by),"photo_count":len(results)},"items":[{"club_name":r.club_name,"original_file":r.path.name,"rank":r.rank,"renamed_file":r.renamed,"ng_flag":r.ng_flag,"ng_reason":r.ng_reason,"total_score":r.total_score,"evaluation":r.eval_data} for r in sorted(results,key=lambda x:(x.club_name,x.rank))]},ensure_ascii=False,indent=2),encoding="utf-8")
     return {"status":"completed","summary":{"club_count":len(by),"photo_count":len(results)},"excel_path":str(excel),"json_path":str(jsonp),"output_dir":str(club_out)}
