@@ -239,6 +239,7 @@ def download_outputs() -> FileResponse:
 async def run_individual(
     photos_zip: UploadFile = File(...),
     roster_file: UploadFile | None = File(default=None),
+    frame_config_file: UploadFile | None = File(default=None),
     school_name: str = Form(default=""),
     year: str = Form(default=""),
     scoring: str = Form(default="local"),
@@ -276,6 +277,13 @@ async def run_individual(
     roster_path = None
     if roster_file and roster_file.filename:
         roster_path = _save_upload(roster_file, roster_dir)
+    frame_config_path = None
+    if frame_config_file and frame_config_file.filename:
+        if not frame_config_file.filename.lower().endswith(".json"):
+            raise HTTPException(status_code=400, detail="frame_config_file must be .json")
+        frame_config_path = output_dir / "frame_config.json"
+        with frame_config_path.open("wb") as f:
+            shutil.copyfileobj(frame_config_file.file, f)
 
     print("[individual/app] received school_name=", school_name)
     print("[individual/app] received year=", year)
@@ -292,6 +300,8 @@ async def run_individual(
             "max_backups": 0,
             "class_mapping": None,
             "no_roster_mode": roster_path is None,
+            "enable_face_offsets": frame_config_path is not None,
+            "frame_config_file": str(frame_config_path) if frame_config_path else None,
         },
     )
 
