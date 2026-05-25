@@ -275,8 +275,8 @@ class SnapPipeline:
         scored = self._score_representatives(reps)
         ordered = [r for r, _ in scored]
 
-        if not isinstance(best_shot_count, int) or best_shot_count < 1:
-            raise ValueError("best_shot_count must be a positive integer.")
+        if not isinstance(best_shot_count, int) or not 1 <= best_shot_count <= 200:
+            raise ValueError("best_shot_count must be an integer between 1 and 200.")
 
         final_count = min(best_shot_count, len(ordered))
         final = ordered[:final_count]
@@ -371,8 +371,8 @@ class SnapPipeline:
         output_dir: Path,
         best_shot_count: int = DEFAULT_BEST_SHOT_COUNT,
     ) -> PipelineResult:
-        if not isinstance(best_shot_count, int) or best_shot_count < 1:
-            raise ValueError("best_shot_count must be a positive integer.")
+        if not isinstance(best_shot_count, int) or not 1 <= best_shot_count <= 200:
+            raise ValueError("best_shot_count must be an integer between 1 and 200.")
         image_paths = self._collect_images(input_dir)
         records = self._load_records(image_paths)
         clusters = self._cluster_records(records)

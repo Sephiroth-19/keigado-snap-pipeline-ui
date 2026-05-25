@@ -32,7 +32,7 @@ class SnapPipelineSelectionTests(unittest.TestCase):
     def test_invalid_best_shot_count_raises_validation_error(self) -> None:
         pipeline = self._pipeline_with_ranked_scores()
 
-        for invalid_value in [0, -1, 1.5, "abc"]:
+        for invalid_value in [0, -1, 201, 1.5, "abc"]:
             with self.subTest(invalid_value=invalid_value):
                 with self.assertRaises(ValueError):
                     pipeline._select_buckets(list(range(40)), best_shot_count=invalid_value)  # type: ignore[arg-type]
