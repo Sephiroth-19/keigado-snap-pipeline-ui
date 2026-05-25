@@ -108,9 +108,16 @@ def _discover_event_dirs(input_root: Path) -> list[tuple[str, Path]]:
 def _parse_snap_best_shot_count(value: str | None) -> int:
     if value is None or value == "":
         return DEFAULT_BEST_SHOT_COUNT
-    if not re.fullmatch(r"[1-9]\d*", value.strip()):
-        raise HTTPException(status_code=400, detail="Best Shot Count must be a positive whole number.")
-    return int(value.strip())
+
+    raw = value.strip()
+    if not re.fullmatch(r"[1-9]\d*", raw):
+        raise HTTPException(status_code=400, detail="Best Shot Count must be an integer between 1 and 200.")
+
+    parsed = int(raw)
+    if parsed > 200:
+        raise HTTPException(status_code=400, detail="Best Shot Count must be an integer between 1 and 200.")
+
+    return parsed
 
 
 def _write_all_events_summary(output_root: Path, event_summaries: list[dict[str, Any]]) -> None:
