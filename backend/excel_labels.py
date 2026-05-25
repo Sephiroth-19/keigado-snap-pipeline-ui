@@ -87,6 +87,14 @@ CLUB_COLUMN_LABELS = {
     "obscured_penalty": "遮蔽減点",
     "ng_flag": "NG判定",
     "total_score": "総合スコア",
+    "beauty_score": "画質・見栄え",
+    "expression_score": "表情スコア",
+    "emotion_score": "雰囲気スコア",
+    "people_count_score": "人数スコア",
+    "gesture_expression_penalty": "ポーズ減点",
+    "short_comment": "コメント",
+    "is_ng": "NG判定",
+    "ng_reason": "NG理由",
 }
 
 TEACHER_SHEET_LABELS = {
@@ -214,6 +222,16 @@ REASON_DESCRIPTION_LABELS = {
     "face mismatch": "顔不一致",
     "name mismatch": "氏名不一致",
     "subject mismatch": "教科不一致",
+    "Well-organized": "整列・構図が良好",
+    "Well-composed": "構図が良好",
+    "Bright": "明るさが良好",
+    "energetic": "活気がある",
+    "obscene": "不適切なポーズ",
+    "middle finger": "中指を立てている",
+    "true": "はい",
+    "false": "いいえ",
+    "True": "はい",
+    "False": "いいえ",
 }
 
 
@@ -229,6 +247,8 @@ def excel_label(value: str) -> str:
 
 
 def translate_display_value(value):
+    if isinstance(value, bool):
+        return "はい" if value else "いいえ"
     if isinstance(value, str):
         out = value
         for src, dst in REASON_DESCRIPTION_LABELS.items():
