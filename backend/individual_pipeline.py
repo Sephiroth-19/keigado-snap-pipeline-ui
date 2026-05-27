@@ -26,6 +26,7 @@ from backend.individual.error_handling import (
     write_error_log_csv,
 )
 from backend.individual.package_exporter import export_all_classes
+from backend.individual.face_offset_calculator import process_manifest_offsets
 
 
 
@@ -392,6 +393,8 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
         if len(YEAR) == 4 and YEAR.isdigit():
             YEAR = YEAR[-2:]
         SCORING = options.get("scoring", "local")
+        enable_face_offsets = bool(options.get("enable_face_offsets", False))
+        frame_config_file_opt = options.get("frame_config_file")
         MAX_BACKUPS = int(options.get("max_backups", 0))
         CLASS_MAPPING = options.get("class_mapping")
         OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -548,8 +551,25 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
             max_backups=MAX_BACKUPS,
         )
         copied_error_files = export_error_items(hard_error_queue, out)
+        manifest_path = out / "manifest.json"
+        frame_config_path = Path(frame_config_file_opt) if frame_config_file_opt else (out / "frame_config.json")
+        frame_config_present = frame_config_path.exists()
+        face_offset_status = "disabled"
+        face_offset_error = None
+        if enable_face_offsets:
+            if not frame_config_present:
+                face_offset_status = "skipped_no_frame_config"
+            elif not manifest_path.exists():
+                face_offset_status = "error"
+                face_offset_error = "manifest.json not found"
+            else:
+                try:
+                    process_manifest_offsets(manifest_path=manifest_path, package_root=out)
+                    face_offset_status = "ok"
+                except Exception as e:
+                    face_offset_status = "error"
+                    face_offset_error = str(e)
         if no_roster_mode:
-            manifest_path = out / "manifest.json"
             if manifest_path.exists():
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
                 for class_id, class_data in (manifest.get("classes") or {}).items():
@@ -634,6 +654,9 @@ def run_individual_pipeline(photos_dir:str, output_dir:str, roster_file:str|None
             "card_label_ocr_accepted_count": len([d for d in card_ocr_debug if d.get("accepted")]),
             "card_label_ocr_rejected_count": len([d for d in card_ocr_debug if not d.get("accepted")]),
             "card_label_ocr_examples": [d for d in card_ocr_debug[:5]],
+            "face_offset_status": face_offset_status,
+            "face_offset_error": face_offset_error,
+            "frame_config_present": frame_config_present,
         }
         _safe_dump(out / "summary.json", summary)
         return summary
