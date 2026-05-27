@@ -49,8 +49,8 @@ def test_club_excel_labels_japanese(tmp_path: Path):
     out = run_club_pipeline(str(z), str(tmp_path / "out"))
     wb = load_workbook(out["excel_path"])
 
-    assert wb.sheetnames == ["サマリー", "目つぶり確認サマリー", "顔検出詳細", "ベストショット順位", "リネーム結果", "NG写真・要確認"]
-    assert [c.value for c in wb["リネーム結果"][1]] == ["部活動名", "元ファイル名", "リネーム後ファイル名", "撮影日", "順位"]
+    assert wb.sheetnames[:5] == ["サマリー", "リネーム結果", "ベストショット順位", "全評価", "NG写真・要確認"]
+    assert [c.value for c in wb["リネーム結果"][1]] == ["グループ番号", "部活動名", "順位", "元ファイル名", "元画像パス", "リネーム後ファイル名", "総合スコア"]
 
 
 def test_individual_error_log_csv_localized(tmp_path: Path):
@@ -106,11 +106,12 @@ def test_club_ranking_sheet_localized_values(tmp_path: Path):
     wb = load_workbook(out["excel_path"])
     ws = wb["ベストショット順位"]
     headers = [c.value for c in ws[1]]
-    assert "画質・見栄え" in headers
+    assert "整列・構図スコア" in headers
+    assert "画質・見栄えスコア" in headers
     assert "表情スコア" in headers
     assert "雰囲気スコア" in headers
     assert "人数スコア" in headers
-    assert "ポーズ減点" in headers
+    assert "ポーズ・表情減点" in headers
     assert "コメント" in headers
     assert "NG判定" in headers
     assert "NG理由" in headers

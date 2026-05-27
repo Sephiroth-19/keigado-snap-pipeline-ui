@@ -59,10 +59,12 @@ SNAP_BUCKET_LABELS = {
 
 CLUB_SHEET_LABELS = {
     "Summary": "サマリー",
+    "Rename Output": "リネーム結果",
+    "Best Shot Ranking": "ベストショット順位",
+    "All Evals": "全評価",
+    "NG Photos": "NG写真・要確認",
     "Eye Closure Summary": "目つぶり確認サマリー",
     "Face Detail": "顔検出詳細",
-    "Best Shot Ranking": "ベストショット順位",
-    "Rename Output": "リネーム結果",
 }
 
 CLUB_COLUMN_LABELS = {
@@ -95,6 +97,29 @@ CLUB_COLUMN_LABELS = {
     "short_comment": "コメント",
     "is_ng": "NG判定",
     "ng_reason": "NG理由",
+    "original_path": "元画像パス",
+    "group_index": "グループ番号",
+    "input_count": "入力枚数",
+    "ranked_count": "順位付け枚数",
+    "ng_count": "NG枚数",
+    "copied_count": "コピー枚数",
+    "best_file_name": "ベスト写真ファイル名",
+    "best_reason": "ベスト選定理由",
+    "copy_failures": "コピー失敗",
+    "original_file_name": "元ファイル名",
+    "new_file_name": "リネーム後ファイル名",
+    "formality_score": "整列・構図スコア",
+    "has_hand_gesture": "手のポーズあり",
+    "has_exaggerated_expression": "大げさな表情あり",
+    "eyes_closed": "目つぶり",
+    "face_obscured": "顔の遮蔽",
+    "subject_falling": "転倒・崩れ",
+    "eating_or_mouth_full": "飲食・口元不適切",
+    "strange_obscene_posing": "不適切なポーズ",
+    "bad_pose": "姿勢不良",
+    "visible_underwear": "下着写り込み",
+    "severe_framing_issue": "構図の重大問題",
+    "path": "画像パス",
 }
 
 TEACHER_SHEET_LABELS = {
@@ -217,6 +242,10 @@ REASON_DESCRIPTION_LABELS = {
     "processed": "処理済み",
     "no match": "一致なし",
     "low confidence": "信頼度低",
+    "no issue": "問題なし",
+    "no face detected": "顔検出なし",
+    "improper": "不適切",
+    "obscene/improper pose": "不適切なポーズ",
     "missing card": "札なし",
     "OCR failed": "OCR失敗",
     "face mismatch": "顔不一致",

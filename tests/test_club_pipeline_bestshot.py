@@ -33,6 +33,7 @@ def test_prompt_allows_thumbs_up_but_rejects_obscene_pose():
     prompt = PHOTO_EVAL_PROMPT.lower()
     assert "thumbs up is acceptable" in prompt
     assert "middle finger" in prompt
+    assert "ng_reason and short_comment values must be japanese" in prompt
 
 
 def test_ranked_marked_uses_marked_image_and_renamed_filename(tmp_path: Path, monkeypatch):
