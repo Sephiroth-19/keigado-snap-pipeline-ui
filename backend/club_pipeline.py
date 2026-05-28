@@ -45,18 +45,11 @@ Return STRICT JSON only.
 JSON keys must stay English.
 ng_reason and short_comment values MUST be Japanese.
 
-<<<<<<< codex/connect-face_offset_calculator-to-individual-workflow-tzcsdq
-Latest client pose rule override:
-- Thumbs up is acceptable and must NOT be NG.
-- Middle finger is NG.
-- Obscene/improper poses are NG.
-=======
 Important pose rule:
 - Thumbs up is acceptable and must NOT be treated as NG.
 - NG hand/pose examples: middle finger, obscene/improper gestures, sexual/improper posing.
 - JSON keys must remain English.
 - ng_reason and short_comment values MUST be Japanese.
->>>>>>> MayFourthWeek
 
 {
   "formality_score": 0-10,
@@ -76,13 +69,8 @@ Important pose rule:
   "severe_framing_issue": true|false,
   "gesture_expression_penalty": 0-5,
   "is_ng": true|false,
-<<<<<<< codex/connect-face_offset_calculator-to-individual-workflow-tzcsdq
-  "ng_reason": "日本語",
-  "short_comment": "日本語"
-=======
   "ng_reason": "日本語の短い理由",
   "short_comment": "日本語の短いコメント"
->>>>>>> MayFourthWeek
 }
 """.strip()
 
@@ -164,7 +152,6 @@ def _eval_photo(client: Any, image_path: Path, people_count: int) -> dict[str, A
         return {"is_ng": True, "ng_reason": f"評価エラー: {e}", "short_comment": "評価に失敗しました"}
 
 
-<<<<<<< codex/connect-face_offset_calculator-to-individual-workflow-tzcsdq
 def _ask_eye(client: Any, crop: np.ndarray) -> tuple[bool, bool, str]:
     h, w = crop.shape[:2]
     if client is None or w < GPT_MIN_FACE_PX or h < GPT_MIN_FACE_PX:
@@ -197,18 +184,6 @@ def _score(row: dict[str, Any]) -> float:
     )
     penalty = float(row.get("gesture_expression_penalty", 0))
     return round(s - penalty, 3)
-=======
-def _fallback_eval(person_count:int, closed_count:int)->dict[str,Any]:
-    return {"formality_score":max(0,8-closed_count),"beauty_score":7,"expression_score":max(0,8-closed_count),"emotion_score":7,"people_count_score":min(10, max(1,person_count)),"has_hand_gesture":False,"has_exaggerated_expression":False,"eyes_closed":closed_count>0,"face_obscured":person_count==0,"subject_falling":False,"eating_or_mouth_full":False,"strange_obscene_posing":False,"bad_pose":False,"visible_underwear":False,"severe_framing_issue":False,"gesture_expression_penalty":0,"is_ng":person_count==0,"ng_reason":"顔検出なし" if person_count==0 else "問題なし","short_comment":"自動評価（簡易）"}
-
-
-def _score(eval_data: dict[str, Any], closed_count: int)->tuple[float,bool,str]:
-    w = (float(eval_data.get("formality_score",0))*0.30 + float(eval_data.get("beauty_score",0))*0.25 + float(eval_data.get("expression_score",0))*0.15 + float(eval_data.get("emotion_score",0))*0.10 + float(eval_data.get("people_count_score",0))*0.20)
-    total = w - float(eval_data.get("gesture_expression_penalty",0)) - (closed_count*0.75)
-    ng = bool(eval_data.get("is_ng", False)) or bool(eval_data.get("eyes_closed", False) and closed_count>0) or bool(eval_data.get("strange_obscene_posing", False))
-    reason = str(eval_data.get("ng_reason", ""))
-    return round(total,3), ng, reason
->>>>>>> MayFourthWeek
 
 
 def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
@@ -229,7 +204,6 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
     face_app = None
     if FaceAnalysis is not None:
         try:
-<<<<<<< codex/connect-face_offset_calculator-to-individual-workflow-tzcsdq
             face_app = FaceAnalysis(name="buffalo_l", allowed_modules=["detection"], providers=["CPUExecutionProvider"])
             face_app.prepare(ctx_id=0, det_size=(640, 640), det_thresh=0.35)
         except Exception:
@@ -362,94 +336,3 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
     wb.save(excel_path)
     (club_out / "club_result.json").write_text(json.dumps({"summary": {"club_count": len(clubs), "photo_count": len(eval_rows)}}, ensure_ascii=False, indent=2), encoding="utf-8")
     return {"status": "completed", "summary": {"club_count": len(clubs), "photo_count": len(eval_rows)}, "excel_path": str(excel_path), "json_path": str(club_out / "club_result.json"), "output_dir": str(club_out)}
-=======
-            face_app=FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"]); face_app.prepare(ctx_id=0, det_size=(640, 640))
-        except Exception: face_app=None
-    client=_get_client(); results=[]
-    marked_outputs: dict[tuple[str, str], Path] = {}
-    for club,images in clubs.items():
-        for p in images:
-            img=cv2.imread(str(p));
-            if img is None: continue
-            pc,cc,fd,vis=_analyze_faces(img,face_app)
-            (marked/club).mkdir(parents=True,exist_ok=True); (clean/club).mkdir(parents=True,exist_ok=True)
-            marked_path = marked / club / p.name
-            clean_path = clean / club / p.name
-            cv2.imwrite(str(marked_path), vis)
-            cv2.imwrite(str(clean_path), img)
-            marked_outputs[(club, p.name)] = marked_path
-            ev=_evaluate_with_gpt(client,p,pc) if client else None
-            if not ev: ev=_fallback_eval(pc,cc)
-            total,ng,reason=_score(ev,cc)
-            results.append(ClubImageResult(club,p,_shooting_date(p),pc,cc>0,cc,fd,ev,ng,reason,total))
-    by={}
-    for r in results: by.setdefault(r.club_name,[]).append(r)
-    summary_rows = []
-    rename_rows = []
-    for group_index, (club,rows) in enumerate(by.items(), 1):
-        rows.sort(key=lambda x:(x.ng_flag,-x.total_score))
-        copied_count = 0
-        copy_failures = 0
-        for i,r in enumerate(rows,1):
-            r.rank=i; r.renamed=f"{club}_{r.shooting_date}_{r.path.stem}_{RANK_TOKEN}{i:02d}{r.path.suffix.lower()}"
-            (ranked/club).mkdir(parents=True,exist_ok=True); (ranked_marked/club).mkdir(parents=True,exist_ok=True)
-            try:
-                shutil.copy2(clean / club / r.path.name, ranked / club / r.renamed); copied_count += 1
-            except Exception:
-                copy_failures += 1
-            marked_source = marked_outputs.get((club, r.path.name), marked / club / r.path.name)
-            try:
-                shutil.copy2(marked_source, ranked_marked / club / r.renamed)
-            except Exception:
-                copy_failures += 1
-            if r.ng_flag:
-                (ng_root/club).mkdir(parents=True,exist_ok=True); shutil.copy2(clean/club/r.path.name, ng_root/club/r.path.name)
-            rename_rows.append({
-                "group_index": group_index, "club": club, "rank": r.rank, "original_file_name": r.path.name,
-                "original_path": str(r.path), "new_file_name": r.renamed, "total_score": r.total_score
-            })
-        best = rows[0] if rows else None
-        summary_rows.append({
-            "group_index": group_index, "club": club, "input_count": len(rows), "ranked_count": len(rows),
-            "ng_count": len([x for x in rows if x.ng_flag]), "copied_count": copied_count,
-            "best_file_name": best.path.name if best else "", "best_reason": translate_display_value((best.eval_data or {}).get("short_comment", "")) if best else "", "copy_failures": copy_failures
-        })
-
-    excel=club_out/"club_result.xlsx"; jsonp=club_out/"club_result.json"
-    wb=Workbook(); ws=wb.active; ws.title=CLUB_SHEET_LABELS["Summary"]
-    ws.append([excel_label(k) for k in ["group_index","club","input_count","ranked_count","ng_count","copied_count","best_file_name","best_reason","copy_failures"]])
-    for row in summary_rows:
-        ws.append([translate_display_value(row.get(k)) for k in ["group_index","club","input_count","ranked_count","ng_count","copied_count","best_file_name","best_reason","copy_failures"]])
-    nws=wb.create_sheet(CLUB_SHEET_LABELS["Rename Output"])
-    nws.append([excel_label(k) for k in ["group_index","club","rank","original_file_name","original_path","new_file_name","total_score"]])
-    for row in rename_rows:
-        nws.append([translate_display_value(row.get(k)) for k in ["group_index","club","rank","original_file_name","original_path","new_file_name","total_score"]])
-    rws=wb.create_sheet(CLUB_SHEET_LABELS["Best Shot Ranking"])
-    ranking_cols = ["formality_score","beauty_score","expression_score","emotion_score","people_count_score","has_hand_gesture","has_exaggerated_expression","eyes_closed","face_obscured","subject_falling","eating_or_mouth_full","strange_obscene_posing","bad_pose","visible_underwear","severe_framing_issue","gesture_expression_penalty","is_ng","ng_reason","short_comment","file_name","path","group_index","total_score","rank"]
-    rws.append([excel_label(c) for c in ranking_cols])
-    for r in sorted(results,key=lambda x:(x.club_name,x.rank)):
-        ev=r.eval_data
-        group_index = list(by.keys()).index(r.club_name) + 1
-        row = [ev.get("formality_score"),ev.get("beauty_score"),ev.get("expression_score"),ev.get("emotion_score"),ev.get("people_count_score"),ev.get("has_hand_gesture"),ev.get("has_exaggerated_expression"),ev.get("eyes_closed"),ev.get("face_obscured"),ev.get("subject_falling"),ev.get("eating_or_mouth_full"),ev.get("strange_obscene_posing"),ev.get("bad_pose"),ev.get("visible_underwear"),ev.get("severe_framing_issue"),ev.get("gesture_expression_penalty"),r.ng_flag,r.ng_reason,ev.get("short_comment"),r.path.name,str(r.path),group_index,r.total_score,r.rank]
-        rws.append([translate_display_value(v) for v in row])
-    aws=wb.create_sheet(CLUB_SHEET_LABELS["All Evals"])
-    aws.append([excel_label(c) for c in ranking_cols])
-    for row in rws.iter_rows(min_row=2, values_only=True):
-        aws.append(list(row))
-    ngs=wb.create_sheet(CLUB_SHEET_LABELS["NG Photos"])
-    ngs.append([excel_label(c) for c in ranking_cols])
-    for r in sorted(results,key=lambda x:(x.club_name,x.rank)):
-        if r.ng_flag:
-            ev = r.eval_data
-            group_index = list(by.keys()).index(r.club_name) + 1
-            row = [ev.get("formality_score"),ev.get("beauty_score"),ev.get("expression_score"),ev.get("emotion_score"),ev.get("people_count_score"),ev.get("has_hand_gesture"),ev.get("has_exaggerated_expression"),ev.get("eyes_closed"),ev.get("face_obscured"),ev.get("subject_falling"),ev.get("eating_or_mouth_full"),ev.get("strange_obscene_posing"),ev.get("bad_pose"),ev.get("visible_underwear"),ev.get("severe_framing_issue"),ev.get("gesture_expression_penalty"),r.ng_flag,r.ng_reason,ev.get("short_comment"),r.path.name,str(r.path),group_index,r.total_score,r.rank]
-            ngs.append([translate_display_value(v) for v in row])
-    ews=wb.create_sheet(CLUB_SHEET_LABELS["Eye Closure Summary"]); ews.append([excel_label("club"),excel_label("file_name"),excel_label("person_count"),excel_label("closed_eye_faces"),excel_label("eyes_closed_photo")])
-    for r in results: ews.append([r.club_name,r.path.name,r.person_count,r.closed_eye_face_count,translate_display_value(r.eyes_closed_photo)])
-    fws=wb.create_sheet(CLUB_SHEET_LABELS["Face Detail"]); fws.append([excel_label("club"),excel_label("file_name"),excel_label("face_index"),excel_label("bbox"),excel_label("left_eye_ratio"),excel_label("right_eye_ratio"),excel_label("eye_closed")])
-    for r in results:
-        for f in r.face_details: fws.append([r.club_name,r.path.name,f.face_index,str(f.bbox),f.left_eye_ratio,f.right_eye_ratio,translate_display_value(f.eye_closed)])
-    wb.save(excel)
-    jsonp.write_text(json.dumps({"summary":{"club_count":len(by),"photo_count":len(results)},"items":[{"club_name":r.club_name,"original_file":r.path.name,"rank":r.rank,"renamed_file":r.renamed,"ng_flag":r.ng_flag,"ng_reason":r.ng_reason,"total_score":r.total_score,"evaluation":r.eval_data} for r in sorted(results,key=lambda x:(x.club_name,x.rank))]},ensure_ascii=False,indent=2),encoding="utf-8")
-    return {"status":"completed","summary":{"club_count":len(by),"photo_count":len(results)},"excel_path":str(excel),"json_path":str(jsonp),"output_dir":str(club_out)}
->>>>>>> MayFourthWeek
