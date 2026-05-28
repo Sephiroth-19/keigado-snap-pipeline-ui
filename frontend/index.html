@@ -1656,5 +1656,53 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
 
 
 
+
+<script>
+// ===== Shared PhotoReviewModal for Individual / Teacher =====
+(function(){
+  const state={isOpen:false,photos:[],currentIndex:0,zoomLevel:1,workflowType:'individual'};
+  function esc(v){return String(v??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
+  function actions(photo){
+    const list=[];const t=state.workflowType;
+    if(t==='individual'){list.push(['確定',()=>toast('確定しました')],['編集/手動補正',()=>toast('手動補正パネルを開きます')],['除外',()=>toast('除外しました')]);if((photo.status||'').includes('エラー'))list.push(['解決済みにする',()=>toast('解決済みにしました')]);}
+    else {list.push(['先生一致を確定',()=>toast('先生一致を確定しました')],['先生名/教科を編集',()=>toast('編集パネルを開きます')],['未一致/不明にする',()=>toast('未一致にしました')],['除外',()=>toast('除外しました')]);if((photo.note||'').includes('BestShot')||(photo.status||'').includes('候補'))list.push(['Best Shotに選択',()=>toast('Best Shotに選択しました')]);}
+    return list;
+  }
+  function render(){
+    const modal=document.getElementById('photoReviewModal'); if(!modal) return;
+    if(!state.isOpen||!state.photos.length){modal.classList.remove('on');return;}
+    modal.classList.add('on'); const ph=state.photos[state.currentIndex]||{};
+    document.getElementById('prm-title').textContent=`${state.workflowType==='teacher'?'先生写真':'個人写真'}レビュー`;
+    document.getElementById('prm-file').textContent=ph.file||'ファイル名なし';
+    document.getElementById('prm-meta').innerHTML=`<span class="badge b-info">${state.workflowType==='teacher'?'Teacher Photo':'Individual Photo'}</span> ${ph.status?`<span class="badge b-warn">${esc(ph.status)}</span>`:''} ${ph.person?`<span class="badge b-blue">${esc(ph.person)}</span>`:''}`;
+    document.getElementById('prm-idx').textContent=`${state.currentIndex+1} / ${state.photos.length}`;
+    const img=document.getElementById('prm-img'); const miss=document.getElementById('prm-missing');
+    img.style.transform=`scale(${state.zoomLevel})`;
+    if(ph.imageUrl){img.src=ph.imageUrl;img.style.display='block';miss.style.display='none';}
+    else {img.removeAttribute('src');img.style.display='none';miss.style.display='flex';}
+    document.getElementById('prm-actions').innerHTML=actions(ph).map((a,i)=>`<button class="btn btn-sm ${i===0?'btn-primary':'btn-ghost'}" data-i="${i}">${a[0]}</button>`).join(' ');
+    [...document.querySelectorAll('#prm-actions button')].forEach(b=>b.onclick=()=>actions(ph)[Number(b.dataset.i)][1]());
+  }
+  window.openPhotoReviewModal=function({photos,index,workflowType}){state.isOpen=true;state.photos=photos||[];state.currentIndex=index||0;state.zoomLevel=1;state.workflowType=workflowType||'individual';render();};
+  window.closePhotoReviewModal=function(){state.isOpen=false;render();};
+  window.prmPrev=function(){if(!state.photos.length)return;state.currentIndex=(state.currentIndex-1+state.photos.length)%state.photos.length;state.zoomLevel=1;render();};
+  window.prmNext=function(){if(!state.photos.length)return;state.currentIndex=(state.currentIndex+1)%state.photos.length;state.zoomLevel=1;render();};
+  window.prmZoom=function(delta){state.zoomLevel=Math.max(0.5,Math.min(3,state.zoomLevel+delta));render();};
+  window.prmReset=function(){state.zoomLevel=1;render();};
+  document.addEventListener('keydown',e=>{if(!state.isOpen)return; if(e.key==='Escape')closePhotoReviewModal(); if(e.key==='ArrowLeft')prmPrev(); if(e.key==='ArrowRight')prmNext();});
+  const m=document.createElement('div');m.id='photoReviewModal';m.className='prm';m.innerHTML=`<div class="prm-bg" onclick="closePhotoReviewModal()"></div><div class="prm-box"><div class="prm-head"><strong id="prm-title"></strong><button class="btn btn-ghost btn-sm" onclick="closePhotoReviewModal()">閉じる</button></div><div class="card-sub" id="prm-file"></div><div id="prm-meta" class="btn-row" style="margin-top:6px"></div><div class="prm-view"><img id="prm-img" alt="review"><div id="prm-missing" class="photo-card">画像パス未設定<br><span class="mono">TODO: backend image URL連携</span></div></div><div class="btn-row"><button class="btn btn-ghost btn-sm" onclick="prmPrev()">← 前へ</button><button class="btn btn-ghost btn-sm" onclick="prmNext()">次へ →</button><span id="prm-idx" class="badge b-gray"></span><button class="btn btn-ghost btn-sm" onclick="prmZoom(0.2)">拡大</button><button class="btn btn-ghost btn-sm" onclick="prmZoom(-0.2)">縮小</button><button class="btn btn-ghost btn-sm" onclick="prmReset()">リセット</button></div><div class="btn-row" id="prm-actions"></div></div>`;
+  document.body.appendChild(m);
+  const st=document.createElement('style');st.textContent=`.prm{display:none;position:fixed;inset:0;z-index:1200}.prm.on{display:block}.prm-bg{position:absolute;inset:0;background:rgba(15,27,48,.65)}.prm-box{position:relative;background:#fff;width:min(1100px,94vw);max-height:92vh;overflow:auto;margin:3vh auto;border-radius:12px;padding:14px}.prm-head{display:flex;justify-content:space-between;align-items:center}.prm-view{margin-top:10px;height:58vh;min-height:300px;border:1px solid var(--border);border-radius:10px;background:var(--g50);display:flex;align-items:center;justify-content:center;overflow:auto}.prm-view img{max-width:100%;max-height:100%;transition:transform .15s;transform-origin:center center}`;document.head.appendChild(st);
+
+  const oldInd=window.individualReviewBody;
+  window.individualReviewBody=function(){const html=oldInd();const photos=(selectedIndividualClass==='all'?['3A','3B']:[selectedIndividualClass]).flatMap(id=>individualClassData[id].rows.map(r=>({file:r[0],status:r[3],person:`${individualClassData[id].label} / ${r[1]}`,note:r[4],imageUrl:''})));
+    return html.replace(/<td class="mono">([^<]+)<\/td>/g,(m,f)=>`<td class="mono"><button class="btn btn-ghost btn-sm" onclick='openPhotoReviewModal({photos:${JSON.stringify(photos)},index:${photos.findIndex(x=>x.file===f)},workflowType:"individual"})'>${f}</button></td>`);
+  }
+  const oldTeach=window.editReviewBody;
+  window.editReviewBody=function(kind,icon){const html=oldTeach(kind,icon);if(kind!=='teacher')return html;const photos=[{file:'T_009.jpg',status:'unmatched',person:'国語科 / 高橋次郎',note:'PDF未照合',imageUrl:''},{file:'IMG0165.jpg',status:'OK',person:'国語科 / 高橋次郎',note:'BestShot第1候補',imageUrl:''},{file:'IMG0166.jpg',status:'OK',person:'国語科 / 高橋次郎',note:'BestShot第2候補',imageUrl:''}];
+    return html.replace(/<td class="mono">([^<]+)<\/td>/g,(m,f)=>`<td class="mono"><button class="btn btn-ghost btn-sm" onclick='openPhotoReviewModal({photos:${JSON.stringify(photos)},index:${Math.max(0,photos.findIndex(x=>x.file===f))},workflowType:"teacher"})'>${f}</button></td>`);
+  }
+})();
+</script>
 </body>
 </html>
