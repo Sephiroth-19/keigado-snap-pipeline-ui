@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from backend.teacher_jobs import router as teacher_router
 from openpyxl import Workbook
 from backend.excel_labels import SNAP_SHEET_LABELS, excel_label
+from backend.preview_images import image_media_type, list_preview_images, safe_resolve_preview_path
 
 from backend.snap_pipeline import DEFAULT_BEST_SHOT_COUNT, SnapPipeline
 from backend.club_pipeline import run_club_pipeline
@@ -326,6 +327,24 @@ def get_individual_result(job_id: str) -> dict[str, Any]:
     if not manifest.exists():
         raise HTTPException(status_code=404, detail="manifest not found")
     return json.loads(manifest.read_text(encoding="utf-8"))
+
+
+@app.get("/api/individual/{job_id}/preview-images")
+def get_individual_preview_images(job_id: str) -> dict[str, Any]:
+    output_dir = APP_STATE_DIR / "individual_jobs" / job_id / "output"
+    images = list_preview_images(
+        output_dir,
+        f"/api/individual/{job_id}/preview-image",
+        "Individual Photo",
+    )
+    return {"job_id": job_id, "count": len(images), "images": images}
+
+
+@app.get("/api/individual/{job_id}/preview-image")
+def get_individual_preview_image(job_id: str, path: str) -> FileResponse:
+    output_dir = APP_STATE_DIR / "individual_jobs" / job_id / "output"
+    image_path = safe_resolve_preview_path(output_dir, path)
+    return FileResponse(image_path, media_type=image_media_type(image_path), filename=image_path.name)
 
 
 @app.get("/api/individual/{job_id}/download")

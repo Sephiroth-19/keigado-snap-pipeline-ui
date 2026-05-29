@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from dotenv import load_dotenv
+from backend.preview_images import image_media_type, list_preview_images, safe_resolve_preview_path
 
 router = APIRouter(prefix='/api/teacher', tags=['teacher'])
 JOBS: dict[str, dict[str, Any]] = {}
@@ -95,6 +96,20 @@ def result(job_id: str):
     if job['status'] != 'completed':
         return JSONResponse(status_code=202, content={'job_id':job_id,'status':job['status'],'message':job.get('error','Job not completed')})
     return job['result']
+
+
+@router.get('/{job_id}/preview-images')
+def preview_images(job_id: str):
+    output_dir = TEACHER_ROOT / job_id / 'output'
+    images = list_preview_images(output_dir, f'/api/teacher/{job_id}/preview-image', 'Teacher Photo')
+    return {'job_id': job_id, 'count': len(images), 'images': images}
+
+@router.get('/{job_id}/preview-image')
+def preview_image(job_id: str, path: str):
+    output_dir = TEACHER_ROOT / job_id / 'output'
+    image_path = safe_resolve_preview_path(output_dir, path)
+    return FileResponse(image_path, media_type=image_media_type(image_path), filename=image_path.name)
+
 
 @router.get('/download/{job_id}')
 def download(job_id: str):
