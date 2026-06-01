@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from backend.teacher_jobs import router as teacher_router
 from openpyxl import Workbook
 from backend.excel_labels import SNAP_SHEET_LABELS, excel_label
+from backend.preview_images import image_media_type, list_preview_images, safe_resolve_preview_path
 
 from backend.snap_pipeline import DEFAULT_BEST_SHOT_COUNT, SnapPipeline
 from backend.club_pipeline import run_club_pipeline
@@ -108,9 +109,16 @@ def _discover_event_dirs(input_root: Path) -> list[tuple[str, Path]]:
 def _parse_snap_best_shot_count(value: str | None) -> int:
     if value is None or value == "":
         return DEFAULT_BEST_SHOT_COUNT
-    if not re.fullmatch(r"[1-9]\d*", value.strip()):
-        raise HTTPException(status_code=400, detail="Best Shot Count must be a positive whole number.")
-    return int(value.strip())
+
+    raw = value.strip()
+    if not re.fullmatch(r"[1-9]\d*", raw):
+        raise HTTPException(status_code=400, detail="Best Shot Count must be an integer between 1 and 200.")
+
+    parsed = int(raw)
+    if parsed > 200:
+        raise HTTPException(status_code=400, detail="Best Shot Count must be an integer between 1 and 200.")
+
+    return parsed
 
 
 def _write_all_events_summary(output_root: Path, event_summaries: list[dict[str, Any]]) -> None:
@@ -232,6 +240,7 @@ def download_outputs() -> FileResponse:
 async def run_individual(
     photos_zip: UploadFile = File(...),
     roster_file: UploadFile | None = File(default=None),
+    frame_config_file: UploadFile | None = File(default=None),
     school_name: str = Form(default=""),
     year: str = Form(default=""),
     scoring: str = Form(default="local"),
@@ -269,6 +278,13 @@ async def run_individual(
     roster_path = None
     if roster_file and roster_file.filename:
         roster_path = _save_upload(roster_file, roster_dir)
+    frame_config_path = None
+    if frame_config_file and frame_config_file.filename:
+        if not frame_config_file.filename.lower().endswith(".json"):
+            raise HTTPException(status_code=400, detail="frame_config_file must be .json")
+        frame_config_path = output_dir / "frame_config.json"
+        with frame_config_path.open("wb") as f:
+            shutil.copyfileobj(frame_config_file.file, f)
 
     print("[individual/app] received school_name=", school_name)
     print("[individual/app] received year=", year)
@@ -285,6 +301,8 @@ async def run_individual(
             "max_backups": 0,
             "class_mapping": None,
             "no_roster_mode": roster_path is None,
+            "enable_face_offsets": frame_config_path is not None,
+            "frame_config_file": str(frame_config_path) if frame_config_path else None,
         },
     )
 
@@ -309,6 +327,24 @@ def get_individual_result(job_id: str) -> dict[str, Any]:
     if not manifest.exists():
         raise HTTPException(status_code=404, detail="manifest not found")
     return json.loads(manifest.read_text(encoding="utf-8"))
+
+
+@app.get("/api/individual/{job_id}/preview-images")
+def get_individual_preview_images(job_id: str) -> dict[str, Any]:
+    output_dir = APP_STATE_DIR / "individual_jobs" / job_id / "output"
+    images = list_preview_images(
+        output_dir,
+        f"/api/individual/{job_id}/preview-image",
+        "Individual Photo",
+    )
+    return {"job_id": job_id, "count": len(images), "images": images}
+
+
+@app.get("/api/individual/{job_id}/preview-image")
+def get_individual_preview_image(job_id: str, path: str) -> FileResponse:
+    output_dir = APP_STATE_DIR / "individual_jobs" / job_id / "output"
+    image_path = safe_resolve_preview_path(output_dir, path)
+    return FileResponse(image_path, media_type=image_media_type(image_path), filename=image_path.name)
 
 
 @app.get("/api/individual/{job_id}/download")
