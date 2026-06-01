@@ -4416,35 +4416,8 @@ TEACHER_EYE_DIST_OVERRIDE = None  # was 0.28 — teacher was hitting 144% and cr
 # Faces too large               Decrease TARGET_EYE_DIST (e.g. 0.20)
 # Always at max/min scale       TARGET_EYE_DIST is too large/small — let it be None
 
-# ══════════════════════════════════════════════════════════════════
-# STAGE 4 RUN
-# ══════════════════════════════════════════════════════════════════
-
-print("=" * 60)
-print("STAGE 4: Computing face-aligned offsets  (v12)")
-print("=" * 60)
-
-manifest_file = OUTPUT_PATH / "manifest.json"
-print(f"  Manifest     : {manifest_file}")
-print(f"  Frame config : {OUTPUT_PATH / 'frame_config.json'}")
-
-face_results = process_manifest_offsets(
-    manifest_path=manifest_file,
-    package_root=OUTPUT_PATH,
-    target_cx=0.50,
-    teacher_target_cx=0.50,
-    target_chin_y_override=TARGET_CHIN_Y_OVERRIDE,
-    target_eye_dist_override=TARGET_EYE_DIST_OVERRIDE,
-    teacher_target_chin_y_override  = TEACHER_CHIN_Y_OVERRIDE,
-    teacher_target_eye_dist_override= TEACHER_EYE_DIST_OVERRIDE,
-    base_offset_x=FALLBACK_OFFSET_X,
-    base_offset_y=FALLBACK_OFFSET_Y,
-    base_scale=FALLBACK_SCALE_FACTOR,
-    frame_w_mm=OVERRIDE_FRAME_W_MM,
-    frame_h_mm=OVERRIDE_FRAME_H_MM,
-    teacher_frame_w_mm=OVERRIDE_TEACHER_FRAME_W_MM,
-    teacher_frame_h_mm=OVERRIDE_TEACHER_FRAME_H_MM,
-)
+# Stage 4 is executed after roster parsing, photo grouping/scoring, and export.
+# Do not run offsets here: manifest.json does not exist until Stage 3 completes.
 
 """---
 ## 🚀 Run the Pipeline
@@ -6158,16 +6131,17 @@ inside the template frame.
 
 # ── Target face position ratios (same for all layouts) ────────────────
 # These are RATIOS, not mm — they work regardless of frame size.
+# Latest Module 6 reads guide ratios from frame_config.json; overrides below
+# should normally stay None so Menna's v10/v12 formulas drive placement.
 TARGET_FACE_CENTER_X = 0.50   # 0.0=left edge, 1.0=right edge  (keep 0.50 = centred)
-TARGET_CHIN_Y        = 1.06   # 0.0=top, 1.0=bottom of frame   (tune if heads too high/low)
-TARGET_EYE_DIST      = 0.22   # eye span as fraction of frame width  (tune if faces too small/large)
+TARGET_CHIN_Y        = 0.62   # legacy tuning constant; not used unless override is set
+TARGET_EYE_DIST      = 0.260  # legacy fallback only; v12 derives scale from head span
 
 # ── Fallback offsets (used when face detection fails) ─────────────────
-# These should still match CONFIG.student.offsetX/Y/scaleFactor in the JSX.
-# Tip: after a successful run, update these to the median of detected offsets.
-FALLBACK_OFFSET_X     = -3.5
-FALLBACK_OFFSET_Y     = 12.0
-FALLBACK_SCALE_FACTOR = 127
+# These preserve the current JSX contract keys: offsetX, offsetY, scaleFactor.
+FALLBACK_OFFSET_X     = 0.0
+FALLBACK_OFFSET_Y     = 5.0
+FALLBACK_SCALE_FACTOR = 130
 
 # ── Optional: hard-override frame sizes (leave as None to use frame_config.json) ──
 # Set these only if you need to force a specific size, e.g. for testing.
@@ -6192,7 +6166,7 @@ TEACHER_EYE_DIST_OVERRIDE = None
 # Wrong frame size in output    Re-run ExportFrameDimensions.jsx on the template
 
 print("=" * 60)
-print("STAGE 4: Computing face-aligned offsets")
+print("STAGE 4: Computing face-aligned offsets  (v12)")
 print("=" * 60)
 
 manifest_file = OUTPUT_PATH / "manifest.json"
@@ -6219,6 +6193,10 @@ face_results = process_manifest_offsets(
     base_offset_x=FALLBACK_OFFSET_X,
     base_offset_y=FALLBACK_OFFSET_Y,
     base_scale=FALLBACK_SCALE_FACTOR,
+    frame_w_mm=OVERRIDE_FRAME_W_MM,
+    frame_h_mm=OVERRIDE_FRAME_H_MM,
+    teacher_frame_w_mm=OVERRIDE_TEACHER_FRAME_W_MM,
+    teacher_frame_h_mm=OVERRIDE_TEACHER_FRAME_H_MM,
 )
 
 """## ✅ Summary"""
