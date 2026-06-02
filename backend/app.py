@@ -121,6 +121,28 @@ def _parse_snap_best_shot_count(value: str | None) -> int:
     return parsed
 
 
+SNAP_PREVIEW_CATEGORIES = {"BestShot", "Passing", "NG", "Similarity Groups", "ranked_photos", "output"}
+
+
+def _enrich_snap_preview_images(images: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Add Snap-specific metadata inferred from output-relative paths."""
+    enriched: list[dict[str, str]] = []
+    for image in images:
+        item = dict(image)
+        parts = [part for part in item.get("relative_path", "").split("/") if part]
+        if parts:
+            item["event_name"] = parts[0]
+
+        category = "output"
+        for part in parts:
+            if part in SNAP_PREVIEW_CATEGORIES:
+                category = part
+                break
+        item["category"] = category
+        enriched.append(item)
+    return enriched
+
+
 def _write_all_events_summary(output_root: Path, event_summaries: list[dict[str, Any]]) -> None:
     (output_root / "all_events_summary.json").write_text(
         json.dumps(event_summaries, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -232,6 +254,21 @@ def download_outputs() -> FileResponse:
     return FileResponse(latest_zip_path, media_type="application/zip", filename="snap_outputs.zip")
 
 
+@app.get("/api/snap/preview-images")
+def get_snap_preview_images() -> dict[str, Any]:
+    images = list_preview_images(
+        OUTPUT_DIR,
+        "/api/snap/preview-image",
+        "Snap Photo",
+    )
+    images = _enrich_snap_preview_images(images)
+    return {"job_id": "latest", "count": len(images), "images": images}
+
+
+@app.get("/api/snap/preview-image")
+def get_snap_preview_image(path: str) -> FileResponse:
+    image_path = safe_resolve_preview_path(OUTPUT_DIR, path)
+    return FileResponse(image_path, media_type=image_media_type(image_path), filename=image_path.name)
 
 
 
