@@ -1660,23 +1660,67 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
 <script>
 // ===== Output image preview integration for Individual / Teacher / Snap =====
 (function(){
-  const state={individual:{loading:false,loaded:false,error:'',images:[]},teacher:{loading:false,loaded:false,error:'',images:[]},snap:{loading:false,loaded:false,error:'',images:[]}};
+  const state={
+    individual:{loading:false,loaded:false,error:'',images:[]},
+    teacher:{loading:false,loaded:false,error:'',images:[]},
+    snap:{loading:false,loaded:false,error:'',images:[],counts:{},mode:'final',selectedCategory:'bestshot'}
+  };
   const noImagesMessage='プレビュー可能な画像が見つかりませんでした。output.zip を確認してください。';
   const snapNoImagesMessage='プレビュー可能なスナップ写真が見つかりませんでした。先にAI処理を実行するか、output.zip を確認してください。';
+  const snapEmptyCategoryMessage='このカテゴリにはプレビュー可能な写真がありません。';
+  const snapCategoryLabels={bestshot:'BestShot',passing:'Passing',ng:'NG',similarity:'類似グループ',candidates:'候補写真',output:'その他',all:'すべて'};
+  const snapCategoryButtons={bestshot:'BestShotを確認',passing:'Passingを確認',ng:'NGを確認',similarity:'類似グループを確認',candidates:'候補写真を確認',all:'すべてを確認'};
+  const snapModeTitles={final:'最終結果（BestShot / Passing / NG）',similarity:'類似グループ',candidates:'候補写真',all:'すべて'};
   function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
   function label(kind){return kind==='teacher'?'Teacher Photo':kind==='snap'?'Snap Photo':'Individual Photo';}
-  function endpoint(kind,jobId){return kind==='snap'?'/api/snap/preview-images':`/api/${kind}/${encodeURIComponent(jobId)}/preview-images`;}
+  function endpoint(kind,jobId,mode){return kind==='snap'?`/api/snap/preview-images?mode=${encodeURIComponent(mode||'final')}`:`/api/${kind}/${encodeURIComponent(jobId)}/preview-images`;}
   function containerId(kind){return `${kind}-photo-preview-list`;}
+  function snapModeCategories(mode){
+    if(mode==='final')return ['bestshot','passing','ng'];
+    if(mode==='similarity')return ['similarity'];
+    if(mode==='candidates')return ['candidates'];
+    const keys=['bestshot','passing','ng','similarity','candidates','output'].filter(k=>(state.snap.counts?.[k]||0)>0);
+    return ['all',...(keys.length?keys:['bestshot','passing','ng'])];
+  }
+  function snapImagesFor(category){
+    const images=state.snap.images||[];
+    if(category==='all')return images;
+    return images.filter(img=>(img.category_key||'output')===category);
+  }
+  function pickSnapCategory(st){
+    const categories=snapModeCategories(st.mode).filter(k=>k!=='all');
+    return categories.find(k=>(st.counts?.[k]||0)>0)||categories[0]||'bestshot';
+  }
+  function renderSnapList(){
+    const box=document.getElementById(containerId('snap'));
+    if(!box)return;
+    const st=state.snap;
+    if(st.loading){box.innerHTML='<div class="card-sub">プレビュー画像を読み込み中...</div>';return;}
+    if(st.error){box.innerHTML=`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(st.error)}</div></div>`;return;}
+    if(!st.loaded){box.innerHTML='<div class="card-sub">「出力写真を確認」を押すと最終結果（BestShot / Passing / NG）の画像一覧を読み込みます。</div>';return;}
+    if(!st.images.length){box.innerHTML=`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(snapNoImagesMessage)}</div></div>${snapAdvancedModeSelector()}`;return;}
+    const categories=snapModeCategories(st.mode);
+    if(!categories.includes(st.selectedCategory))st.selectedCategory=pickSnapCategory(st);
+    const selected=snapImagesFor(st.selectedCategory);
+    const cards=categories.map(key=>`<div class="event-tile ${st.selectedCategory===key?'on':''}" onclick="selectSnapPreviewCategory('${key}')"><div class="card-title">${esc(snapCategoryLabels[key]||key)}</div><div class="num">${key==='all'?st.images.length:(st.counts?.[key]||0)}</div><div class="card-sub">枚</div><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="event.stopPropagation();openSnapCategoryPreview('${key}',0)">${esc(snapCategoryButtons[key]||'確認')}</button></div>`).join('');
+    const rows=selected.length?`<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>File name</th><th>Relative path</th><th>Event</th><th>Category</th><th>Action</th></tr></thead><tbody>${selected.map((img,i)=>`<tr><td class="mono">${esc(img.file||img.name)}</td><td class="mono">${esc(img.relative_path||'')}</td><td>${esc(img.event_name||'')}</td><td>${esc(img.category||'')}</td><td><button class="btn btn-primary btn-sm" onclick="openSnapCategoryPreview('${st.selectedCategory}',${i})">大きく確認</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="alert a-warn" style="margin-top:12px"><span>⚠️</span><div>${snapEmptyCategoryMessage}</div></div>`;
+    box.innerHTML=`<div class="card-sub" style="margin-top:10px"><strong>${esc(snapModeTitles[st.mode]||'最終結果')}</strong></div><div class="event-summary-grid" style="margin-top:12px">${cards}</div>${rows}${snapAdvancedModeSelector()}`;
+  }
+  function snapAdvancedModeSelector(){
+    const st=state.snap;
+    const modes=[['final','最終結果'],['similarity','類似グループ'],['candidates','候補写真'],['all','すべて']];
+    return `<div class="divider"></div><div class="card-sub">詳細表示（通常は最終結果のみ確認してください）</div><div class="btn-row">${modes.map(([mode,text])=>`<button class="btn btn-sm ${st.mode===mode?'btn-primary':'btn-ghost'}" onclick="loadOutputPhotoPreview('snap','latest',0,{mode:'${mode}',open:false})">${text}</button>`).join('')}</div>`;
+  }
   function renderList(kind){
+    if(kind==='snap'){renderSnapList();return;}
     const box=document.getElementById(containerId(kind));
     if(!box)return;
     const st=state[kind];
     if(st.loading){box.innerHTML='<div class="card-sub">プレビュー画像を読み込み中...</div>';return;}
     if(st.error){box.innerHTML=`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(st.error)}</div></div>`;return;}
     if(!st.loaded){box.innerHTML='<div class="card-sub">「出力写真を確認」を押すと画像一覧を読み込みます。</div>';return;}
-    if(!st.images.length){box.innerHTML=`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(kind==='snap'?snapNoImagesMessage:noImagesMessage)}</div></div>`;return;}
-    const metadataHeads=kind==='snap'?'<th>Event</th><th>Category</th>':'';
-    box.innerHTML=`<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>File name</th><th>Relative path</th>${metadataHeads}<th>Action</th></tr></thead><tbody>${st.images.map((img,i)=>`<tr><td class="mono">${esc(img.file||img.name)}</td><td class="mono">${esc(img.relative_path||'')}</td>${kind==='snap'?`<td>${esc(img.event_name||'')}</td><td>${esc(img.category||'')}</td>`:''}<td><button class="btn btn-primary btn-sm" onclick="openOutputPhotoPreview('${kind}',${i})">大きく確認</button></td></tr>`).join('')}</tbody></table></div>`;
+    if(!st.images.length){box.innerHTML=`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(noImagesMessage)}</div></div>`;return;}
+    box.innerHTML=`<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>File name</th><th>Relative path</th><th>Action</th></tr></thead><tbody>${st.images.map((img,i)=>`<tr><td class="mono">${esc(img.file||img.name)}</td><td class="mono">${esc(img.relative_path||'')}</td><td><button class="btn btn-primary btn-sm" onclick="openOutputPhotoPreview('${kind}',${i})">大きく確認</button></td></tr>`).join('')}</tbody></table></div>`;
   }
   function normalizeImages(kind,images){
     return (images||[]).map(img=>({
@@ -1690,23 +1734,40 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
       workflowType:img.workflow_type||label(kind),
       event_name:img.event_name||'',
       category:img.category||'',
+      category_key:img.category_key||'output',
     }));
   }
-  window.loadOutputPhotoPreview=async function(kind,jobId,openIndex=0){
+  window.loadOutputPhotoPreview=async function(kind,jobId,openIndex=0,options={}){
     if(kind!=='snap'&&!jobId){window.safeToast?.('job_idがありません');return;}
     const st=state[kind];
+    const mode=kind==='snap'?(options.mode||st.mode||'final'):undefined;
     st.loading=true;st.error='';renderList(kind);
     try{
-      const res=await fetch(endpoint(kind,jobId));
+      const res=await fetch(endpoint(kind,jobId,mode));
       const data=await res.json().catch(()=>({}));
       if(!res.ok)throw new Error(data?.detail||'プレビュー画像の取得に失敗しました。');
       st.images=normalizeImages(kind,data.images||[]);
       st.loaded=true;
+      if(kind==='snap'){
+        st.mode=data.mode||mode||'final';
+        st.counts=data.counts||{};
+        st.selectedCategory=pickSnapCategory(st);
+      }
       if(!st.images.length){st.error='';renderList(kind);window.safeToast?.(kind==='snap'?snapNoImagesMessage:noImagesMessage);return;}
       renderList(kind);
-      window.openOutputPhotoPreview(kind,openIndex);
+      if(options.open===false)return;
+      if(kind==='snap')window.openSnapCategoryPreview(st.selectedCategory,openIndex);
+      else window.openOutputPhotoPreview(kind,openIndex);
     }catch(e){st.error=e?.message||'プレビュー画像の取得に失敗しました。';renderList(kind);}
     finally{st.loading=false;renderList(kind);}
+  };
+  window.selectSnapPreviewCategory=function(category){state.snap.selectedCategory=category;renderList('snap');};
+  window.openSnapCategoryPreview=function(category,index=0){
+    state.snap.selectedCategory=category;
+    const photos=snapImagesFor(category);
+    renderList('snap');
+    if(!photos.length){window.safeToast?.(snapEmptyCategoryMessage);return;}
+    openPhotoReviewModal({photos,index:Math.max(0,Math.min(index,photos.length-1)),workflowType:'snap'});
   };
   window.openOutputPhotoPreview=function(kind,index=0){
     const photos=state[kind]?.images||[];
