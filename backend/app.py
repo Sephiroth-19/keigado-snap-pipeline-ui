@@ -121,6 +121,63 @@ def _parse_snap_best_shot_count(value: str | None) -> int:
     return parsed
 
 
+SNAP_PREVIEW_CATEGORY_MAP = {
+    "final_selected": ("BestShot", "bestshot"),
+    "other_passing": ("Passing", "passing"),
+    "ng_photos": ("NG", "ng"),
+    "similarity_clusters": ("Similarity Group", "similarity"),
+    "dedup_candidates": ("Dedup Candidate", "candidates"),
+}
+SNAP_PREVIEW_MODE_KEYS = {
+    "final": {"bestshot", "passing", "ng"},
+    "similarity": {"similarity"},
+    "candidates": {"candidates"},
+    "all": None,
+}
+
+
+def _snap_preview_category(parts: list[str]) -> tuple[str, str]:
+    for part in parts:
+        if part in SNAP_PREVIEW_CATEGORY_MAP:
+            return SNAP_PREVIEW_CATEGORY_MAP[part]
+    return "output", "output"
+
+
+def _snap_preview_event_name(parts: list[str]) -> str:
+    if not parts:
+        return ""
+    first = parts[0]
+    return "" if first in SNAP_PREVIEW_CATEGORY_MAP else first
+
+
+def _enrich_snap_preview_images(images: list[dict[str, str]], mode: str) -> list[dict[str, str]]:
+    """Add Snap-specific metadata and filter by requested preview mode."""
+    allowed_keys = SNAP_PREVIEW_MODE_KEYS[mode]
+    enriched: list[dict[str, str]] = []
+    for image in images:
+        item = dict(image)
+        parts = [part for part in item.get("relative_path", "").split("/") if part]
+        category, category_key = _snap_preview_category(parts)
+        if allowed_keys is not None and category_key not in allowed_keys:
+            continue
+
+        event_name = _snap_preview_event_name(parts)
+        if event_name:
+            item["event_name"] = event_name
+        item["category"] = category
+        item["category_key"] = category_key
+        enriched.append(item)
+    return enriched
+
+
+def _snap_preview_counts(images: list[dict[str, str]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for image in images:
+        key = image.get("category_key", "output")
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
 def _write_all_events_summary(output_root: Path, event_summaries: list[dict[str, Any]]) -> None:
     (output_root / "all_events_summary.json").write_text(
         json.dumps(event_summaries, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -232,6 +289,24 @@ def download_outputs() -> FileResponse:
     return FileResponse(latest_zip_path, media_type="application/zip", filename="snap_outputs.zip")
 
 
+@app.get("/api/snap/preview-images")
+def get_snap_preview_images(mode: str = "final") -> dict[str, Any]:
+    if mode not in SNAP_PREVIEW_MODE_KEYS:
+        raise HTTPException(status_code=400, detail="mode must be one of: final, similarity, candidates, all")
+
+    images = list_preview_images(
+        OUTPUT_DIR,
+        "/api/snap/preview-image",
+        "Snap Photo",
+    )
+    images = _enrich_snap_preview_images(images, mode)
+    return {"job_id": "latest", "mode": mode, "count": len(images), "counts": _snap_preview_counts(images), "images": images}
+
+
+@app.get("/api/snap/preview-image")
+def get_snap_preview_image(path: str) -> FileResponse:
+    image_path = safe_resolve_preview_path(OUTPUT_DIR, path)
+    return FileResponse(image_path, media_type=image_media_type(image_path), filename=image_path.name)
 
 
 

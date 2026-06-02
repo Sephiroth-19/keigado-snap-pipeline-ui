@@ -229,8 +229,8 @@ function renderSnapWorkflow(step){const sec=document.getElementById('sec-snap');
  if(step===0){body=`<div class="card"><div class="card-title">イベントフォルダアップロード</div><div class="card-sub">1つまたは複数のイベントフォルダをアップロードできます。結果もイベント別に分かれます。</div><div class="drop" style="margin-top:12px" onclick="toast('イベントフォルダを追加しました')">☁️ イベントフォルダを追加</div><div class="file-list"><div class="file-row"><span class="file-icon">📁</span><div class="file-info"><div class="file-name">運動会/</div><div class="file-meta">125枚 · event folder</div></div></div><div class="file-row"><span class="file-icon">📁</span><div class="file-info"><div class="file-name">修学旅行/</div><div class="file-meta">138枚 · event folder</div></div></div></div><div class="btn-row"><button class="btn btn-primary" onclick="renderSnapWorkflow(1);toast('イベント別AI処理を開始しました')">AI処理を開始</button></div></div>`;}
  else if(step===1){body=`<div class="card"><div class="alert a-blue"><span>📸</span><div><strong>AI処理結果：</strong>アップロードされたイベントごとに BestShot / Passing / NG / Similarity Groups / Excel を生成します。</div></div>${snapSummaryTable()}<div class="btn-row"><button class="btn btn-primary" onclick="renderSnapWorkflow(2)">イベント別結果を見る</button></div></div>`;}
  else if(step===2){body=`<div class="card"><div class="card-title">イベント別処理結果</div><div class="card-sub">イベントとフォルダを選ぶと、BestShot / Passing / NG / Similarity Groups / Excel の中身を確認できます。</div>${snapEventTiles()}<div id="snapEventPreview"></div><div class="btn-row"><button class="btn btn-primary" onclick="renderSnapWorkflow(3)">Final BestShot Reviewへ</button><button class="btn btn-success" onclick="downloadAllSnapResults()">全イベント結果をダウンロード</button></div></div>`;}
- else if(step===3){body=`<div class="card"><div class="card-title">Final BestShot Review / 最終選定</div><div class="card-sub">AIが選んだBestShot候補を確認し、PassingやNGから写真を追加・復活できます。</div>${snapEventTiles()}<div id="snapFinalReview"></div><div class="btn-row"><button class="btn btn-success" onclick="confirmFinalBestShot()">最終BestShotを確定</button><button class="btn btn-primary" onclick="renderSnapWorkflow(4)">Exportへ</button></div></div>`;}
- else{body=`<div class="card"><div class="alert a-ok"><span>✅</span><div><strong>スナップ写真のイベント別出力準備が完了しました。</strong><br>イベントごとのExcel・出力フォルダ、または全イベントまとめてダウンロードできます。</div></div>${snapEventTiles()}<div id="snapEventPreview"></div><div class="btn-row"><button class="btn btn-success" onclick="downloadSnapExcel(selectedSnapEvent)">このイベントのExcelをダウンロード</button><button class="btn btn-primary" onclick="downloadSnapFolder(selectedSnapEvent)">このイベントの出力フォルダをダウンロード</button><button class="btn btn-success" onclick="downloadAllSnapResults()">全イベント結果をダウンロード</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;}
+ else if(step===3){body=`<div class="card"><div class="card-title">Final BestShot Review / 最終選定</div><div class="card-sub">AIが選んだBestShot候補を確認し、PassingやNGから写真を追加・復活できます。</div>${snapEventTiles()}<div id="snapFinalReview"></div>${typeof photoPreviewSection==='function'?photoPreviewSection('snap','latest'):''}<div class="btn-row"><button class="btn btn-success" onclick="confirmFinalBestShot()">最終BestShotを確定</button><button class="btn btn-primary" onclick="renderSnapWorkflow(4)">Exportへ</button></div></div>`;}
+ else{body=`<div class="card"><div class="alert a-ok"><span>✅</span><div><strong>スナップ写真のイベント別出力準備が完了しました。</strong><br>イベントごとのExcel・出力フォルダ、または全イベントまとめてダウンロードできます。</div></div>${snapEventTiles()}<div id="snapEventPreview"></div>${typeof photoPreviewSection==='function'?photoPreviewSection('snap','latest'):''}<div class="btn-row"><button class="btn btn-success" onclick="downloadSnapExcel(selectedSnapEvent)">このイベントのExcelをダウンロード</button><button class="btn btn-primary" onclick="downloadSnapFolder(selectedSnapEvent)">このイベントの出力フォルダをダウンロード</button><button class="btn btn-success" onclick="downloadAllSnapResults()">全イベント結果をダウンロード</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;}
  sec.innerHTML=`<div class="alert a-info"><span>📸</span><div><strong>スナップ写真：</strong>イベントフォルダごとに処理し、出力もイベント別に分けて確認できます。</div></div><div class="wf-tabs">${tabs}</div>${body}`; if(step===2||step===4)setTimeout(()=>selectSnapEvent(selectedSnapEvent||'sports'),0); if(step===3)setTimeout(()=>renderSnapFinalReview(),0);}
 function snapSummaryTable(){return `<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Event</th><th>Uploaded</th><th>BestShot</th><th>Passing</th><th>NG</th><th>Similar Groups</th><th>Action</th></tr></thead><tbody>${snapEvents.map(e=>`<tr><td><strong>${e.name}</strong></td><td>${e.uploaded}</td><td><span class="badge b-ok">${e.best}</span></td><td>${e.passing}</td><td><span class="badge b-err">${e.ng}</span></td><td><span class="badge b-blue">${e.similar}</span></td><td><button class="btn btn-primary btn-sm" onclick="renderSnapWorkflow(2);setTimeout(()=>selectSnapEvent('${e.id}'),0)">View Result</button></td></tr>`).join('')}</tbody></table></div>`;}
 function snapEventTiles(){return `<div class="event-summary-grid">${snapEvents.map(e=>`<div class="event-tile ${selectedSnapEvent===e.id?'on':''}" id="snapTile-${e.id}" onclick="selectSnapEvent('${e.id}')"><div class="card-title">${e.name}</div><div class="card-sub">${e.uploaded}枚アップロード</div><div class="num">${e.best}</div><div class="card-sub">BestShot</div></div>`).join('')}</div>`;}
@@ -1658,22 +1658,68 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
 
 
 <script>
-// ===== Output image preview integration for Individual / Teacher =====
+// ===== Output image preview integration for Individual / Teacher / Snap =====
 (function(){
-  const state={individual:{loading:false,loaded:false,error:'',images:[]},teacher:{loading:false,loaded:false,error:'',images:[]}};
+  const state={
+    individual:{loading:false,loaded:false,error:'',images:[]},
+    teacher:{loading:false,loaded:false,error:'',images:[]},
+    snap:{loading:false,loaded:false,error:'',images:[],counts:{},mode:'final',selectedCategory:'bestshot'}
+  };
   const noImagesMessage='プレビュー可能な画像が見つかりませんでした。output.zip を確認してください。';
+  const snapNoImagesMessage='プレビュー可能なスナップ写真が見つかりませんでした。先にAI処理を実行するか、output.zip を確認してください。';
+  const snapEmptyCategoryMessage='このカテゴリにはプレビュー可能な写真がありません。';
+  const snapCategoryLabels={bestshot:'BestShot',passing:'Passing',ng:'NG',similarity:'類似グループ',candidates:'候補写真',output:'その他',all:'すべて'};
+  const snapCategoryButtons={bestshot:'BestShotを確認',passing:'Passingを確認',ng:'NGを確認',similarity:'類似グループを確認',candidates:'候補写真を確認',all:'すべてを確認'};
+  const snapModeTitles={final:'最終結果（BestShot / Passing / NG）',similarity:'類似グループ',candidates:'候補写真',all:'すべて'};
   function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
-  function label(kind){return kind==='teacher'?'Teacher Photo':'Individual Photo';}
-  function endpoint(kind,jobId){return `/api/${kind}/${encodeURIComponent(jobId)}/preview-images`;}
+  function label(kind){return kind==='teacher'?'Teacher Photo':kind==='snap'?'Snap Photo':'Individual Photo';}
+  function endpoint(kind,jobId,mode){return kind==='snap'?`/api/snap/preview-images?mode=${encodeURIComponent(mode||'final')}`:`/api/${kind}/${encodeURIComponent(jobId)}/preview-images`;}
   function containerId(kind){return `${kind}-photo-preview-list`;}
+  function snapModeCategories(mode){
+    if(mode==='final')return ['bestshot','passing','ng'];
+    if(mode==='similarity')return ['similarity'];
+    if(mode==='candidates')return ['candidates'];
+    const keys=['bestshot','passing','ng','similarity','candidates','output'].filter(k=>(state.snap.counts?.[k]||0)>0);
+    return ['all',...(keys.length?keys:['bestshot','passing','ng'])];
+  }
+  function snapImagesFor(category){
+    const images=state.snap.images||[];
+    if(category==='all')return images;
+    return images.filter(img=>(img.category_key||'output')===category);
+  }
+  function pickSnapCategory(st){
+    const categories=snapModeCategories(st.mode).filter(k=>k!=='all');
+    return categories.find(k=>(st.counts?.[k]||0)>0)||categories[0]||'bestshot';
+  }
+  function renderSnapList(){
+    const box=document.getElementById(containerId('snap'));
+    if(!box)return;
+    const st=state.snap;
+    if(st.loading){box.innerHTML='<div class="card-sub">プレビュー画像を読み込み中...</div>';return;}
+    if(st.error){box.innerHTML=`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(st.error)}</div></div>`;return;}
+    if(!st.loaded){box.innerHTML='<div class="card-sub">「出力写真を確認」を押すと最終結果（BestShot / Passing / NG）の画像一覧を読み込みます。</div>';return;}
+    if(!st.images.length){box.innerHTML=`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(snapNoImagesMessage)}</div></div>${snapAdvancedModeSelector()}`;return;}
+    const categories=snapModeCategories(st.mode);
+    if(!categories.includes(st.selectedCategory))st.selectedCategory=pickSnapCategory(st);
+    const selected=snapImagesFor(st.selectedCategory);
+    const cards=categories.map(key=>`<div class="event-tile ${st.selectedCategory===key?'on':''}" onclick="selectSnapPreviewCategory('${key}')"><div class="card-title">${esc(snapCategoryLabels[key]||key)}</div><div class="num">${key==='all'?st.images.length:(st.counts?.[key]||0)}</div><div class="card-sub">枚</div><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="event.stopPropagation();openSnapCategoryPreview('${key}',0)">${esc(snapCategoryButtons[key]||'確認')}</button></div>`).join('');
+    const rows=selected.length?`<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>File name</th><th>Relative path</th><th>Event</th><th>Category</th><th>Action</th></tr></thead><tbody>${selected.map((img,i)=>`<tr><td class="mono">${esc(img.file||img.name)}</td><td class="mono">${esc(img.relative_path||'')}</td><td>${esc(img.event_name||'')}</td><td>${esc(img.category||'')}</td><td><button class="btn btn-primary btn-sm" onclick="openSnapCategoryPreview('${st.selectedCategory}',${i})">大きく確認</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="alert a-warn" style="margin-top:12px"><span>⚠️</span><div>${snapEmptyCategoryMessage}</div></div>`;
+    box.innerHTML=`<div class="card-sub" style="margin-top:10px"><strong>${esc(snapModeTitles[st.mode]||'最終結果')}</strong></div><div class="event-summary-grid" style="margin-top:12px">${cards}</div>${rows}${snapAdvancedModeSelector()}`;
+  }
+  function snapAdvancedModeSelector(){
+    const st=state.snap;
+    const modes=[['final','最終結果'],['similarity','類似グループ'],['candidates','候補写真'],['all','すべて']];
+    return `<div class="divider"></div><div class="card-sub">詳細表示（通常は最終結果のみ確認してください）</div><div class="btn-row">${modes.map(([mode,text])=>`<button class="btn btn-sm ${st.mode===mode?'btn-primary':'btn-ghost'}" onclick="loadOutputPhotoPreview('snap','latest',0,{mode:'${mode}',open:false})">${text}</button>`).join('')}</div>`;
+  }
   function renderList(kind){
+    if(kind==='snap'){renderSnapList();return;}
     const box=document.getElementById(containerId(kind));
     if(!box)return;
     const st=state[kind];
     if(st.loading){box.innerHTML='<div class="card-sub">プレビュー画像を読み込み中...</div>';return;}
     if(st.error){box.innerHTML=`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(st.error)}</div></div>`;return;}
     if(!st.loaded){box.innerHTML='<div class="card-sub">「出力写真を確認」を押すと画像一覧を読み込みます。</div>';return;}
-    if(!st.images.length){box.innerHTML=`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${noImagesMessage}</div></div>`;return;}
+    if(!st.images.length){box.innerHTML=`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(noImagesMessage)}</div></div>`;return;}
     box.innerHTML=`<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>File name</th><th>Relative path</th><th>Action</th></tr></thead><tbody>${st.images.map((img,i)=>`<tr><td class="mono">${esc(img.file||img.name)}</td><td class="mono">${esc(img.relative_path||'')}</td><td><button class="btn btn-primary btn-sm" onclick="openOutputPhotoPreview('${kind}',${i})">大きく確認</button></td></tr>`).join('')}</tbody></table></div>`;
   }
   function normalizeImages(kind,images){
@@ -1686,32 +1732,52 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
       status:img.status||'output',
       workflow_type:img.workflow_type||label(kind),
       workflowType:img.workflow_type||label(kind),
+      event_name:img.event_name||'',
+      category:img.category||'',
+      category_key:img.category_key||'output',
     }));
   }
-  window.loadOutputPhotoPreview=async function(kind,jobId,openIndex=0){
-    if(!jobId){window.safeToast?.('job_idがありません');return;}
+  window.loadOutputPhotoPreview=async function(kind,jobId,openIndex=0,options={}){
+    if(kind!=='snap'&&!jobId){window.safeToast?.('job_idがありません');return;}
     const st=state[kind];
+    const mode=kind==='snap'?(options.mode||st.mode||'final'):undefined;
     st.loading=true;st.error='';renderList(kind);
     try{
-      const res=await fetch(endpoint(kind,jobId));
+      const res=await fetch(endpoint(kind,jobId,mode));
       const data=await res.json().catch(()=>({}));
       if(!res.ok)throw new Error(data?.detail||'プレビュー画像の取得に失敗しました。');
       st.images=normalizeImages(kind,data.images||[]);
       st.loaded=true;
-      if(!st.images.length){st.error='';renderList(kind);window.safeToast?.(noImagesMessage);return;}
+      if(kind==='snap'){
+        st.mode=data.mode||mode||'final';
+        st.counts=data.counts||{};
+        st.selectedCategory=pickSnapCategory(st);
+      }
+      if(!st.images.length){st.error='';renderList(kind);window.safeToast?.(kind==='snap'?snapNoImagesMessage:noImagesMessage);return;}
       renderList(kind);
-      window.openOutputPhotoPreview(kind,openIndex);
+      if(options.open===false)return;
+      if(kind==='snap')window.openSnapCategoryPreview(st.selectedCategory,openIndex);
+      else window.openOutputPhotoPreview(kind,openIndex);
     }catch(e){st.error=e?.message||'プレビュー画像の取得に失敗しました。';renderList(kind);}
     finally{st.loading=false;renderList(kind);}
   };
+  window.selectSnapPreviewCategory=function(category){state.snap.selectedCategory=category;renderList('snap');};
+  window.openSnapCategoryPreview=function(category,index=0){
+    state.snap.selectedCategory=category;
+    const photos=snapImagesFor(category);
+    renderList('snap');
+    if(!photos.length){window.safeToast?.(snapEmptyCategoryMessage);return;}
+    openPhotoReviewModal({photos,index:Math.max(0,Math.min(index,photos.length-1)),workflowType:'snap'});
+  };
   window.openOutputPhotoPreview=function(kind,index=0){
     const photos=state[kind]?.images||[];
-    if(!photos.length){window.safeToast?.(noImagesMessage);return;}
+    if(!photos.length){window.safeToast?.(kind==='snap'?snapNoImagesMessage:noImagesMessage);return;}
     openPhotoReviewModal({photos,index:Math.max(0,Math.min(index,photos.length-1)),workflowType:kind});
   };
   window.photoPreviewSection=function(kind,jobId){
-    if(!jobId)return '';
-    return `<div class="card" style="margin-top:12px"><div class="card-title">写真確認 / Photo Preview</div><div class="card-sub">出力された写真をダウンロード前に大きく確認できます。</div><div class="btn-row"><button class="btn btn-primary" onclick="loadOutputPhotoPreview('${kind}','${esc(jobId)}',0)">出力写真を確認</button></div><div id="${containerId(kind)}"><div class="card-sub">「出力写真を確認」を押すと画像一覧を読み込みます。</div></div></div>`;
+    if(kind!=='snap'&&!jobId)return '';
+    const description=kind==='snap'?'出力されたスナップ写真をダウンロード前に大きく確認できます。':'出力された写真をダウンロード前に大きく確認できます。';
+    return `<div class="card" style="margin-top:12px"><div class="card-title">写真確認 / Photo Preview</div><div class="card-sub">${description}</div><div class="btn-row"><button class="btn btn-primary" onclick="loadOutputPhotoPreview('${kind}','${esc(jobId||'latest')}',0)">出力写真を確認</button></div><div id="${containerId(kind)}"><div class="card-sub">「出力写真を確認」を押すと画像一覧を読み込みます。</div></div></div>`;
   };
   const originalTeacherExport=window.teacherExportBody;
   window.teacherExportBody=function(){
@@ -1724,7 +1790,7 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
 </script>
 
 <script>
-// ===== Shared PhotoReviewModal for Individual / Teacher =====
+// ===== Shared PhotoReviewModal for Individual / Teacher / Snap =====
 (function(){
   const state={isOpen:false,photos:[],currentIndex:0,zoomLevel:1,workflowType:'individual'};
   function esc(v){return String(v??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
@@ -1735,9 +1801,10 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
     const modal=document.getElementById('photoReviewModal'); if(!modal) return;
     if(!state.isOpen||!state.photos.length){modal.classList.remove('on');return;}
     modal.classList.add('on'); const ph=state.photos[state.currentIndex]||{};
-    document.getElementById('prm-title').textContent=`${state.workflowType==='teacher'?'先生写真':'個人写真'}レビュー`;
+    const titleMap={teacher:'先生写真レビュー',snap:'スナップ写真レビュー',individual:'個人写真レビュー'};
+    document.getElementById('prm-title').textContent=titleMap[state.workflowType]||'写真レビュー';
     document.getElementById('prm-file').textContent=`${ph.file||ph.name||'ファイル名なし'}${ph.relative_path?' / '+ph.relative_path:''}`;
-    document.getElementById('prm-meta').innerHTML=`<span class="badge b-info">${esc(ph.workflow_type||ph.workflowType||(state.workflowType==='teacher'?'Teacher Photo':'Individual Photo'))}</span> ${ph.status?`<span class="badge b-warn">${esc(ph.status)}</span>`:''} ${ph.person?`<span class="badge b-blue">${esc(ph.person)}</span>`:''} ${ph.relative_path?`<span class="badge b-gray">${esc(ph.relative_path)}</span>`:''}`;
+    document.getElementById('prm-meta').innerHTML=`<span class="badge b-info">${esc(ph.workflow_type||ph.workflowType||(state.workflowType==='teacher'?'Teacher Photo':state.workflowType==='snap'?'Snap Photo':'Individual Photo'))}</span> ${ph.status?`<span class="badge b-warn">${esc(ph.status)}</span>`:''} ${ph.person?`<span class="badge b-blue">${esc(ph.person)}</span>`:''} ${ph.event_name?`<span class="badge b-blue">Event: ${esc(ph.event_name)}</span>`:''} ${ph.category?`<span class="badge b-warn">${esc(ph.category)}</span>`:''} ${ph.relative_path?`<span class="badge b-gray">${esc(ph.relative_path)}</span>`:''}`;
     document.getElementById('prm-idx').textContent=`${state.currentIndex+1} / ${state.photos.length}`;
     const img=document.getElementById('prm-img'); const miss=document.getElementById('prm-missing');
     img.style.transform=`scale(${state.zoomLevel})`;
