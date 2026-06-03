@@ -1552,6 +1552,148 @@ if(kind==='snap'&&step===4){const sec=document.getElementById('sec-snap');const 
 };
 window.runTeacherPipeline=runTeacherPipeline;window.runSnapPipeline=runSnapPipeline;
 window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFolder=downloadTeacherOutputFolder;window.downloadSnapFolder=downloadSnapFolder;window.downloadAllSnapResults=downloadAllSnapResults;
+
+</script>
+
+<script>
+// ===== Snap read-only previews: final folders, similarity clusters, Excel =====
+(function(){
+  const snapPreviewState={mode:'final',images:[],excel:null,activeFile:0,activeSheet:0,modalImages:[],modalIndex:0,modalZoom:1};
+  const esc=(v)=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const categoryLabels={best:'BestShot',passing:'Passing',ng:'NG',similarity:'類似グループ'};
+
+  function ensurePhotoReviewModal(){
+    if(document.getElementById('photoReviewModal')) return;
+    const style=document.createElement('style');
+    style.textContent=`.photo-review-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.82);display:none;align-items:center;justify-content:center;z-index:9999;padding:22px}.photo-review-backdrop.on{display:flex}.photo-review-dialog{width:min(1100px,96vw);height:min(760px,92vh);background:#fff;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden}.photo-review-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:14px 16px;border-bottom:1px solid var(--border)}.photo-review-title{font-weight:900;color:var(--navy)}.photo-review-meta{font-size:11px;color:var(--g500);word-break:break-all}.photo-review-stage{flex:1;min-height:0;background:#0f172a;display:flex;align-items:center;justify-content:center;overflow:auto;padding:16px}.photo-review-stage img{max-width:100%;max-height:100%;object-fit:contain;transition:transform .12s ease;transform-origin:center center}.photo-review-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--border);flex-wrap:wrap}.snap-sheet-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.snap-sheet-tabs button.on{background:var(--teal);color:#fff;border-color:var(--teal)}.snap-excel-table th,.snap-excel-table td{white-space:nowrap}.snap-preview-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.snap-preview-tabs button.on{background:var(--teal);color:#fff;border-color:var(--teal)}.snap-cluster-heading{background:var(--bluePale);color:#1e3a8a;font-weight:900}`;
+    document.head.appendChild(style);
+    const modal=document.createElement('div');
+    modal.id='photoReviewModal';
+    modal.className='photo-review-backdrop';
+    modal.innerHTML=`<div class="photo-review-dialog" role="dialog" aria-modal="true" aria-label="Photo Review Modal"><div class="photo-review-head"><div><div class="photo-review-title" id="photoReviewTitle">写真プレビュー</div><div class="photo-review-meta" id="photoReviewMeta"></div></div><button class="btn btn-ghost btn-sm" onclick="closePhotoReviewModal()">閉じる</button></div><div class="photo-review-stage"><img id="photoReviewImage" alt="preview image"></div><div class="photo-review-foot"><div class="btn-row" style="margin-top:0"><button class="btn btn-ghost btn-sm" onclick="prevPhotoReviewImage()">← 前へ</button><button class="btn btn-ghost btn-sm" onclick="nextPhotoReviewImage()">次へ →</button></div><div class="btn-row" style="margin-top:0"><button class="btn btn-ghost btn-sm" onclick="zoomPhotoReview(0.2)">拡大</button><button class="btn btn-ghost btn-sm" onclick="zoomPhotoReview(-0.2)">縮小</button><button class="btn btn-ghost btn-sm" onclick="resetPhotoReviewZoom()">リセット</button><span class="badge b-gray" id="photoReviewCount">1 / 1</span></div></div></div>`;
+    document.body.appendChild(modal);
+  }
+
+  function updatePhotoReviewModal(){
+    const item=snapPreviewState.modalImages[snapPreviewState.modalIndex];
+    if(!item)return;
+    snapPreviewState.modalZoom=1;
+    document.getElementById('photoReviewTitle').textContent=item.name||'写真プレビュー';
+    document.getElementById('photoReviewMeta').textContent=[item.category,item.cluster_name,item.relative_path].filter(Boolean).join(' / ');
+    const img=document.getElementById('photoReviewImage');
+    img.src=item.url; img.style.transform='scale(1)';
+    document.getElementById('photoReviewCount').textContent=`${snapPreviewState.modalIndex+1} / ${snapPreviewState.modalImages.length}`;
+  }
+
+  window.openPhotoReviewModal=function(index,mode){
+    ensurePhotoReviewModal();
+    const list=(mode==='similarity'?snapPreviewState.images.filter(x=>x.category_key==='similarity'):snapPreviewState.images).filter(x=>x.url);
+    if(!list.length)return;
+    snapPreviewState.modalImages=list;
+    snapPreviewState.modalIndex=Math.max(0,Math.min(Number(index)||0,list.length-1));
+    document.getElementById('photoReviewModal').classList.add('on');
+    updatePhotoReviewModal();
+  };
+  window.closePhotoReviewModal=function(){document.getElementById('photoReviewModal')?.classList.remove('on');};
+  window.prevPhotoReviewImage=function(){if(!snapPreviewState.modalImages.length)return;snapPreviewState.modalIndex=(snapPreviewState.modalIndex-1+snapPreviewState.modalImages.length)%snapPreviewState.modalImages.length;updatePhotoReviewModal();};
+  window.nextPhotoReviewImage=function(){if(!snapPreviewState.modalImages.length)return;snapPreviewState.modalIndex=(snapPreviewState.modalIndex+1)%snapPreviewState.modalImages.length;updatePhotoReviewModal();};
+  window.zoomPhotoReview=function(delta){const img=document.getElementById('photoReviewImage');if(!img)return;snapPreviewState.modalZoom=Math.max(.4,Math.min(4,snapPreviewState.modalZoom+delta));img.style.transform=`scale(${snapPreviewState.modalZoom})`;};
+  window.resetPhotoReviewZoom=function(){const img=document.getElementById('photoReviewImage');snapPreviewState.modalZoom=1;if(img)img.style.transform='scale(1)';};
+
+  async function fetchSnapImages(mode='final'){
+    snapPreviewState.mode=mode;
+    const box=document.getElementById('snapPreviewContent');
+    if(box)box.innerHTML='<div class="card-sub">読み込み中...</div>';
+    try{
+      const r=await fetch(`/api/snap/preview-images?mode=${encodeURIComponent(mode)}`);
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.detail||'preview failed');
+      snapPreviewState.images=d.images||[];
+      renderSnapPreviewContent();
+    }catch(e){if(box)box.innerHTML=`<div class="alert a-warn"><span>⚠️</span><div>プレビュー取得に失敗しました: ${esc(e.message)}</div></div>`;}
+  }
+
+  function finalCategoryCard(key){
+    const rows=snapPreviewState.images.filter(x=>x.category_key===key);
+    return `<div class="card"><div class="card-title">${categoryLabels[key]}</div><div class="card-sub">${rows.length}枚</div><div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>File</th><th>Relative Path</th><th>Action</th></tr></thead><tbody>${rows.length?rows.map((img)=>{const idx=snapPreviewState.images.indexOf(img);return `<tr><td class="mono">${esc(img.name)}</td><td class="mono">${esc(img.relative_path)}</td><td><button class="btn btn-primary btn-sm" onclick="openPhotoReviewModal(${idx},'final')">大きく確認</button></td></tr>`;}).join(''):`<tr><td colspan="3" class="card-sub">画像がありません。</td></tr>`}</tbody></table></div></div>`;
+  }
+
+  function renderSimilarityPreview(){
+    const rows=snapPreviewState.images.filter(x=>x.category_key==='similarity');
+    const grouped=new Map();
+    rows.forEach((img,i)=>{const key=[img.event_name||'イベント未指定',img.cluster_name||img.cluster_folder||'クラスタ未指定'].join(' / ');if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push({img,index:i});});
+    let body='';
+    grouped.forEach((items,key)=>{body+=`<tr class="snap-cluster-heading"><td colspan="5">${esc(key)}（${items.length}枚）</td></tr>`+items.map(({img,index})=>`<tr><td class="mono">${esc(img.name)}</td><td>${esc(img.cluster_name||'')}</td><td>${esc(img.event_name||'')}</td><td class="mono">${esc(img.relative_path)}</td><td><button class="btn btn-primary btn-sm" onclick="openPhotoReviewModal(${index},'similarity')">大きく確認</button></td></tr>`).join('');});
+    return `<div class="card"><div class="card-title">類似グループ</div><div class="card-sub">${rows.length}枚。クラスタ単位で読み取り専用プレビューします。</div><div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>File</th><th>Cluster</th><th>Event</th><th>Relative Path</th><th>Action</th></tr></thead><tbody>${body||`<tr><td colspan="5">類似グループ画像がありません。</td></tr>`}</tbody></table></div></div>`;
+  }
+
+  function renderSnapPreviewContent(){
+    const box=document.getElementById('snapPreviewContent');
+    if(!box)return;
+    if(snapPreviewState.mode==='similarity') box.innerHTML=renderSimilarityPreview();
+    else box.innerHTML=`<div class="grid grid-3">${finalCategoryCard('best')}${finalCategoryCard('passing')}${finalCategoryCard('ng')}</div>`;
+  }
+
+  window.selectSnapPreviewMode=function(mode){
+    document.querySelectorAll('.snap-preview-tabs button').forEach(b=>b.classList.toggle('on',b.dataset.mode===mode));
+    fetchSnapImages(mode);
+  };
+
+  async function previewSnapExcel(){
+    const box=document.getElementById('snapExcelPreviewBox');
+    if(box)box.innerHTML='<div class="card-sub">Excelを読み込み中...</div>';
+    try{
+      const r=await fetch('/api/snap/preview-excel');
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.detail||'excel preview failed');
+      snapPreviewState.excel=d;
+      snapPreviewState.activeFile=0;
+      snapPreviewState.activeSheet=0;
+      renderSnapExcelPreview();
+    }catch(e){if(box)box.innerHTML=`<div class="alert a-warn"><span>⚠️</span><div>Excelプレビュー取得に失敗しました: ${esc(e.message)}</div></div>`;}
+  }
+  window.previewSnapExcel=previewSnapExcel;
+
+  window.selectSnapExcelFile=function(index){snapPreviewState.activeFile=index;snapPreviewState.activeSheet=0;renderSnapExcelPreview();};
+  window.selectSnapExcelSheet=function(index){snapPreviewState.activeSheet=index;renderSnapExcelPreview();};
+
+  function renderSnapExcelPreview(){
+    const box=document.getElementById('snapExcelPreviewBox');
+    if(!box)return;
+    const files=snapPreviewState.excel?.files||[];
+    if(!files.length){box.innerHTML='<div class="alert a-warn"><span>📊</span><div>プレビュー可能なExcelファイルが見つかりませんでした。</div></div>';return;}
+    const file=files[snapPreviewState.activeFile]||files[0];
+    const sheet=file.sheets?.[snapPreviewState.activeSheet]||file.sheets?.[0]||{headers:[],rows:[],sheet_name:'',row_count:0,column_count:0};
+    const fileTabs=files.length>1?`<div class="snap-sheet-tabs">${files.map((f,i)=>`<button class="btn btn-ghost btn-sm ${i===snapPreviewState.activeFile?'on':''}" onclick="selectSnapExcelFile(${i})">${esc(f.file_name)}</button>`).join('')}</div>`:'';
+    const sheetTabs=(file.sheets||[]).length>1?`<div class="snap-sheet-tabs">${file.sheets.map((sh,i)=>`<button class="btn btn-ghost btn-sm ${i===snapPreviewState.activeSheet?'on':''}" onclick="selectSnapExcelSheet(${i})">${esc(sh.sheet_name)}</button>`).join('')}</div>`:'';
+    const headers=(sheet.headers||[]).map(h=>`<th>${esc(h)}</th>`).join('');
+    const rows=(sheet.rows||[]).map(row=>`<tr>${row.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('');
+    box.innerHTML=`<div class="card" style="margin-top:12px"><div class="card-title">${esc(file.file_name)} / ${esc(sheet.sheet_name)}</div><div class="card-sub">${esc(file.relative_path)} · ${sheet.row_count}行 / ${sheet.column_count}列（先頭100行まで表示）</div>${fileTabs}${sheetTabs}<div class="table-wrap snap-excel-table" style="margin-top:10px"><table><thead><tr>${headers}</tr></thead><tbody>${rows||`<tr><td>表示できる行がありません。</td></tr>`}</tbody></table></div></div>`;
+  }
+
+  function snapPhotoPreviewSection(){
+    return `<div class="card"><div class="card-title">Snap Photo Preview</div><div class="card-sub">BestShot / Passing / NG を標準表示します。必要に応じて「類似グループ」を開きます。</div><div class="snap-preview-tabs"><button class="btn btn-ghost btn-sm on" data-mode="final" onclick="selectSnapPreviewMode('final')">BestShot / Passing / NG</button><button class="btn btn-ghost btn-sm" data-mode="similarity" onclick="selectSnapPreviewMode('similarity')">類似グループ</button></div><div id="snapPreviewContent"><div class="card-sub">読み込み中...</div></div></div>`;
+  }
+
+  function snapExcelPreviewSection(){
+    return `<div class="card"><div class="card-title">Excel結果プレビュー</div><div class="card-sub">ダウンロード前にExcel出力内容を確認できます。</div><div class="btn-row"><button class="btn btn-primary" onclick="previewSnapExcel()">Excelをプレビュー</button></div><div id="snapExcelPreviewBox"></div></div>`;
+  }
+
+  window.renderSnapWorkflow=function(step){
+    const sec=document.getElementById('sec-snap');
+    if(!sec)return;
+    const steps=['Upload','AI Process','Event Result','Photo Preview','Export'];
+    const tabs=steps.map((s,i)=>`<button class="wf-tab ${i===step?'on':''}" onclick="renderSnapWorkflow(${i})">${i+1} ${s}</button>`).join('');
+    let body='';
+    if(step===0){body=`<div class="card"><div class="card-title">イベントZIPアップロード</div><div class="card-sub">スナップ写真ZIPをアップロードしてAI処理を実行します。</div><div class="btn-row" style="margin-top:12px"><input id="snap-folder-zip" type="file" accept=".zip" class="btn btn-ghost"><span id="snap-zip-name" class="card-sub">未選択</span></div><label class="card-sub" style="display:block;margin-top:12px" for="snap-best-shot-count">Best Shot Count</label><input id="snap-best-shot-count" type="number" min="1" step="1" value="25" class="input" style="margin-top:6px;max-width:220px"><div class="card-sub" style="margin-top:4px">選択するBest Shot写真数を指定します（既定値: 25）。</div><div id="snap-run-status" class="card-sub" style="margin-top:10px">status: idle</div><pre id="snap-result-json" class="panel" style="margin-top:10px;white-space:pre-wrap">結果はここに表示されます</pre><div class="btn-row"><button class="btn btn-primary" onclick="runSnapPipeline()">AI処理を開始</button></div></div>`;}
+    else if(step===1){body=`<div class="card"><div class="alert a-blue"><span>📸</span><div><strong>AI処理：</strong>アップロードされたイベントごとに BestShot / Passing / NG / 類似グループ / Excel を生成します。</div></div><div class="btn-row"><button class="btn btn-primary" onclick="renderSnapWorkflow(3)">プレビューを見る</button></div></div>`;}
+    else if(step===2||step===3){body=`${snapPhotoPreviewSection()}<div class="btn-row"><button class="btn btn-primary" onclick="renderSnapWorkflow(4)">Exportへ</button><button class="btn btn-success" onclick="downloadAllSnapResults()">出力ZIPをダウンロード</button></div>`;}
+    else{body=`<div class="card"><div class="alert a-ok"><span>✅</span><div><strong>スナップ写真の出力準備が完了しました。</strong><br>プレビュー確認後も、既存のZIPダウンロードはそのまま利用できます。</div></div><div class="btn-row"><button class="btn btn-success" onclick="downloadAllSnapResults()">出力ZIPをダウンロード</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>${snapPhotoPreviewSection()}${snapExcelPreviewSection()}`;}
+    sec.innerHTML=`<div class="alert a-info"><span>📸</span><div><strong>スナップ写真：</strong>最終フォルダと類似グループ、Excel結果を読み取り専用で確認できます。</div></div><div class="wf-tabs">${tabs}</div>${body}`;
+    if(typeof bindWorkflowUploadInputs==='function')bindWorkflowUploadInputs();
+    if(step===2||step===3||step===4)setTimeout(()=>fetchSnapImages('final'),0);
+  };
+})();
 </script>
 
 <script>

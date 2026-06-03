@@ -7,17 +7,18 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from uuid import uuid4
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from backend.teacher_jobs import router as teacher_router
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from backend.excel_labels import SNAP_SHEET_LABELS, excel_label
 
 from backend.snap_pipeline import DEFAULT_BEST_SHOT_COUNT, SnapPipeline
+from backend.preview_images import collect_snap_preview_images
 from backend.club_pipeline import run_club_pipeline
 from backend.individual_pipeline import (
     filter_unresolved_error_queue,
@@ -208,6 +209,84 @@ async def run_snap_pipeline(
     latest_summary = {**total_summary, "event_summaries": event_summaries}
     latest_zip_path = _pack_outputs(OUTPUT_DIR)
     return {"status": "ok", "summary": latest_summary}
+
+
+@app.get("/api/snap/preview-images")
+def preview_snap_images(mode: str = Query(default="final", pattern="^(final|similarity|candidates|all)$")) -> dict[str, Any]:
+    images = collect_snap_preview_images(OUTPUT_DIR, mode=mode)
+    return {"status": "ok", "mode": mode, "count": len(images), "images": images}
+
+
+@app.get("/api/snap/preview-file")
+def preview_snap_file(path: str) -> FileResponse:
+    target = (OUTPUT_DIR / path).resolve()
+    output_root = OUTPUT_DIR.resolve()
+    try:
+        target.relative_to(output_root)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Preview file not found.") from None
+    if not target.exists() or not target.is_file():
+        raise HTTPException(status_code=404, detail="Preview file not found.")
+    return FileResponse(target)
+
+
+def _excel_sort_key(path: Path) -> tuple[int, str]:
+    name = path.name.lower()
+    if name == "snap_pipeline_report.xlsx":
+        return (0, path.as_posix())
+    if name == "all_events_summary.xlsx":
+        return (1, path.as_posix())
+    return (2, path.as_posix())
+
+
+def _cell_to_json(value: Any) -> Any:
+    if value is None:
+        return ""
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return value
+
+
+def _preview_excel_file(path: Path, row_limit: int = 100) -> dict[str, Any]:
+    workbook = load_workbook(path, read_only=True, data_only=True)
+    try:
+        sheets: list[dict[str, Any]] = []
+        for sheet in workbook.worksheets:
+            rows_iter = sheet.iter_rows(values_only=True)
+            first_row = next(rows_iter, None)
+            headers = [_cell_to_json(v) for v in first_row] if first_row else []
+            rows: list[list[Any]] = []
+            for idx, row in enumerate(rows_iter):
+                if idx >= row_limit:
+                    break
+                rows.append([_cell_to_json(v) for v in row])
+            sheets.append(
+                {
+                    "sheet_name": sheet.title,
+                    "headers": headers,
+                    "rows": rows,
+                    "row_count": sheet.max_row or 0,
+                    "column_count": sheet.max_column or 0,
+                }
+            )
+        return {
+            "file_name": path.name,
+            "relative_path": path.relative_to(OUTPUT_DIR).as_posix(),
+            "sheets": sheets,
+        }
+    finally:
+        workbook.close()
+
+
+@app.get("/api/snap/preview-excel")
+def preview_snap_excel() -> dict[str, Any]:
+    if not OUTPUT_DIR.exists():
+        return {"status": "ok", "files": [], "message": "プレビュー可能なExcelファイルが見つかりませんでした。"}
+    excel_files = sorted((p for p in OUTPUT_DIR.rglob("*.xlsx") if p.is_file()), key=_excel_sort_key)
+    if not excel_files:
+        return {"status": "ok", "files": [], "message": "プレビュー可能なExcelファイルが見つかりませんでした。"}
+    files = [_preview_excel_file(path) for path in excel_files]
+    return {"status": "ok", "files": files}
 
 
 @app.get("/api/snap/result")
