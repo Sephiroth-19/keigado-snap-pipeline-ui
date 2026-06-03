@@ -1558,7 +1558,7 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
 <script>
 // ===== Snap read-only previews: final folders, similarity clusters, Excel =====
 (function(){
-  const snapPreviewState={mode:'final',images:[],excel:null,activeFile:0,activeSheet:0,modalImages:[],modalIndex:0,modalZoom:1};
+  const snapPreviewState={mode:'final',images:[],excel:null,activeFile:0,activeSheet:0,modalImages:[],modalIndex:0,modalZoom:1,modalLabel:''};
   const esc=(v)=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const categoryLabels={best:'BestShot',passing:'Passing',ng:'NG',similarity:'類似グループ'};
 
@@ -1582,17 +1582,27 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
     document.getElementById('photoReviewMeta').textContent=[item.category,item.cluster_name,item.relative_path].filter(Boolean).join(' / ');
     const img=document.getElementById('photoReviewImage');
     img.src=item.url; img.style.transform='scale(1)';
-    document.getElementById('photoReviewCount').textContent=`${snapPreviewState.modalIndex+1} / ${snapPreviewState.modalImages.length}`;
+    document.getElementById('photoReviewCount').textContent=`${snapPreviewState.modalLabel?`${snapPreviewState.modalLabel} `:''}${snapPreviewState.modalIndex+1} / ${snapPreviewState.modalImages.length}`;
+  }
+
+  function openPhotoReviewList(list,index,label){
+    ensurePhotoReviewModal();
+    const localList=(list||[]).filter(x=>x.url);
+    if(!localList.length)return;
+    snapPreviewState.modalImages=localList;
+    snapPreviewState.modalLabel=label||'';
+    snapPreviewState.modalIndex=Math.max(0,Math.min(Number(index)||0,localList.length-1));
+    document.getElementById('photoReviewModal').classList.add('on');
+    updatePhotoReviewModal();
   }
 
   window.openPhotoReviewModal=function(index,mode){
-    ensurePhotoReviewModal();
     const list=(mode==='similarity'?snapPreviewState.images.filter(x=>x.category_key==='similarity'):snapPreviewState.images).filter(x=>x.url);
-    if(!list.length)return;
-    snapPreviewState.modalImages=list;
-    snapPreviewState.modalIndex=Math.max(0,Math.min(Number(index)||0,list.length-1));
-    document.getElementById('photoReviewModal').classList.add('on');
-    updatePhotoReviewModal();
+    openPhotoReviewList(list,index,mode==='similarity'?categoryLabels.similarity:'');
+  };
+  window.openSnapCategoryPhotoReview=function(categoryKey,index){
+    const list=snapPreviewState.images.filter(x=>x.category_key===categoryKey);
+    openPhotoReviewList(list,index,categoryLabels[categoryKey]||'');
   };
   window.closePhotoReviewModal=function(){document.getElementById('photoReviewModal')?.classList.remove('on');};
   window.prevPhotoReviewImage=function(){if(!snapPreviewState.modalImages.length)return;snapPreviewState.modalIndex=(snapPreviewState.modalIndex-1+snapPreviewState.modalImages.length)%snapPreviewState.modalImages.length;updatePhotoReviewModal();};
@@ -1615,7 +1625,7 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
 
   function finalCategoryCard(key){
     const rows=snapPreviewState.images.filter(x=>x.category_key===key);
-    return `<div class="card"><div class="card-title">${categoryLabels[key]}</div><div class="card-sub">${rows.length}枚</div><div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>File</th><th>Relative Path</th><th>Action</th></tr></thead><tbody>${rows.length?rows.map((img)=>{const idx=snapPreviewState.images.indexOf(img);return `<tr><td class="mono">${esc(img.name)}</td><td class="mono">${esc(img.relative_path)}</td><td><button class="btn btn-primary btn-sm" onclick="openPhotoReviewModal(${idx},'final')">大きく確認</button></td></tr>`;}).join(''):`<tr><td colspan="3" class="card-sub">画像がありません。</td></tr>`}</tbody></table></div></div>`;
+    return `<div class="card"><div class="card-title">${categoryLabels[key]}</div><div class="card-sub">${rows.length}枚</div><div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>File</th><th>Relative Path</th><th>Action</th></tr></thead><tbody>${rows.length?rows.map((img,idx)=>`<tr><td class="mono">${esc(img.name)}</td><td class="mono">${esc(img.relative_path)}</td><td><button class="btn btn-primary btn-sm" onclick="openSnapCategoryPhotoReview('${key}',${idx})">大きく確認</button></td></tr>`).join(''):`<tr><td colspan="3" class="card-sub">画像がありません。</td></tr>`}</tbody></table></div></div>`;
   }
 
   function renderSimilarityPreview(){
