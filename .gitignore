@@ -1,8 +1,12 @@
 .env
 .env.*
 !.env.example
+
 runtime/
+
 __pycache__/
 *.pyc
 
-.venv311/
+.venv/
+venv/
+venv311/
