@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>恵雅堂 AI写真整理システム - Client Feedback Updated UI</title>
+<style>
+:root{
+  --navy:#17233d;--navyDark:#0f1b30;--teal:#0b8f8f;--teal2:#e8f7f7;
+  --bg:#eef2f7;--card:#fff;--line:#d7dee8;--text:#1f2937;--muted:#64748b;
+  --green:#16a34a;--green2:#ecfdf5;--red:#dc2626;--red2:#fef2f2;
+  --amber:#d97706;--amber2:#fff7ed;--blue:#2563eb;--blue2:#eff6ff;
+  --purple:#7c3aed;--purple2:#f5f3ff;--shadow:0 2px 8px rgba(15,23,42,.08);--r:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Yu Gothic UI","Hiragino Sans","Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.55}
+.app{display:flex;min-height:100vh}
+.side{width:220px;background:var(--navyDark);color:#fff;position:fixed;inset:0 auto 0 0;padding:16px 12px}
+.logo{display:flex;gap:10px;align-items:center;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,.1)}
+.logo-b{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#0b8f8f,#13b8b8);display:grid;place-items:center;font-weight:900}
+.logo-t{font-weight:900;color:#7ee5e5}.logo-s{font-size:10px;color:rgba(255,255,255,.45)}
+.nav{margin-top:16px}.nav small{display:block;color:rgba(255,255,255,.35);font-size:10px;margin:18px 8px 7px}
+.nav button{width:100%;border:0;background:transparent;color:rgba(255,255,255,.68);padding:10px;border-radius:9px;text-align:left;font-weight:800;cursor:pointer}
+.nav button:hover,.nav button.on{background:rgba(11,143,143,.22);color:#fff}
+.main{margin-left:220px;flex:1;min-width:0}
+.top{height:62px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:10}
+.h1{font-size:18px;font-weight:900;color:var(--navy)}
+.sub,.hint,.mini{font-size:11.5px;color:var(--muted)}
+.page{display:none}.page.on{display:block}.wrap{padding:18px 24px 32px}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:15px;margin-bottom:14px}
+.title{font-size:14px;font-weight:900;color:var(--navy)}
+.grid{display:grid;gap:12px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.fields{display:grid;grid-template-columns:1.2fr .8fr 1fr .9fr .8fr .8fr;gap:10px}
+label{display:block;font-size:10.5px;font-weight:900;color:#475569;margin-bottom:4px}
+input,select{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 9px;font-family:inherit;font-size:12px;background:#fff}
+input:disabled{background:#f1f5f9;color:#94a3b8}
+.btn{border:0;border-radius:8px;padding:8px 12px;font-weight:900;font-size:12px;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{transform:translateY(-1px)}
+.primary{background:var(--teal);color:#fff}.navy{background:var(--navy);color:#fff}.ghost{background:#fff;color:#475569;border:1px solid var(--line)}
+.good{background:var(--green);color:#fff}.warn{background:var(--amber);color:#fff}.danger{background:var(--red);color:#fff}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:9px 10px;border-bottom:1px solid #edf2f7;text-align:left;vertical-align:middle}th{font-size:10.5px;color:#64748b;background:#f8fafc;text-transform:uppercase}tr:hover td{background:#fbfdff}.table{overflow:auto;border:1px solid var(--line);border-radius:10px}
+.badge{display:inline-flex;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:900}
+.b-existing{background:var(--teal2);color:var(--teal)}.b-new{background:var(--blue2);color:var(--blue)}.b-non{background:var(--purple2);color:var(--purple)}.b-temp{background:var(--amber2);color:var(--amber)}
+.b-ok{background:var(--green2);color:var(--green)}.b-warn{background:var(--amber2);color:var(--amber)}.b-ng{background:var(--red2);color:var(--red)}.b-pass{background:var(--blue2);color:var(--blue)}.b-gray{background:#f1f5f9;color:#64748b}
+.mono{font-family:ui-monospace,Menlo,monospace}
+.collapse{display:none}.collapse.on{display:block}
+.project-tabs{background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);position:sticky;top:62px;z-index:9;display:flex;gap:7px;padding:9px 24px;overflow:auto}
+.tab{border:1px solid var(--line);background:#fff;color:#475569;border-radius:999px;padding:7px 11px;font-weight:900;font-size:12px;cursor:pointer}.tab.on{background:var(--teal);border-color:var(--teal);color:#fff}
+.workflow{display:none}.workflow.on{display:block}
+.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px}.stat strong{font-size:24px;color:var(--navy)}
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.flow-step{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px;text-align:center;cursor:pointer}.flow-step:hover{border-color:var(--teal);background:var(--teal2)}.flow-step.on{border-color:var(--teal);background:var(--teal2);box-shadow:0 0 0 2px rgba(11,143,143,.12)}.flow-step strong{display:block;color:var(--navy);font-size:12px}.flow-step span{display:block;color:var(--muted);font-size:10.5px;margin-top:2px}
+.drop{border:2px dashed var(--line);background:#f8fafc;border-radius:12px;padding:20px;text-align:center;color:#64748b;font-weight:800;cursor:pointer}.drop:hover{border-color:var(--teal);background:var(--teal2);color:var(--teal)}
+.folder-tabs,.status-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.folder-tab,.status-tab{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font-weight:900;font-size:12px;color:#475569;cursor:pointer}.folder-tab.on,.status-tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.result-layout{display:grid;grid-template-columns:330px 1fr;gap:14px;margin-top:12px}.preview{height:300px;background:linear-gradient(135deg,#e2e8f0,#f8fafc);border:1px solid var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#64748b;text-align:center}.preview .big{font-size:48px;margin-bottom:6px}.photo-meta,.panel{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:10px}
+.photo-list{display:grid;gap:8px}.photo-row{display:grid;grid-template-columns:54px 1fr 1.4fr auto;gap:10px;align-items:center;border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px}.photo-row:hover{border-color:var(--teal);background:#fbffff}.photo-row.on{border-color:var(--teal);background:var(--teal2)}.picon{width:46px;height:46px;border-radius:9px;background:#e2e8f0;display:grid;place-items:center;font-size:22px}.fname{font-weight:900;color:var(--navy)}.rename{font-size:11px;color:#475569;word-break:break-all}.actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.output-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.output-card{border:1px solid var(--line);background:#f8fafc;border-radius:10px;padding:10px}.output-card strong{display:block;color:var(--navy);font-size:12px}.output-card span{font-size:10.5px;color:var(--muted)}
+.naming{border:1px solid var(--line);background:#f8fafc;border-radius:10px;padding:10px;margin-top:10px;font-size:11.5px;color:#475569}.naming strong{color:var(--navy)}
+.check-card{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px;display:flex;gap:8px;align-items:flex-start;cursor:pointer}.check-card.active{border-color:var(--teal);background:var(--teal2)}.check-card input{width:auto;margin-top:2px;accent-color:var(--teal)}
+.ai-mini-preview{width:48px;height:48px;border-radius:9px;background:#e2e8f0;display:grid;place-items:center;font-size:22px}
+.modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.68);z-index:200;align-items:center;justify-content:center;padding:20px}.modal.on{display:flex}.viewer{background:#fff;border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.28);width:min(980px,96vw);max-height:94vh;display:grid;grid-template-rows:auto 1fr auto}.viewer-head,.viewer-foot{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}.viewer-foot{border-bottom:0;border-top:1px solid var(--line);flex-wrap:wrap}.viewer-body{display:grid;grid-template-columns:1fr 300px;gap:14px;padding:16px;overflow:auto}.viewer-photo{min-height:520px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,#dbe3ef,#fff);display:grid;place-items:center;text-align:center;color:#64748b}.viewer-photo .big{font-size:76px}.sidepanel{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px}
+.toast{position:fixed;right:20px;bottom:20px;background:#17233d;color:#fff;padding:11px 14px;border-radius:10px;display:none;z-index:999;font-weight:900}.toast.on{display:block}
+@media(max-width:980px){.side{width:64px}.side span,.logo-t,.logo-s,.nav small{display:none}.main{margin-left:64px}.fields,.g2,.g3,.g4,.statgrid,.result-layout,.viewer-body,.flow,.output-grid{grid-template-columns:1fr}.preview{height:240px}.viewer-photo{min-height:360px}.photo-row{grid-template-columns:44px 1fr}.photo-row .actions{justify-content:flex-start}.rename{grid-column:2}.side{padding:12px 8px}}
+
+/* Combined update: view toggles, upload delete, Excel preview, master-project link */
+.view-toggle{display:inline-flex;gap:4px;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:3px}
+.view-toggle button{border:0;background:transparent;padding:6px 10px;border-radius:8px;cursor:pointer;color:#64748b;font-weight:900;font-family:inherit;font-size:12px}
+.view-toggle button.on{background:#fff;color:var(--teal);box-shadow:var(--shadow)}
+.project-card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+.project-card{border:1px solid var(--line);background:#fff;border-radius:14px;padding:14px;box-shadow:var(--shadow);cursor:pointer;transition:.15s}
+.project-card:hover{border-color:var(--teal);transform:translateY(-1px)}
+.project-card .code{font-family:ui-monospace,Menlo,monospace;color:#64748b;font-size:11px}
+.upload-list{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden;margin-top:12px}
+.upload-row{display:grid;grid-template-columns:42px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid #edf2f7}
+.upload-row:last-child{border-bottom:0}.upload-ico{width:36px;height:36px;border-radius:9px;background:#e2e8f0;display:grid;place-items:center;font-size:19px}.upload-name{font-weight:900;color:var(--navy)}
+.output-card.click{cursor:pointer;transition:.15s}.output-card.click:hover,.output-card.click.on{border-color:var(--teal);background:var(--teal2);box-shadow:0 0 0 2px rgba(11,143,143,.08)}
+.excel-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.excel-tab{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:900;color:#475569;cursor:pointer}.excel-tab.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.photo-icon-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.photo-card-mini{border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px;cursor:pointer}.photo-card-mini.on{border-color:var(--teal);background:var(--teal2)}.photo-card-mini .pic{height:74px;border-radius:10px;background:#e2e8f0;display:grid;place-items:center;font-size:28px;margin-bottom:8px}.photo-card-mini .nm{font-weight:900;color:var(--navy);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.photo-card-mini .rn{font-size:10.5px;color:#64748b;word-break:break-all}
+@media(max-width:980px){.project-card-grid,.photo-icon-grid{grid-template-columns:1fr}.upload-row{grid-template-columns:36px 1fr}.upload-row .actions{grid-column:2;justify-content:flex-start}}
+
+/* Client feedback update: date picker, sort bar, keyboard focus, snap output count */
+.sort-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;padding:10px;background:#f8fafc;border:1px solid var(--line);border-radius:12px}
+.sort-chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 11px;font-size:12px;font-weight:900;color:#475569;cursor:pointer;font-family:inherit}
+.sort-chip.on{background:var(--teal);border-color:var(--teal);color:#fff}
+.keyboard-help{margin-top:8px;color:#64748b;font-size:11px}
+tr.kbd-focus td,.project-card.kbd-focus{background:var(--teal2)!important;box-shadow:inset 0 0 0 2px rgba(11,143,143,.18)}
+.date-field{display:flex;gap:8px;align-items:center}
+.date-field input{font-weight:900;color:var(--navy)}
+.date-picker{display:none;max-width:360px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 16px 40px rgba(15,23,42,.16);padding:16px;margin-top:12px}
+.date-picker.on{display:block}
+.dp-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.dp-title{font-size:18px;font-weight:900;color:var(--navy)}
+.dp-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.dp-week,.dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.dp-week div{font-size:10px;font-weight:900;color:#64748b;padding:5px 0}
+.dp-day{border:0;background:#fff;border-radius:9px;padding:8px 0;cursor:pointer;font-weight:900;color:#334155;font-family:inherit}
+.dp-day:hover,.dp-day.on{background:var(--teal2);color:var(--teal)}
+.dp-day.muted{color:#cbd5e1;cursor:default}
+.staff-build{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#f8fafc}
+.snap-count-box{margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#f8fafc;max-width:420px}
+.snap-count-box input{max-width:120px;display:inline-block;margin:0 6px}
+
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+  <div class="logo"><div class="logo-b">K</div><div><div class="logo-t">KEIGADO AI</div><div class="logo-s">Detailed workflow fixed</div></div></div>
+  <div class="nav">
+    <small>Main</small>
+    <button class="on" data-page="projects" onclick="showPage('projects')">📚 <span>プロジェクト一覧</span></button>
+    <button data-page="ai" onclick="showPage('ai')">🤖 <span>AI 検出チェック</span></button>
+    <button data-page="master" onclick="showPage('master')">🏫 <span>学校マスター</span></button>
+    <small>Current</small>
+    <button data-page="project" onclick="openProject(activeProject.id)">📁 <span id="currentSide">未選択</span></button>
+  </div>
+</aside>
+
+<main class="main">
+<section id="page-projects" class="page on">
+  <div class="top"><div><div class="h1">プロジェクト一覧</div><div class="sub">学校案件・新規取引校・学校以外案件・一時処理案件を検索して開きます</div></div><button class="btn primary" onclick="toggleNewProject()">＋ 新規プロジェクト作成</button></div>
+  <div class="wrap">
+    <div class="card collapse" id="newProjectBox">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+        <div><div class="title">新規プロジェクト作成</div><div class="hint">学校マスターは別リストです。ここでは新規取引校・学校以外案件・一時処理案件の作業プロジェクトを作成します。</div></div>
+        <button class="btn ghost" onclick="toggleNewProject()">最小化</button>
+      </div>
+      <div class="grid g4" style="margin-top:12px">
+        <div><label>プロジェクト種別</label><select id="newType" onchange="syncNewType()"><option value="new">新規取引校</option><option value="non">学校以外案件</option><option value="temp">一時的な写真処理案件</option></select></div>
+        <div><label>学校コード（任意・5桁）</label><input id="newCode" placeholder="例：00042" maxlength="5" oninput="lookupNewCode()"></div>
+        <div><label>学校名</label><input id="newSchool" placeholder="コード入力で自動表示 / または手入力"></div>
+        <div><label>年度</label><select id="newYear" onchange="syncProjectName()"><option>2026年度</option><option>2027年度</option><option>2025年度</option></select></div>
+        <div style="grid-column:span 2"><label>プロジェクト名</label><input id="newName" placeholder="例：上水高校 2026年度 卒業アルバム"></div>
+        <div><label>ステータス</label><select id="newStatus"><option>準備中</option><option>未開始</option><option>処理中</option></select></div>
+        <div><label>プロジェクト登録日</label><div class="date-field"><input id="newRegDate" value="2026-05-27" readonly><button class="btn ghost" onclick="toggleDatePicker()" type="button">日付選択</button></div></div>
+      </div>
+      <div class="date-picker" id="datePickerBox">
+        <div class="dp-head"><div class="dp-title">Select Date</div><button class="btn ghost" onclick="toggleDatePicker()" type="button">閉じる</button></div>
+        <div class="dp-controls"><select id="dpMonth" onchange="renderDatePicker()"></select><input id="dpYear" type="number" min="2000" max="2100" onchange="renderDatePicker()"></div>
+        <div class="dp-week"><div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div></div>
+        <div class="dp-grid" id="dpGrid"></div>
+        <div class="row"><button class="btn primary" onclick="confirmProjectDate()" type="button">Confirm</button></div>
+      </div>
+      <div class="row"><button class="btn good" onclick="addProject()">プロジェクトを作成して開く</button><button class="btn ghost" onclick="toggleNewProject()">キャンセル</button></div>
+    </div>
+
+    <div class="card">
+      <div class="title">プロジェクト検索</div>
+      <div class="hint">学校以外案件・一時処理案件は「キーワード」または「プロジェクト種別」で検索します。</div>
+      <div class="fields" style="margin-top:12px">
+        <div><label>キーワード</label><input id="q" placeholder="プロジェクト名・学校名・コード・メモ"></div>
+        <div><label>学校コード</label><input id="fCode" placeholder="学校案件のみ" maxlength="5"></div>
+        <div><label>学校名</label><input id="fSchool" placeholder="学校案件のみ"></div>
+        <div><label>プロジェクト種別</label><select id="fType"><option value="">すべて</option><option value="existing">学校案件</option><option value="new">新規取引校</option><option value="non">学校以外案件</option><option value="temp">一時的な写真処理案件</option></select></div>
+        <div><label>年度</label><select id="fYear"><option value="">すべて</option><option>2026年度</option><option>2027年度</option><option>2025年度</option></select></div>
+        <div><label>ステータス</label><select id="fStatus"><option value="">すべて</option><option>準備中</option><option>未開始</option><option>処理中</option><option>完了</option></select></div>
+      </div>
+      <div class="row"><button class="btn primary" onclick="renderProjects()">検索する</button><button class="btn ghost" onclick="clearSearch()">条件をクリア</button><span class="mini" id="resultCount"></span></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
+        <div><div class="title">プロジェクトリスト</div><div class="hint">開くと、各ワークフローをフォルダ別に操作できます。表示形式は一覧/カードで切替できます。</div></div>
+        <div class="view-toggle"><button id="projectListBtn" class="on" onclick="setProjectView('list')">一覧</button><button id="projectCardBtn" onclick="setProjectView('card')">カード</button></div>
+      </div>
+      <div class="sort-bar"><strong class="mini">並び替え：</strong><button class="sort-chip on" id="sort-registered_desc" onclick="setSort('registered_desc')">登録日 新しい順</button><button class="sort-chip" id="sort-registered_asc" onclick="setSort('registered_asc')">登録日 古い順</button><button class="sort-chip" id="sort-status" onclick="setSort('status')">ステータス</button><button class="sort-chip" id="sort-year" onclick="setSort('year')">年度</button><button class="sort-chip" id="sort-code" onclick="setSort('code')">学校コード</button><button class="sort-chip" id="sort-name" onclick="setSort('name')">プロジェクト名</button></div><div class="keyboard-help">キーボード操作：↑↓でプロジェクト選択、Enterで開くことができます。</div>
+      <div id="projectCardGrid" class="project-card-grid" style="display:none"></div>
+      <div id="projectTableWrap" class="table" style="margin-top:12px"><table><thead><tr><th>コード</th><th>プロジェクト名</th><th>種別</th><th>学校名</th><th>年度</th><th>ステータス</th><th>登録日</th><th>利用ワークフロー</th><th>操作</th></tr></thead><tbody id="projectRows"></tbody></table></div>
+    </div>
+  </div>
+</section>
+
+<section id="page-project" class="page">
+  <div class="top"><div><div class="h1"><span id="pName">上水高校 2026年度</span></div><div class="sub"><span id="pMeta"></span></div></div><button class="btn ghost" onclick="showPage('projects')">← プロジェクト一覧</button></div>
+  <div class="project-tabs">
+    <button class="tab on" data-sec="dash" onclick="showSec('dash')">Dashboard</button>
+    <button class="tab" data-sec="individual" onclick="showSec('individual')">個人写真</button>
+    <button class="tab" data-sec="teacher" onclick="showSec('teacher')">先生写真</button>
+    <button class="tab" data-sec="club" onclick="showSec('club')">クラブ写真</button>
+    <button class="tab" data-sec="snap" onclick="showSec('snap')">スナップ写真</button>
+    <button class="tab" data-sec="person" onclick="showSec('person')">人物検索</button>
+  </div>
+  <div class="wrap">
+    <div id="sec-dash" class="workflow on">
+      <div class="statgrid"><div class="stat"><strong>523</strong><div class="mini">処理済み写真</div></div><div class="stat"><strong>3</strong><div class="mini">確認待ち</div></div><div class="stat"><strong id="dashType">学校</strong><div class="mini">プロジェクト種別</div></div><div class="stat"><strong id="dashWf">5</strong><div class="mini">利用ワークフロー</div></div></div>
+      <div class="card" style="margin-top:14px"><div class="title">ワークフロー</div><div class="hint">各ワークフローは、UploadからOutput Reviewまでクリックできます。</div><div class="grid g3" style="margin-top:12px" id="workflowCards"></div></div>
+    </div>
+    <div id="sec-individual" class="workflow"></div><div id="sec-teacher" class="workflow"></div><div id="sec-club" class="workflow"></div><div id="sec-snap" class="workflow"></div><div id="sec-person" class="workflow"></div>
+  </div>
+</section>
+
+<section id="page-ai" class="page">
+  <div class="top"><div><div class="h1">AI 検出チェック</div><div class="sub">目閉じ検出・人数確認を単独で実行できます。人数確認は「写っている人物数」のカウントで、先生・生徒の分類は行いません。</div></div><button class="btn ghost" onclick="showPage('projects')">プロジェクト一覧へ</button></div>
+  <div class="wrap">
+    <div class="grid g2">
+      <div class="card"><div class="title">01 Upload</div><div class="hint">画像またはフォルダを追加して、AIチェックだけを実行します。</div><div class="drop" style="margin-top:12px" onclick="aiAddSampleUpload()">☁️ フォルダまたは画像をクリックして追加</div><div id="aiFileList" class="table" style="display:none;margin-top:12px"><table><thead><tr><th>Preview</th><th>File</th><th>Status</th></tr></thead><tbody id="aiFileRows"></tbody></table></div></div>
+      <div class="card"><div class="title">02 Check Items</div><div class="hint">必要なチェックだけ選択できます。1つだけでも実行できます。</div><div class="grid g2" style="margin-top:12px"><label class="check-card active" id="aiEyeCard"><input type="checkbox" id="aiEye" checked onchange="syncAiOptions()"><div><strong>👁 目閉じ検出</strong><div class="mini">目閉じ候補を確認します</div></div></label><label class="check-card active" id="aiCountCard"><input type="checkbox" id="aiCount" checked onchange="syncAiOptions()"><div><strong>👥 人数確認</strong><div class="mini">写真内に写っている人物の人数をAIでカウントします。<br>※先生・生徒などの分類は行いません。</div></div></label></div><div class="row"><button class="btn primary" onclick="runAiDetection()">チェック実行</button><button class="btn ghost" onclick="resetAiDetection()">クリア</button></div></div>
+    </div>
+    <div class="card" id="aiResultCard" style="display:none"><div class="title">03 Result</div><div class="hint">AI検出チェックは確認用です。命名・出力処理を自動停止するものではありません。</div><div class="table" style="margin-top:12px"><table><thead><tr><th>Preview</th><th>File</th><th id="aiEyeHeader">目閉じ</th><th id="aiCountHeader">人数</th><th>Workflow Impact</th><th>Note</th><th>操作</th></tr></thead><tbody id="aiResultRows"></tbody></table></div><div class="row"><button class="btn good" onclick="toast('AIチェック結果CSVをダウンロードしました')">CSV / Excelをダウンロード</button><button class="btn primary" onclick="toast('確認済みにしました')">確認済みにする</button></div></div>
+  </div>
+</section>
+
+<section id="page-master" class="page">
+  <div class="top"><div><div class="h1">学校マスター管理</div><div class="sub">5桁コードと正式学校名のリストです。プロジェクト種別ではありません。</div></div><button class="btn primary" onclick="toggleSchoolAdd()">＋ 学校マスター追加</button></div>
+  <div class="wrap">
+    <div class="card collapse" id="schoolAddBox"><div class="title">学校マスター追加</div><div class="hint">学校コードを新しく登録する場合だけ使います。</div><div class="grid g3" style="margin-top:12px"><div><label>学校コード</label><input id="mCode" maxlength="5" placeholder="例：00999"></div><div><label>学校名</label><input id="mName" placeholder="例：新規追加高校"></div><div><label>ステータス</label><select><option>有効</option></select></div></div><div class="row"><button class="btn good" onclick="addMaster()">学校マスターに追加</button><button class="btn ghost" onclick="toggleSchoolAdd()">閉じる</button></div></div>
+    <div class="card"><div class="title">学校マスターリスト</div><div class="hint">学校コード入力時に正式学校名を自動表示するためのリストです。学校行から関連プロジェクトだけを絞り込めます。</div><div class="table" style="margin-top:12px"><table><thead><tr><th>コード</th><th>学校名</th><th>関連プロジェクト</th><th>ステータス</th><th>操作</th></tr></thead><tbody id="masterRows"></tbody></table></div></div>
+  </div>
+</section>
+</main>
+</div>
+
+<div class="modal" id="viewer"><div class="viewer">
+  <div class="viewer-head"><div><div class="title" id="viewerTitle">拡大表示</div><div class="hint" id="viewerSub">写真を確認できます</div></div><button class="btn ghost" onclick="closeViewer()">閉じる</button></div>
+  <div class="viewer-body"><div class="viewer-photo"><div><div class="big" id="viewerIcon">🖼️</div><div id="viewerPhotoName">IMG_0001.jpg</div><div class="mini" id="viewerRename">renamed.jpg</div></div></div><div class="sidepanel" id="viewerPanel"></div></div>
+  <div class="viewer-foot" id="viewerActions"></div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const typeLabel={existing:'学校案件',new:'新規取引校',non:'学校以外案件',temp:'一時的な写真処理案件'};
+const typeBadge={existing:'b-existing',new:'b-new',non:'b-non',temp:'b-temp'};
+let masters={'00042':'上水高校','00123':'千早高校','01008':'篠崎高校','00007':'青葉中学校'};
+let projects=[
+ {id:'p1',code:'00042',school:'上水高校',name:'上水高校 2026年度 卒業アルバム',type:'existing',year:'2026年度',status:'処理中',memo:'学校コード管理',workflows:['individual','teacher','club','snap','person'],registered:'2026-05-20'},
+ {id:'p2',code:'00123',school:'千早高校',name:'千早高校 2026年度 卒業アルバム',type:'existing',year:'2026年度',status:'準備中',memo:'通常学校案件',workflows:['individual','teacher','club','snap','person'],registered:'2026-05-18'},
+ {id:'p3',code:'',school:'仮登録校A',name:'新規取引校_仮登録校A_2026年度',type:'new',year:'2026年度',status:'未開始',memo:'マスター未登録の新規取引校',workflows:['individual','teacher','snap','person'],registered:'2026-05-22'},
+ {id:'p4',code:'',school:'',name:'企業イベント写真整理_春',type:'non',year:'2026年度',status:'準備中',memo:'学校以外案件 イベント写真',workflows:['snap','person'],registered:'2026-05-24'},
+ {id:'p5',code:'',school:'',name:'一時処理案件_卒業式サンプル',type:'temp',year:'2026年度',status:'完了',memo:'一時的な写真処理案件',workflows:['snap','club','person'],registered:'2026-05-10'}
+];
+let activeProject=projects[0];
+let stepState={individual:0,teacher:0,club:0,snap:0};
+let activeGroup={individual:0,teacher:0,club:0,snap:0};
+let activeStatus={club:'All',snap:'All'};
+let selected={individual:0,teacher:0,club:0,snap:0}, viewerKind=null;
+let projectView='list';
+let sortMode='registered_desc';
+let projectFocusIndex=0;
+let lastProjectRows=[];
+let snapSelectCount=25;
+let selectedProjectDate='2026-05-27';
+let photoView={individual:'list',teacher:'list',club:'list',snap:'list'};
+let activeOutput={individual:'BestShot',teacher:'BestShot',club:'BestShot',snap:'BestShot'};
+let excelTab={individual:'Rename Result',teacher:'Match Result',club:'BestShot Result',snap:'Event Summary'};
+let uploads={individual:[{icon:'📁',name:'3年A組_写真フォルダ',meta:'47枚 / クラス区切りカード含む'},{icon:'📁',name:'3年B組_写真フォルダ',meta:'42枚 / クラス区切りカード含む'}],teacher:[{icon:'📁',name:'先生写真フォルダ',meta:'34枚'},{icon:'📄',name:'教師名簿_PDF.pdf',meta:'OCR照合用'}],club:[{icon:'📁',name:'バドミントン部',meta:'18枚'},{icon:'📁',name:'サッカー部',meta:'22枚'}],snap:[{icon:'📁',name:'運動会',meta:'125枚 / 出力枚数は最後に指定'},{icon:'📁',name:'修学旅行',meta:'138枚 / 出力枚数は最後に指定'}]};
+
+const data={
+ individual:{name:'個人写真',note:'Excel名簿は使いません。写真フォルダ・番号カード・本/札タグ・クラス区切りカードで処理します。',naming:'[Year]_[SchoolName]_[OriginalFileName]_[Grade][Class][ID]_[Tag].ext　例：26_上水高_IMG_2337_3105_札01.jpg',folders:[
+  {name:'3年A組',meta:'47枚 / クラス区切りカード検出',items:[{icon:'👤',orig:'IMG_2337.jpg',ren:'26_上水高_IMG_2337_3105_札01.jpg',status:'確認済み',meta:'3年1組 05番 / 札01 / ID plate shot'},{icon:'👤',orig:'IMG_2338.jpg',ren:'26_上水高_IMG_2338_3105_本01.jpg',status:'確認済み',meta:'3年1組 05番 / 本01 / portrait priority'},{icon:'⚠️',orig:'IMG_2401.jpg',ren:'要修正：duplicate_number',status:'要修正',meta:'重複番号 3年1組 05番'}]},
+  {name:'3年B組',meta:'42枚 / クラス区切りカード検出',items:[{icon:'👤',orig:'IMG_2510.jpg',ren:'26_上水高_IMG_2510_3208_札01.jpg',status:'確認済み',meta:'3年2組 08番 / 札01'},{icon:'❓',orig:'IMG_2522.jpg',ren:'要修正：missing_tag',status:'要修正',meta:'本/札タグ未確定'}]}
+ ]},
+ teacher:{name:'先生写真',note:'先生写真フォルダとPDF教師名簿をアップロードし、OCRとPDFを照合します。',naming:'教科_先生名_元ファイル名_札01/本01　例：国語科_高橋次郎_IMG0165_本01.jpg',folders:[
+  {name:'Processed / Matched',meta:'PDF照合済み',items:[{icon:'🎓',orig:'IMG0165.jpg',ren:'国語科_高橋次郎_IMG0165_本01.jpg',status:'照合済み',meta:'OCR: 高橋次郎 / PDF一致 / 国語科'},{icon:'🎓',orig:'IMG0166.jpg',ren:'数学科_田中花子_IMG0166_本01.jpg',status:'照合済み',meta:'OCR: 田中花子 / PDF一致 / 数学科'}]},
+  {name:'Unknown / Review',meta:'未照合・要確認',items:[{icon:'⚠️',orig:'IMG0199.jpg',ren:'Unknown_IMG0199.jpg',status:'要確認',meta:'OCR読取不明 / PDF未照合'}]},
+  {name:'BestShot',meta:'最終候補',items:[{icon:'🎓',orig:'IMG0165.jpg',ren:'国語科_高橋次郎_IMG0165_本01.jpg',status:'Best Shot',meta:'スコア92 / 正面・表情良好'}]}
+ ]},
+ club:{name:'クラブ写真',note:'クラブフォルダ別に目閉じ・人数確認を行い、Best Shot / Passing / NGを確認します。',naming:'フォルダ名_撮影日_元ファイル名_札01/本01　例：バドミントン部_20260403_IMG0045_本01.jpg',folders:[
+  {name:'バドミントン部',meta:'18枚 / 撮影日 20260403',items:[{icon:'🏆',orig:'IMG0045.jpg',ren:'バドミントン部_20260403_IMG0045_本01.jpg',status:'Best Shot',meta:'人数32 / 目閉じなし'},{icon:'📘',orig:'IMG0046.jpg',ren:'バドミントン部_20260403_IMG0046_本02.jpg',status:'Passing',meta:'類似候補 / 人数31'},{icon:'🚫',orig:'IMG0047.jpg',ren:'バドミントン部_20260403_IMG0047_札01.jpg',status:'NG',meta:'目閉じ候補あり'}]},
+  {name:'サッカー部',meta:'22枚 / 撮影日 20260403',items:[{icon:'🏆',orig:'IMG0101.jpg',ren:'サッカー部_20260403_IMG0101_本01.jpg',status:'Best Shot',meta:'人数28 / 表情良好'},{icon:'📘',orig:'IMG0102.jpg',ren:'サッカー部_20260403_IMG0102_本02.jpg',status:'Passing',meta:'類似候補'},{icon:'🚫',orig:'IMG0103.jpg',ren:'サッカー部_20260403_IMG0103_札01.jpg',status:'NG',meta:'ブレ候補'}]}
+ ]},
+ snap:{name:'スナップ写真',note:'イベントフォルダ別に類似写真整理・品質判定を行い、Best Shot / Passing / NGを確認します。',naming:'イベントフォルダ別に出力。セレクト枚数はOutput Reviewで1〜200枚の範囲で指定できます。',folders:[
+  {name:'運動会',meta:'125枚 / セレクト枚数は出力時に指定',items:[{icon:'📸',orig:'IMG1201.jpg',ren:'運動会/BestShot/IMG1201.jpg',status:'Best Shot',meta:'score 92 / 類似グループA代表'},{icon:'📘',orig:'IMG1202.jpg',ren:'運動会/Passing/IMG1202.jpg',status:'Passing',meta:'score 81 / 類似候補'},{icon:'🚫',orig:'IMG1203.jpg',ren:'運動会/NG/IMG1203.jpg',status:'NG',meta:'ブレ検出'},{icon:'📘',orig:'IMG1204.jpg',ren:'運動会/Passing/IMG1204.jpg',status:'Passing',meta:'score 79 / 保留'}]},
+  {name:'修学旅行',meta:'138枚 / セレクト枚数は出力時に指定',items:[{icon:'📸',orig:'IMG2201.jpg',ren:'修学旅行/BestShot/IMG2201.jpg',status:'Best Shot',meta:'score 90 / イベント条件一致'},{icon:'📘',orig:'IMG2202.jpg',ren:'修学旅行/Passing/IMG2202.jpg',status:'Passing',meta:'保留候補'},{icon:'🚫',orig:'IMG2203.jpg',ren:'修学旅行/NG/IMG2203.jpg',status:'NG',meta:'顔ブレ候補'}]}
+ ]}
+};
+
+function toast(msg){let t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),1800)}
+function showPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));document.getElementById('page-'+p).classList.add('on');document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('on',x.dataset.page===p));if(p==='master')renderMaster()}
+function typeHTML(t){return `<span class="badge ${typeBadge[t]}">${typeLabel[t]}</span>`}
+function statusHTML(s){let c=s==='完了'?'b-ok':s==='処理中'?'b-warn':'b-gray';return `<span class="badge ${c}">${s}</span>`}
+function wfName(w){return {individual:'個人写真',teacher:'先生写真',club:'クラブ写真',snap:'スナップ写真',person:'人物検索'}[w]}
+function filteredProjects(){const q=document.getElementById('q').value.trim().toLowerCase(), code=document.getElementById('fCode').value.trim(), school=document.getElementById('fSchool').value.trim().toLowerCase(), type=document.getElementById('fType').value, year=document.getElementById('fYear').value, status=document.getElementById('fStatus').value;let rows=projects.filter(p=>{const hay=[p.name,p.school,p.code,typeLabel[p.type],p.memo,p.year,p.status,p.registered].join(' ').toLowerCase();return (!q||hay.includes(q))&&(!code||p.code.includes(code))&&(!school||(p.school||'').toLowerCase().includes(school))&&(!type||p.type===type)&&(!year||p.year===year)&&(!status||p.status===status)});return sortProjects(rows)}
+function sortProjects(rows){const statusOrder={'処理中':1,'準備中':2,'未開始':3,'完了':4};return [...rows].sort((a,b)=>{if(sortMode==='registered_desc')return (b.registered||'').localeCompare(a.registered||'');if(sortMode==='registered_asc')return (a.registered||'').localeCompare(b.registered||'');if(sortMode==='status')return (statusOrder[a.status]||99)-(statusOrder[b.status]||99);if(sortMode==='year')return (b.year||'').localeCompare(a.year||'');if(sortMode==='code')return (a.code||'99999').localeCompare(b.code||'99999');if(sortMode==='name')return (a.name||'').localeCompare(b.name||'','ja');return 0})}
+function setSort(mode){sortMode=mode;projectFocusIndex=0;renderProjects()}
+function renderProjects(){const rows=filteredProjects();lastProjectRows=rows;if(projectFocusIndex>=rows.length)projectFocusIndex=Math.max(0,rows.length-1);document.getElementById('resultCount').textContent=`${rows.length}件表示`;document.getElementById('projectRows').innerHTML=rows.map((p,i)=>`<tr class="${i===projectFocusIndex?'kbd-focus':''}" onclick="projectFocusIndex=${i};renderProjects()" ondblclick="openProject('${p.id}')"><td class="mono">${p.code||'—'}</td><td><strong>${p.name}</strong><div class="mini">${p.memo}</div></td><td>${typeHTML(p.type)}</td><td>${p.school||'—'}</td><td>${p.year}</td><td>${statusHTML(p.status)}</td><td class="mono">${p.registered||'—'}</td><td class="mini">${p.workflows.map(w=>wfName(w)).join(' / ')}</td><td><button class="btn primary" onclick="event.stopPropagation();openProject('${p.id}')">開く</button></td></tr>`).join('')||`<tr><td colspan="9" class="mini">該当するプロジェクトがありません。</td></tr>`;document.getElementById('projectCardGrid').innerHTML=rows.map((p,i)=>`<div class="project-card ${i===projectFocusIndex?'kbd-focus':''}" onclick="projectFocusIndex=${i};renderProjects()" ondblclick="openProject('${p.id}')"><div style="display:flex;justify-content:space-between;gap:8px"><div class="code">${p.code||'FREE'}</div>${statusHTML(p.status)}</div><div class="title" style="margin-top:8px">${p.name}</div><div class="hint">${p.school||'学校以外 / 一時案件'} / ${p.year}</div><div class="mini" style="margin-top:6px">登録日：${p.registered||'—'}</div><div style="margin-top:8px">${typeHTML(p.type)}</div><div class="mini" style="margin-top:8px">${p.workflows.map(w=>wfName(w)).join(' / ')}</div><div class="row"><button class="btn primary" onclick="event.stopPropagation();openProject('${p.id}')">開く</button></div></div>`).join('')||`<div class="panel">該当するプロジェクトがありません。</div>`;document.getElementById('projectTableWrap').style.display=projectView==='list'?'block':'none';document.getElementById('projectCardGrid').style.display=projectView==='card'?'grid':'none';document.getElementById('projectListBtn').classList.toggle('on',projectView==='list');document.getElementById('projectCardBtn').classList.toggle('on',projectView==='card');document.querySelectorAll('.sort-chip').forEach(b=>b.classList.toggle('on',b.id==='sort-'+sortMode))}
+function setProjectView(v){projectView=v;renderProjects()}
+function filterProjectsBySchool(code,school){document.getElementById('fCode').value=code||'';document.getElementById('fSchool').value=school||'';document.getElementById('fType').value='';document.getElementById('fYear').value='';document.getElementById('fStatus').value='';showPage('projects');renderProjects();toast('関連プロジェクトを絞り込みました')}
+function createProjectFromMaster(code,school){document.getElementById('newProjectBox').classList.add('on');document.getElementById('newType').value='new';syncNewType();document.getElementById('newCode').value=code;document.getElementById('newSchool').value=school;syncProjectName();showPage('projects');toast('学校マスターのコードを使ってプロジェクト作成を開始できます')}
+function clearSearch(){['q','fCode','fSchool'].forEach(id=>document.getElementById(id).value='');['fType','fYear','fStatus'].forEach(id=>document.getElementById(id).value='');projectFocusIndex=0;renderProjects()}
+function toggleNewProject(){document.getElementById('newProjectBox').classList.toggle('on')}
+function syncNewType(){const t=document.getElementById('newType').value, dis=(t==='non'||t==='temp');['newCode','newSchool'].forEach(id=>{document.getElementById(id).disabled=dis;if(dis)document.getElementById(id).value=''});if(t==='new'&&!document.getElementById('newName').value)document.getElementById('newName').value='新規取引校_新規プロジェクト';if(dis&&!document.getElementById('newName').value)document.getElementById('newName').value=t==='non'?'学校以外案件_新規プロジェクト':'一時処理案件_新規プロジェクト'}
+function lookupNewCode(){const c=document.getElementById('newCode').value;if(masters[c]){document.getElementById('newSchool').value=masters[c];syncProjectName()}}
+function syncProjectName(){const s=document.getElementById('newSchool').value,y=document.getElementById('newYear').value;if(s)document.getElementById('newName').value=`${s} ${y} 卒業アルバム`}
+function addProject(){let t=document.getElementById('newType').value;const code=document.getElementById('newCode').value.trim();const school=document.getElementById('newSchool').value.trim();if(code&&masters[code])t='existing';let p={id:'p'+Date.now(),code:code,school:school,name:document.getElementById('newName').value||'新規プロジェクト',type:t,year:document.getElementById('newYear').value,status:document.getElementById('newStatus').value,memo:typeLabel[t],workflows:t==='non'?['snap','person']:['individual','teacher','club','snap','person'],registered:document.getElementById('newRegDate').value};projects.unshift(p);renderProjects();toggleNewProject();openProject(p.id);toast('プロジェクトを作成しました')}
+function openProject(id){activeProject=projects.find(p=>p.id===id)||projects[0];document.getElementById('pName').textContent=activeProject.name;document.getElementById('pMeta').innerHTML=`${typeLabel[activeProject.type]} / コード：${activeProject.code||'—'} / 学校名：${activeProject.school||'—'} / ${activeProject.year} / ${activeProject.status} / 登録日：${activeProject.registered||'—'}`;document.getElementById('currentSide').textContent=activeProject.name.slice(0,12);document.getElementById('dashType').textContent=typeLabel[activeProject.type].replace('既存学校案件','学校');document.getElementById('dashWf').textContent=activeProject.workflows.length;renderWorkflowCards();showPage('project');showSec('dash')}
+function renderWorkflowCards(){const icons={individual:'👤',teacher:'🎓',club:'🏆',snap:'📸',person:'🔍'};document.getElementById('workflowCards').innerHTML=activeProject.workflows.map(w=>`<div class="card" style="cursor:pointer;margin:0" onclick="showSec('${w}')"><div style="font-size:26px">${icons[w]}</div><div class="title">${wfName(w)}</div><div class="hint">フォルダ別に確認・出力</div></div>`).join('')}
+function showSec(sec){document.querySelectorAll('.project-tabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.sec===sec));document.querySelectorAll('.workflow').forEach(x=>x.classList.remove('on'));document.getElementById('sec-'+sec).classList.add('on'); if(['individual','teacher','club','snap'].includes(sec))renderWorkflow(sec); if(sec==='person')renderPerson()}
+function flowLabels(k){return k==='individual'?[['Upload','写真フォルダ'],['Processing','番号・本/札・クラス'],['Result Review & Correction','結果確認・修正'],['Output Review','最終出力確認']]:k==='teacher'?[['Upload','写真+PDF'],['Processing','OCR/PDF照合'],['Result Review & Correction','結果確認・修正'],['Output Review','最終出力確認']]:k==='club'?[['Upload','クラブ写真'],['Processing','目閉じ・人数'],['Result Review & Correction','結果確認・振分'],['Output Review','最終出力確認']]:[['Upload','イベントフォルダ'],['Processing','類似・品質判定'],['Result Review & Correction','結果確認・振分'],['Output Review','最終出力確認']]}
+function flowHTML(k){return `<div class="flow">${flowLabels(k).map((x,i)=>`<div class="flow-step ${stepState[k]===i?'on':''}" onclick="setStep('${k}',${i})"><strong>0${i+1} ${x[0]}</strong><span>${x[1]}</span></div>`).join('')}</div>`}
+function setStep(k,i){stepState[k]=i;renderWorkflow(k)}
+function renderWorkflow(k){document.getElementById('sec-'+k).innerHTML=`<div class="card"><div class="title">${data[k].name}</div><div class="hint">${data[k].note}</div>${flowHTML(k)}<div class="naming"><strong>命名ルール：</strong>${data[k].naming}</div></div>${stepContent(k)}`}
+function stepContent(k){const s=stepState[k];if(s===0)return uploadStep(k);if(s===1)return processingStep(k);if(s===2)return reviewStep(k);return outputReviewStep(k)}
+function uploadStep(k){let add=k==='teacher'?`<div class="grid g2"><div class="drop" onclick="addUploadDemo('${k}','photo')">📁 先生写真フォルダをアップロード</div><div class="drop" onclick="addUploadDemo('${k}','pdf')">📄 PDF教師名簿をアップロード</div></div><div class="panel"><div class="title">職員一覧について</div><div class="hint">職員名表・職員時間割りを統合した職員一覧は、通常の先生写真処理後にExcel Report内で確認できます。</div></div>`:k==='individual'?`<div class="drop" onclick="addUploadDemo('${k}','photo')">📁 個人写真フォルダをアップロード<br><span class="mini">Excelは使いません。番号カード・本/札タグ・クラス区切りカードを含みます。</span></div>`:k==='snap'?`<div class="drop" onclick="addUploadDemo('${k}','photo')">📁 イベントフォルダをアップロード（複数イベント対応）<br><span class="mini">セレクト枚数はアップロード時ではなく、最後のOutput Reviewで指定します。</span></div>`:`<div class="drop" onclick="addUploadDemo('${k}','photo')">📁 クラブ写真フォルダをアップロード</div>`;return `<div class="card"><div class="title">01 Upload</div><div class="hint">アップロード対象と、アップロード済みフォルダを確認します。誤って追加したファイル/フォルダは削除できます。</div><div style="margin-top:12px">${add}</div><div class="title" style="margin-top:14px">アップロード済み</div>${uploadList(k)}<div class="row"><button class="btn primary" onclick="setStep('${k}',1)">次へ：Processing</button></div></div>`}
+function uploadList(k){let arr=uploads[k]||[];if(!arr.length)return `<div class="panel">アップロード済みファイルはありません。</div>`;return `<div class="upload-list">${arr.map((u,i)=>`<div class="upload-row"><div class="upload-ico">${u.icon}</div><div><div class="upload-name">${u.name}</div><div class="mini">${u.meta}</div></div><div class="actions"><button class="btn danger" onclick="deleteUpload('${k}',${i})">削除</button></div></div>`).join('')}</div>`}
+function addUploadDemo(k,type){let sample=type==='pdf'?{icon:'📄',name:'追加_教師名簿_PDF.pdf',meta:'OCR照合用'}:{icon:'📁',name:'追加アップロード_'+(uploads[k].length+1),meta:k==='snap'?'イベントフォルダ / セレクト枚数は最後に指定':'写真フォルダ'};uploads[k].push(sample);toast('アップロード項目を追加しました');renderWorkflow(k)}
+function deleteUpload(k,i){uploads[k].splice(i,1);toast('アップロード項目を削除しました');renderWorkflow(k)}
+function processingStep(k){let rows=data[k].folders.map(f=>{let c=countByStatus(f.items);return `<tr><td>📁 ${f.name}</td><td>${f.items.length} photos</td><td>${statusSummary(c)}</td><td>${f.meta}</td></tr>`}).join('');return `<div class="card"><div class="title">02 Processing</div><div class="hint">フォルダ単位で処理状態を確認します。</div><div class="table" style="margin-top:12px"><table><thead><tr><th>Folder / Group</th><th>Photos</th><th>Status Summary</th><th>Details</th></tr></thead><tbody>${rows}</tbody></table></div><div class="row"><button class="btn ghost" onclick="setStep('${k}',0)">戻る</button><button class="btn primary" onclick="setStep('${k}',2)">次へ：結果確認・修正</button></div></div>`}
+function countByStatus(items){let o={};items.forEach(x=>o[x.status]=(o[x.status]||0)+1);return o}
+function statusSummary(c){return Object.entries(c).map(([k,v])=>`<span class="badge ${statusClass(k)}">${k}: ${v}</span>`).join(' ')}
+function folderTabs(k){return `<div class="folder-tabs">${data[k].folders.map((f,i)=>`<button class="folder-tab ${activeGroup[k]===i?'on':''}" onclick="activeGroup['${k}']=${i};selected['${k}']=0;renderWorkflow('${k}')">📁 ${f.name}</button>`).join('')}</div>`}
+function statusTabs(k){if(!(k==='club'||k==='snap'))return '';let vals=['All','Best Shot','Passing','NG'];return `<div class="status-tabs">${vals.map(v=>`<button class="status-tab ${activeStatus[k]===v?'on':''}" onclick="activeStatus['${k}']='${v}';selected['${k}']=0;renderWorkflow('${k}')">${v} ${v==='All'?'':countStatus(k,v)}</button>`).join('')}</div>`}
+function currentItems(k){let arr=data[k].folders[activeGroup[k]].items;if(k==='club'||k==='snap'){let st=activeStatus[k];if(st!=='All')arr=arr.filter(x=>x.status===st)}return arr}
+function currentItem(k){let arr=currentItems(k);if(!arr.length)return null;if(selected[k]>=arr.length)selected[k]=0;return arr[selected[k]]}
+function reviewStep(k){
+  if(k==='club'||k==='snap'){
+    if(!activeStatus[k]) activeStatus[k]='All';
+    return `<div class="card"><div class="title">03 Result Review & Correction / 結果確認・修正</div><div class="hint">AI処理結果の確認と、Best Shot / Passing / NG の振分をこの画面で行います。Output Reviewは最終出力確認だけに分けます。</div>${folderTabs(k)}${statusTabs(k)}${statusBoard(k)}${groupReview(k,true)}<div class="row"><button class="btn ghost" onclick="setStep('${k}',1)">戻る</button><button class="btn primary" onclick="setStep('${k}',3)">次へ：Output Review</button></div></div>`
+  }
+  return `<div class="card"><div class="title">03 Result Review & Correction / 結果確認・修正</div><div class="hint">AI/OCR結果を確認し、必要な修正・リネームを同じ画面で行います。Output Reviewは最終出力確認だけに分けます。</div>${folderTabs(k)}${groupReview(k,false)}${renamePanel(k)}<div class="row"><button class="btn ghost" onclick="setStep('${k}',1)">戻る</button><button class="btn primary" onclick="setStep('${k}',3)">次へ：Output Review</button></div></div>`
+}
+function correctionStep(k){return reviewStep(k)}
+function moveStep(k){return reviewStep(k)}
+function statusBoard(k){let all=data[k].folders[activeGroup[k]].items;return `<div class="output-grid">${['Best Shot','Passing','NG'].map(s=>`<div class="output-card"><strong>${s}</strong><span>${all.filter(x=>x.status===s).length} photos</span></div>`).join('')}</div>`}
+function outputCardsFor(k){return k==='individual'?[['BestShot','採用候補・本写真'],['Renamed Photos','クラス別・本/札タグ付き写真'],['Error List','確認対象一覧'],['Excel Report','処理結果一覧']]:k==='teacher'?[['BestShot','先生ごとの候補写真'],['Processed','PDF照合済み'],['Unknown','未照合'],['Excel Report','照合結果・統合職員一覧']]:k==='club'?[['Marked Photos','マーク付き写真（目閉じ・人数）'],['Clean Photos','マークなしクリーン写真'],['Excel Report','スコア・目閉じ・人数']]:[['BestShot','イベント別採用'],['Passing','保留'],['NG','除外候補'],['Excel Report','イベント別結果']]}
+function setOutputFolder(k,name){activeOutput[k]=name;renderWorkflow(k)}
+function setPhotoView(k,v){photoView[k]=v;renderWorkflow(k)}
+function outputReviewStep(k){let cards=outputCardsFor(k);let current=activeOutput[k]||cards[0][0];let body=current==='Excel Report'?excelPreview(k):outputPhotoPreview(k,current);let snapCount=k==='snap'?`<div class="snap-count-box"><div class="title">出力するセレクト枚数</div><div class="hint">結果確認後、最終出力するBest Shot枚数を1〜200枚の範囲で指定します。</div><div style="margin-top:8px"><label>セレクト枚数</label><input id="snapSelectCount" type="number" min="1" max="200" value="${snapSelectCount}" onchange="snapSelectCount=Math.max(1,Math.min(200,Number(this.value)||1));this.value=snapSelectCount">枚</div></div>`:'';return `<div class="card"><div class="title">04 Output Review / Download</div><div class="hint">最終出力フォルダまたはExcel Reportをクリックすると、画面内で内容を確認できます。フォルダ選択は下のカードに統一し、重複表示をなくしています。</div><div class="output-grid">${cards.map(x=>`<div class="output-card click ${current===x[0]?'on':''}" onclick="setOutputFolder('${k}','${x[0]}')"><strong>${x[0]}</strong><span>${x[1]}</span></div>`).join('')}</div>${body}${snapCount}<div class="row"><button class="btn ghost" onclick="setStep('${k}',2)">戻る</button><button class="btn good" onclick="toast('選択中フォルダをダウンロードしました')">このフォルダをダウンロード</button><button class="btn primary" onclick="toast('${k==='snap'?`セレクト${snapSelectCount}枚を含めて、`:''}写真とExcelをまとめてダウンロードしました')">写真 + Excelをまとめてダウンロード</button></div></div>`}
+function outputPhotoPreview(k,current){
+ let filter=current==='BestShot'?'Best Shot':current==='Passing'?'Passing':current==='NG'?'NG':null;
+ let old=activeStatus[k];
+ let extraHint='';
+ if(k==='club' && (current==='Marked Photos'||current==='Clean Photos')){
+   filter='Best Shot';
+   extraHint=current==='Marked Photos'?'目閉じ検出枠・人数カウントなどの確認マーク付き写真を表示します。':'確認マークのない納品用クリーン写真を表示します。';
+ }
+ if(filter&&(k==='club'||k==='snap'))activeStatus[k]=filter;
+ let content=`<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px"><div><div class="title">出力プレビュー：${current}</div><div class="hint">${extraHint||'クリックで選択、拡大表示できます。出力画面では最終フォルダとファイルを確認します。修正・振分は結果確認・修正画面で行います。'}</div></div><div class="view-toggle"><button class="${photoView[k]==='list'?'on':''}" onclick="setPhotoView('${k}','list')">一覧</button><button class="${photoView[k]==='icon'?'on':''}" onclick="setPhotoView('${k}','icon')">カード</button></div></div>${photoList(k,false,true)}`;
+ if(filter&&(k==='club'||k==='snap'))activeStatus[k]=old;
+ return content
+}
+function excelPreview(k){let tabs=excelTabsFor(k);let tab=excelTab[k]||tabs[0];let hint=k==='teacher'?'先生写真の照合結果に加えて、職員名表・職員時間割りを統合した職員一覧もExcel Report内で確認できます。':(k==='club'?'ベストショット選定スコア、目閉じ検出、人数カウントの結果を画面内で確認します。':data[k].name+' のExcel出力を画面内で確認します。');return `<div class="panel" style="margin-top:14px"><div class="title">Excel Report Preview</div><div class="hint">${hint}</div><div class="excel-tabs">${tabs.map(t=>`<button class="excel-tab ${tab===t?'on':''}" onclick="excelTab['${k}']='${t}';renderWorkflow('${k}')">${t}</button>`).join('')}</div>${excelTable(k,tab)}</div>`}
+function excelTabsFor(k){return k==='individual'?['Rename Result','Error List','Final Output']:k==='teacher'?['Match Result','PDF Staff Master','統合職員一覧','Final Name List','BestShot Scores']:k==='club'?['Best Shot Scoring','Eye Closure Detection','People Count','Review Summary']:['Event Summary','Similarity Group','BestShot Selection']}
+function excelTable(k,tab){if(k==='teacher'&&tab==='統合職員一覧'){let rows=[['高橋 次郎','国語','1年A組 / 2年B組','職員名表・職員時間割りより統合'],['田中 花子','数学','3年A組 / 3年B組','職員名表・職員時間割りより統合'],['佐藤 一郎','英語','1年C組 / 2年A組','職員名表・職員時間割りより統合']].map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td><span class="badge b-ok">統合済み</span></td><td>${r[3]}</td></tr>`).join('');return `<div class="table"><table><thead><tr><th>職員名</th><th>教科</th><th>担当クラス / 時間割情報</th><th>Status</th><th>Sheet Note</th></tr></thead><tbody>${rows}</tbody></table></div>`}let items=data[k].folders.flatMap(f=>f.items.map(x=>({folder:f.name,...x})));let rows=items.map((x,i)=>`<tr><td>${x.folder}</td><td>${x.orig}</td><td>${x.ren}</td><td><span class="badge ${statusClass(x.status)}">${x.status}</span></td><td>${tab} row ${i+1}</td></tr>`).join('');return `<div class="table"><table><thead><tr><th>Folder</th><th>File</th><th>Output / Name</th><th>Status</th><th>Sheet Note</th></tr></thead><tbody>${rows}</tbody></table></div>`}
+function groupReview(k,showActions){let item=currentItem(k), folder=data[k].folders[activeGroup[k]];if(!item)return `<div class="panel">選択中のステータスには写真がありません。別のステータスを選んでください。</div>`;return `<div class="result-layout"><div><div class="preview"><div class="big">${item.icon}</div><strong>${item.orig}</strong><div class="mini">${folder.name}</div></div><div class="photo-meta">${item.meta}<br><span class="badge ${statusClass(item.status)}">${item.status}</span></div><div class="row"><button class="btn ghost" onclick="prevPhoto('${k}')">← 前へ</button><button class="btn ghost" onclick="nextPhoto('${k}')">次へ →</button><button class="btn primary" onclick="openViewer('${k}',${selected[k]})">拡大表示</button></div>${(k==='club'||k==='snap')?moveButtons(k):''}</div><div><div class="title" style="margin-bottom:8px">写真リスト：${folder.name}</div>${photoList(k,showActions,false)}</div></div>`}
+function moveButtons(k){return `<div class="row"><button class="btn good" onclick="movePhoto('${k}','Best Shot')">Best Shotへ</button><button class="btn navy" onclick="movePhoto('${k}','Passing')">Passingへ</button><button class="btn danger" onclick="movePhoto('${k}','NG')">NGへ</button></div>`}
+function photoList(k,showActions,outputMode){let items=currentItems(k);if(!items.length)return '<div class="panel">表示する写真がありません。</div>';if(outputMode&&photoView[k]==='icon'){return `<div class="photo-icon-grid" style="margin-top:10px">${items.map((x,i)=>`<div class="photo-card-mini ${i===selected[k]?'on':''}" onclick="selected['${k}']=${i};renderWorkflow('${k}')"><div class="pic">${x.icon}</div><div class="nm">${x.orig}</div><div class="rn">${x.ren}</div><div style="margin-top:6px"><span class="badge ${statusClass(x.status)}">${x.status}</span></div><div class="row"><button class="btn ghost" onclick="event.stopPropagation();selected['${k}']=${i};openViewer('${k}',${i})">拡大</button>${showActions&&(k==='club'||k==='snap')?`<button class="btn good" onclick="event.stopPropagation();selected['${k}']=${i};movePhoto('${k}','Best Shot')">Best</button><button class="btn navy" onclick="event.stopPropagation();selected['${k}']=${i};movePhoto('${k}','Passing')">Passing</button><button class="btn danger" onclick="event.stopPropagation();selected['${k}']=${i};movePhoto('${k}','NG')">NG</button>`:showActions?`<button class="btn primary" onclick="event.stopPropagation();selected['${k}']=${i};setStep('${k}',3)">修正</button>`:''}</div></div>`).join('')}</div>`}return `<div class="photo-list" style="margin-top:${outputMode?'10px':'0'}">${items.map((x,i)=>`<div class="photo-row ${i===selected[k]?'on':''}" onclick="selected['${k}']=${i};renderWorkflow('${k}')"><div class="picon">${x.icon}</div><div><div class="fname">${x.orig}</div><div class="mini">${x.meta}</div></div><div class="rename">${x.ren}<br><span class="badge ${statusClass(x.status)}">${x.status}</span></div><div class="actions"><button class="btn ghost" onclick="event.stopPropagation();selected['${k}']=${i};openViewer('${k}',${i})">拡大</button>${showActions&&(k==='club'||k==='snap')?`<button class="btn good" onclick="event.stopPropagation();selected['${k}']=${i};movePhoto('${k}','Best Shot')">Best</button><button class="btn navy" onclick="event.stopPropagation();selected['${k}']=${i};movePhoto('${k}','Passing')">Passing</button><button class="btn danger" onclick="event.stopPropagation();selected['${k}']=${i};movePhoto('${k}','NG')">NG</button>`:showActions?`<button class="btn primary" onclick="event.stopPropagation();selected['${k}']=${i};setStep('${k}',3)">修正</button>`:''}</div></div>`).join('')}</div>`}
+function renamePanel(k){const item=currentItem(k);if(!item)return '';let fields='',ruleText='';if(k==='individual'){fields=`<div><label>学年</label><input id="editGrade" value="3"></div><div><label>クラス</label><input id="editClass" value="${activeGroup[k]+1}"></div><div><label>番号</label><input id="editNo" value="${item.meta.match(/(\d{2})番/)?.[1]||'05'}"></div><div><label>タグ</label><input id="editTag" value="${item.ren.includes('札')?'札01':'本01'}"></div>`;ruleText='例：26_上水高_IMG_2337_3105_本01.jpg / 札01.jpg'}else if(k==='teacher'){fields=`<div><label>教科</label><input id="editSubject" value="${item.ren.split('_')[0]||'国語科'}"></div><div><label>先生名</label><input id="editTeacher" value="${item.ren.split('_')[1]||'高橋次郎'}"></div><div><label>タグ</label><input id="editTag" value="${item.ren.includes('札')?'札01':'本01'}"></div>`;ruleText='例：国語科_高橋次郎_IMG0165_本01.jpg'}else{let folderLabel=k==='club'?'クラブ名':'イベント名';fields=`<div><label>${folderLabel}</label><input id="editFolder" value="${data[k].folders[activeGroup[k]].name}"></div><div><label>撮影日</label><input id="editDate" value="20260403"></div><div><label>タグ</label><input id="editTag" value="${item.status==='NG'?'NG01':item.status==='Passing'?'保留01':(item.ren.includes('札')?'札01':'本01')}"></div>`;ruleText=k==='club'?'例：バドミントン部_20260403_IMG0045_本01.jpg':'例：体育祭_20260410_IMG1201_本01.jpg'}return `<div class="panel"><div class="title">手入力修正 / Manual Rename</div><div class="hint">自動リネームを確認し、必要な場合だけ手入力で修正します。</div><div class="grid g4" style="margin-top:10px">${fields}<div style="grid-column:span 4"><label>手入力ファイル名（任意）</label><input id="manualRename" value="${item.ren}"></div></div><div class="naming"><strong>命名例：</strong>${ruleText}<br><strong>現在の出力名：</strong><span id="renamePreview">${item.ren}</span></div><div class="row"><button class="btn good" onclick="applyRename('${k}')">リネームを保存</button><button class="btn ghost" onclick="toast('自動候補を再計算しました')">自動候補を再計算</button></div></div>`}
+function applyRename(k){const item=currentItem(k);const manual=document.getElementById('manualRename')?.value?.trim();if(item&&manual){ item.ren=manual; item.status=item.status==='要修正'||item.status==='要確認'?'確認済み':item.status; }toast('リネームを保存しました');renderWorkflow(k)}
+function statusClass(s){return s==='Best Shot'||s==='確認済み'||s==='照合済み'?'b-ok':s==='Passing'?'b-pass':s==='NG'||s==='要修正'||s==='要確認'?'b-ng':'b-gray'}
+function countStatus(k,s){return data[k].folders[activeGroup[k]].items.filter(x=>x.status===s).length}
+function prevPhoto(k){let arr=currentItems(k);selected[k]=(selected[k]+arr.length-1)%arr.length;renderWorkflow(k)}
+function nextPhoto(k){let arr=currentItems(k);selected[k]=(selected[k]+1)%arr.length;renderWorkflow(k)}
+function findActualItem(k){let visible=currentItems(k);return visible[selected[k]]}
+function movePhoto(k,status){let item=findActualItem(k);if(!item)return;item.status=status;item.icon=status==='Best Shot'?'🏆':status==='Passing'?'📘':'🚫';if(k==='snap'){let folder=data[k].folders[activeGroup[k]].name;item.ren=`${folder}/${status.replace(' ','')}/${item.orig}`}if(k==='club'){item.ren=item.ren.replace(/_(本|札)\d+\.jpg$/,'_'+(status==='Best Shot'?'本01':'札01')+'.jpg')}toast(`${item.orig} を ${status} に移動しました`);if(document.getElementById('viewer').classList.contains('on'))openViewer(k,selected[k]);else renderWorkflow(k)}
+function openViewer(k,i){viewerKind=k;selected[k]=i;const item=currentItem(k);if(!item)return;const folder=data[k].folders[activeGroup[k]];document.getElementById('viewer').classList.add('on');document.getElementById('viewerTitle').textContent=`${data[k].name}：拡大表示`;document.getElementById('viewerSub').textContent=`${folder.name} / ${item.orig}`;document.getElementById('viewerIcon').textContent=item.icon;document.getElementById('viewerPhotoName').textContent=item.orig;document.getElementById('viewerRename').textContent=item.ren;document.getElementById('viewerPanel').innerHTML=`<div class="title">写真情報</div><div class="photo-meta"><strong>フォルダ：</strong>${folder.name}<br><strong>元ファイル：</strong>${item.orig}<br><strong>出力名：</strong><br>${item.ren}<br><strong>検出情報：</strong>${item.meta}</div><div style="margin-top:10px"><span class="badge ${statusClass(item.status)}">${item.status}</span></div>`;document.getElementById('viewerActions').innerHTML=(k==='club'||k==='snap')?`<button class="btn ghost" onclick="viewerPrev()">← 前へ</button><button class="btn ghost" onclick="viewerNext()">次へ →</button><button class="btn good" onclick="movePhoto('${k}','Best Shot')">Best Shotへ移動</button><button class="btn navy" onclick="movePhoto('${k}','Passing')">Passingへ移動</button><button class="btn danger" onclick="movePhoto('${k}','NG')">NGへ移動</button><button class="btn ghost" onclick="closeViewer()">閉じる</button>`:`<button class="btn ghost" onclick="viewerPrev()">← 前へ</button><button class="btn ghost" onclick="viewerNext()">次へ →</button><button class="btn primary" onclick="closeViewer();setStep('${k}',2)">結果確認・修正へ</button><button class="btn good" onclick="toast('確認済みにしました')">確認済みにする</button><button class="btn ghost" onclick="closeViewer()">閉じる</button>`}
+function viewerPrev(){prevPhoto(viewerKind);openViewer(viewerKind,selected[viewerKind])}
+function viewerNext(){nextPhoto(viewerKind);openViewer(viewerKind,selected[viewerKind])}
+function closeViewer(){document.getElementById('viewer').classList.remove('on');if(viewerKind)renderWorkflow(viewerKind)}
+let personFiles=[{icon:'🖼️',name:'reference_face_sample.jpg',meta:'参照写真 / 顔写真検索用'},{icon:'📄',name:'album_sample.pdf',meta:'PDFアルバム / 検索ソース'}];
+function renderPerson(){document.getElementById('sec-person').innerHTML=`<div class="card"><div class="title">人物検索</div><div class="hint">参照写真、クラス名、クラス番号でプロジェクト内の写真・PDFアルバムを検索できます。アップロードした参照写真・PDFは削除できます。</div></div><div class="grid g2"><div class="card"><div class="title">検索条件</div><div class="grid g3" style="margin-top:10px"><div><label>参照写真</label><div class="drop" onclick="addPersonUpload('photo')">🖼️ 顔写真をアップロード</div></div><div><label>クラス名</label><input placeholder="例：3年A組 / 3年1組"></div><div><label>クラス番号</label><input placeholder="例：05 / 23"></div></div><div class="title" style="margin-top:14px">アップロード済み</div>${personUploadList()}</div><div class="card"><div class="title">検索元</div><div class="grid g2" style="margin-top:10px">${['個人写真','先生写真','クラブ写真','スナップ写真','集合写真','PDFアルバム'].map(x=>`<label><input type="checkbox" checked style="width:auto"> ${x}</label>`).join('')}</div><div class="drop" style="margin-top:12px" onclick="addPersonUpload('pdf')">📄 PDFアルバム / PDF冊子をアップロード</div><div class="hint" style="margin-top:8px">PDF・参照写真は選択中プロジェクトの保存領域に保存します。不要なものはアップロード済みリストから削除できます。</div></div></div><div class="card"><div class="row"><button class="btn primary" onclick="document.getElementById('personResult').style.display='block'">検索する</button><button class="btn ghost" onclick="clearPersonSearch()">条件をクリア</button></div></div><div class="card" id="personResult" style="display:none"><div class="title">検索結果</div><div class="table" style="margin-top:12px"><table><thead><tr><th>候補</th><th>検索元</th><th>クラス</th><th>番号</th><th>一致理由</th><th>操作</th></tr></thead><tbody><tr><td>候補A</td><td>個人写真</td><td>3年1組</td><td>05</td><td>参照写真 + クラス番号一致</td><td><button class="btn primary" onclick="showSec('individual');setStep('individual',2);activeGroup.individual=0;selected.individual=0;openViewer('individual',0)">写真確認</button></td></tr><tr><td>候補B</td><td>スナップ写真</td><td>3年1組</td><td>—</td><td>顔類似 + 同クラス候補</td><td><button class="btn primary" onclick="showSec('snap');setStep('snap',2);activeGroup.snap=0;selected.snap=1;openViewer('snap',1)">写真確認</button></td></tr></tbody></table></div></div>`}
+function personUploadList(){if(!personFiles.length)return `<div class="panel">アップロード済みファイルはありません。</div>`;return `<div class="upload-list">${personFiles.map((u,i)=>`<div class="upload-row"><div class="upload-ico">${u.icon}</div><div><div class="upload-name">${u.name}</div><div class="mini">${u.meta}</div></div><div class="actions"><button class="btn danger" onclick="deletePersonUpload(${i})">削除</button></div></div>`).join('')}</div>`}
+function addPersonUpload(type){const item=type==='pdf'?{icon:'📄',name:'追加_PDFアルバム_'+(personFiles.length+1)+'.pdf',meta:'PDFアルバム / 検索ソース'}:{icon:'🖼️',name:'追加_参照写真_'+(personFiles.length+1)+'.jpg',meta:'参照写真 / 顔写真検索用'};personFiles.push(item);toast('人物検索用ファイルを追加しました');renderPerson()}
+function deletePersonUpload(i){personFiles.splice(i,1);toast('人物検索用ファイルを削除しました');renderPerson()}
+function clearPersonSearch(){personFiles=[];renderPerson();toast('人物検索条件をクリアしました')}
+let aiFiles=[];
+function aiAddSampleUpload(){aiFiles=[{icon:'📷',name:'club_IMG0045.jpg',status:'Added'},{icon:'📷',name:'snap_IMG1201.jpg',status:'Added'},{icon:'📷',name:'teacher_IMG0165.jpg',status:'Added'}];renderAiFiles();toast('AIチェック用ファイルを追加しました')}
+function renderAiFiles(){document.getElementById('aiFileList').style.display=aiFiles.length?'block':'none';document.getElementById('aiFileRows').innerHTML=aiFiles.map((f,i)=>`<tr><td><div class="ai-mini-preview">${f.icon}</div></td><td><strong>${f.name}</strong></td><td><span class="badge b-ok">${f.status}</span><div class="row" style="margin-top:6px"><button class="btn danger" onclick="deleteAiFile(${i})">削除</button></div></td></tr>`).join('')}
+function deleteAiFile(i){aiFiles.splice(i,1);renderAiFiles();toast('AIチェック用ファイルを削除しました')}
+function syncAiOptions(){document.getElementById('aiEyeCard').classList.toggle('active',document.getElementById('aiEye').checked);document.getElementById('aiCountCard').classList.toggle('active',document.getElementById('aiCount').checked)}
+function runAiDetection(){if(!aiFiles.length)aiAddSampleUpload();const eye=document.getElementById('aiEye').checked,cnt=document.getElementById('aiCount').checked;document.getElementById('aiResultCard').style.display='block';document.getElementById('aiEyeHeader').style.display=eye?'':'none';document.getElementById('aiCountHeader').style.display=cnt?'':'none';document.getElementById('aiResultRows').innerHTML=aiFiles.map((f,i)=>`<tr><td><div class="ai-mini-preview">${f.icon}</div></td><td><strong>${f.name}</strong></td>${eye?`<td><span class="badge ${i===1?'b-warn':'b-ok'}">${i===1?'候補あり':'OK'}</span></td>`:''}${cnt?`<td>${i===2?1:(i===0?32:18)}人</td>`:''}<td><span class="badge b-gray">確認用</span></td><td>${i===1?'レビュー時に確認':'処理継続可能'}</td><td><button class="btn ghost" onclick="openAiViewer(${i})">拡大</button></td></tr>`).join('');toast('AI検出チェックを実行しました')}
+function openAiViewer(i){const f=aiFiles[i];if(!f)return;document.getElementById('viewerTitle').textContent='AI検出チェック 拡大表示';document.getElementById('viewerSub').textContent='目閉じ・人数確認の結果を大きく確認できます';document.getElementById('viewerIcon').textContent=f.icon;document.getElementById('viewerPhotoName').textContent=f.name;document.getElementById('viewerRename').textContent='AI検出チェック結果プレビュー';document.getElementById('viewerPanel').innerHTML=`<div class="title">検出結果</div><div class="photo-meta"><strong>目閉じ：</strong>${i===1?'候補あり（要確認）':'OK'}<br><strong>人数：</strong>${i===2?1:(i===0?32:18)}人<br><strong>用途：</strong>確認用。ワークフロー処理は自動停止しません。</div>`;document.getElementById('viewerActions').innerHTML=`<button class="btn primary" onclick="toast('AI結果を確認済みにしました');closeViewer()">確認済みにする</button><button class="btn ghost" onclick="closeViewer()">閉じる</button>`;document.getElementById('viewer').classList.add('on')}
+function resetAiDetection(){aiFiles=[];renderAiFiles();document.getElementById('aiResultCard').style.display='none';toast('AIチェックをクリアしました')}
+function toggleSchoolAdd(){document.getElementById('schoolAddBox').classList.toggle('on')}
+function renderMaster(){document.getElementById('masterRows').innerHTML=Object.entries(masters).map(([c,n])=>{let related=projects.filter(p=>p.code===c||p.school===n);return `<tr><td class="mono">${c}</td><td><strong>${n}</strong></td><td>${related.length}件<div class="mini">${related.map(p=>p.year).join(' / ')||'未作成'}</div></td><td><span class="badge b-ok">有効</span></td><td><div class="actions"><button class="btn primary" onclick="filterProjectsBySchool('${c}','${n}')">関連プロジェクトを見る</button><button class="btn ghost" onclick="createProjectFromMaster('${c}','${n}')">この学校で新規PJ</button><button class="btn danger" onclick="deleteMaster('${c}')">削除</button></div></td></tr>`}).join('')}
+function deleteMaster(code){const school=masters[code];if(!school)return;const related=projects.filter(p=>p.code===code||p.school===school).length;const msg=`学校マスター「${code} ${school}」を削除しますか？
+
+関連プロジェクト ${related}件 は削除されません。学校コードのマスター情報だけを削除します。`;if(!confirm(msg))return;delete masters[code];renderMaster();toast('学校マスターを削除しました（関連プロジェクトは残っています）')}
+function addMaster(){const c=document.getElementById('mCode').value,n=document.getElementById('mName').value;if(!c||!n){toast('コードと学校名を入力してください');return}masters[c]=n;renderMaster();toggleSchoolAdd();toast('学校マスターに追加しました')}
+
+function initDatePicker(){const months=['January','February','March','April','May','June','July','August','September','October','November','December'];const m=document.getElementById('dpMonth');if(!m)return;m.innerHTML=months.map((x,i)=>`<option value="${i}">${x}</option>`).join('');const d=new Date(selectedProjectDate);m.value=d.getMonth();document.getElementById('dpYear').value=d.getFullYear();renderDatePicker()}
+function toggleDatePicker(){const box=document.getElementById('datePickerBox');box.classList.toggle('on');if(box.classList.contains('on'))initDatePicker()}
+function renderDatePicker(){const grid=document.getElementById('dpGrid');if(!grid)return;const year=Number(document.getElementById('dpYear').value)||new Date().getFullYear();const month=Number(document.getElementById('dpMonth').value)||0;const first=new Date(year,month,1);const last=new Date(year,month+1,0).getDate();const offset=first.getDay();let html='';for(let i=0;i<offset;i++)html+=`<button class="dp-day muted" type="button"> </button>`;for(let d=1;d<=last;d++){const iso=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;html+=`<button class="dp-day ${iso===selectedProjectDate?'on':''}" type="button" onclick="selectDate('${iso}')">${String(d).padStart(2,'0')}</button>`}grid.innerHTML=html}
+function selectDate(iso){selectedProjectDate=iso;renderDatePicker()}
+function confirmProjectDate(){document.getElementById('newRegDate').value=selectedProjectDate;document.getElementById('datePickerBox').classList.remove('on');toast('プロジェクト登録日を設定しました')}
+function activeWorkflowKey(){const on=document.querySelector('#page-project .workflow.on');if(!on)return null;const id=on.id||'';return id.replace('sec-','')}
+function handleKeyboardNav(e){const tag=(e.target.tagName||'').toLowerCase();if(['input','select','textarea','button'].includes(tag))return;if(document.getElementById('viewer').classList.contains('on')){if(e.key==='ArrowLeft'&&viewerKind){e.preventDefault();viewerPrev()}if(e.key==='ArrowRight'&&viewerKind){e.preventDefault();viewerNext()}if(e.key==='Escape'){e.preventDefault();closeViewer()}return}if(document.getElementById('page-projects').classList.contains('on')){if(e.key==='ArrowDown'){e.preventDefault();projectFocusIndex=Math.min(projectFocusIndex+1,Math.max(0,lastProjectRows.length-1));renderProjects()}if(e.key==='ArrowUp'){e.preventDefault();projectFocusIndex=Math.max(projectFocusIndex-1,0);renderProjects()}if(e.key==='Enter'&&lastProjectRows[projectFocusIndex]){e.preventDefault();openProject(lastProjectRows[projectFocusIndex].id)}return}const k=activeWorkflowKey();if(['individual','teacher','club','snap'].includes(k)&&stepState[k]===2){if(e.key==='ArrowLeft'){e.preventDefault();prevPhoto(k)}if(e.key==='ArrowRight'){e.preventDefault();nextPhoto(k)}if(e.key==='Enter'){e.preventDefault();openViewer(k,selected[k])}}}
+document.addEventListener('keydown',handleKeyboardNav);
+initDatePicker();
+
+renderProjects();
+</script>
+</body>
+</html>
