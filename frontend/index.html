@@ -641,6 +641,7 @@ async function runIndividualPipeline(){
 function individualUploadBody(){
   const photosName=individualUploadState.photosZip?individualUploadState.photosZip.name:'未選択';
   const result=individualUploadState.result;
+  const uploadStatus=individualUploadState.running?'<span class="badge b-blue">実行中...</span>':result?'<span class="badge b-ok">処理完了</span>':'<span class="badge b-gray">待機中</span>';
   const summary=result?`<div class="summary-box" style="margin-top:12px">
       <div class="summary-row"><strong>job_id</strong><span class="mono">${result.job_id||'-'}</span></div>
       <div class="summary-row"><strong>status</strong><span>${result.status||'-'}</span></div>
@@ -659,16 +660,17 @@ function individualUploadBody(){
       <div class="summary-row"><strong>remaining_error_queue_count</strong><span>${result.remaining_error_queue_count??'-'}</span></div>
       <div class="summary-row"><strong>exportable_groups_count</strong><span>${result.exportable_groups_count??'-'}</span></div>
       <div class="summary-row"><strong>output_image_files_count</strong><span>${result.output_image_files_count??'-'}</span></div>
-    </div><div class="btn-row" style="margin-top:12px">${result.output_zip_url?`<a class="btn btn-success" href="${result.output_zip_url}">output.zip をダウンロード</a>`:''}</div>`:'<div class="card-sub" style="margin-top:10px">結果はここに表示されます。</div>';
-  return `<div class="card"><div class="card-title">① アップロード</div><div class="card-sub">個人写真ZIP（必須）のみを指定して処理を開始します（名簿ファイル不要）。</div>
-    <div class="formgrid" style="margin-top:12px"><div class="field"><label>school_name</label><input id="individual-school-name" placeholder="上水高校"></div><div class="field"><label>year</label><input id="individual-year" placeholder="2026"></div><div class="field"><label>scoring</label><select id="individual-scoring"><option value="local">local</option><option value="openai">openai</option></select></div></div>
-    <div class="btn-row" style="margin-top:12px"><input id="individual-photos-zip" type="file" accept=".zip,application/zip" class="btn btn-ghost"></div>
-    <div class="card-sub">photos_zip: <span class="mono">${photosName}</span></div>
-    <div class="card-sub" style="margin-top:8px">status: ${individualUploadState.running?'実行中...':'待機中'}</div>
+    </div><div class="btn-row" style="margin-top:12px">${result.output_zip_url?`<a class="btn btn-success" href="${result.output_zip_url}">output.zip をダウンロード</a>`:''}</div>`:'<div class="card-sub" style="margin-top:10px">処理結果はここにクラス別サマリーとして表示されます。</div>';
+  return `<div class="card"><div class="card-title">① クラス別フォルダをアップロード</div><div class="card-sub">最新テンプレートのクラス別ワークフローに合わせ、実運用では個人写真ZIP（必須）をアップロードして既存APIへ送信します（名簿ファイル不要）。</div>
+    <div class="formgrid" style="margin-top:12px"><div class="field"><label>学校名</label><input id="individual-school-name" placeholder="上水高校"></div><div class="field"><label>年度</label><input id="individual-year" placeholder="2026"></div><div class="field"><label>スコアリング</label><select id="individual-scoring"><option value="local">local</option><option value="openai">openai</option></select></div></div>
+    <div class="drop" style="margin-top:12px" onclick="document.getElementById('individual-photos-zip')?.click()">☁️ 個人写真ZIPを選択（クラス別フォルダを含むZIP）</div>
+    <input id="individual-photos-zip" type="file" accept=".zip,application/zip" style="display:none">
+    <div class="file-list"><div class="file-row"><span class="file-icon">📦</span><div class="file-info"><div class="file-name">${photosName}</div><div class="file-meta">photos_zip · 既存 /api/individual/run に送信</div></div><span>${uploadStatus}</span></div></div>
     ${individualUploadState.error?`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${individualUploadState.error}</div></div>`:''}
     ${summary}
     <div class="btn-row"><button class="btn btn-primary" onclick="runIndividualPipeline()" ${individualUploadState.running?'disabled':''}>AI処理を開始</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
 }
+
 function individualClassResultBody(){
   const rows=Object.entries(individualClassData).map(([id,d])=>`<tr><td><strong>${d.label}</strong><div class="card-sub">${d.folder}</div></td><td>${d.uploaded}</td><td><span class="badge b-ok">OK ${d.ok}</span></td><td><span class="badge b-err">エラー ${d.missing}</span></td><td><span class="badge b-warn">要確認 ${d.duplicate}</span></td><td><button class="btn btn-primary btn-sm" onclick="selectedIndividualClass='${id}';renderIndividualWorkflow(2)">${d.label}をレビュー</button></td></tr>`).join('');
   return `<div class="card"><div class="card-title">② クラス別AI処理結果</div><div class="card-sub">アップロードしたフォルダごとに結果を分けて表示します。エラーはクラス単位でレビューできます。</div>
@@ -1707,7 +1709,7 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
 </script>
 
 <script>
-// ===== Club API wiring (minimal integration) =====
+// ===== Club API wiring (reference UI shell + existing backend integration) =====
 (function(){
   const state={file:null,running:false,error:'',result:null};
   function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
@@ -1739,7 +1741,7 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
       if(!res.ok) throw new Error(data?.detail || 'クラブ写真の処理に失敗しました。');
       state.result=data;
       state.running=false;
-      window.renderClubWorkflow(3);
+      window.renderClubWorkflow(4);
       toast('クラブ写真の処理が完了しました');
     }catch(e){
       state.running=false;
@@ -1748,48 +1750,65 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
     }
   };
 
-  window.clubUploadBody=function(){
-    const fileName=state.file?esc(state.file.name):'未選択';
-    const status=state.running?'<span class="badge b-blue">処理中...</span>':state.result?'<span class="badge b-ok">処理完了</span>':'<span class="badge b-gray">待機中</span>';
-    const err=state.error?`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(state.error)}</div></div>`:'';
-    return `<div class="card"><div class="card-title">① ZIPアップロード</div><div class="card-sub">クラブ写真はZIP 1ファイルのみ対応です。ZIPのトップ階層フォルダ名をクラブ名として扱います。</div>
-      <div class="field" style="margin-top:12px"><label>Club ZIP</label><input type="file" accept=".zip,application/zip" onchange="onClubZipSelected(this)"></div>
-      <div class="panel" style="margin-top:10px"><strong>選択中：</strong>${fileName}<br><strong>ステータス：</strong>${status}</div>${err}
-      <div class="btn-row"><button class="btn btn-primary" onclick="runClubPipeline()">AI処理を開始</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
-  };
+  function resultRequiredCard(targetStep){
+    return `<div class="card"><div class="alert a-warn"><span>⚠️</span><div>まだ処理結果がありません。UploadからZIPを実行してください。</div></div><div class="btn-row"><button class="btn btn-primary" onclick="renderClubWorkflow(0)">Uploadへ戻る</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
+  }
 
-  window.clubAiBody=function(){
-    return `<div class="card"><div class="card-title">② AI Detection / Ranking</div><div class="card-sub">クラブ写真をバックエンドで処理しています。完了後に自動でExport表示へ移動します。</div><div class="alert a-blue" style="margin-top:12px"><span>⏳</span><div>処理中です。しばらくお待ちください...</div></div></div>`;
-  };
-
-  window.clubExportBody=function(){
-    const res=state.result;
-    if(!res){
-      return `<div class="card"><div class="alert a-warn"><span>⚠️</span><div>まだ処理結果がありません。UploadからZIPを実行してください。</div></div><div class="btn-row"><button class="btn btn-primary" onclick="renderClubWorkflow(0)">Uploadへ戻る</button></div></div>`;
-    }
+  function clubSummaryBox(){
     const clubs=sum('total_clubs');
     const photos=sum('total_images');
     const closed=sum('eyes_closed_count');
     const ranked=photos;
-    return `<div class="card"><div class="alert a-ok"><span>✅</span><div><strong>クラブ写真の処理が完了しました。</strong></div></div>
-      <div class="summary-box" style="margin-top:12px">
-        <div class="summary-row"><strong>クラブ数</strong><span>${clubs}</span></div>
-        <div class="summary-row"><strong>写真枚数</strong><span>${photos}</span></div>
-        <div class="summary-row"><strong>目つぶり候補</strong><span>${closed}</span></div>
-        <div class="summary-row"><strong>BestShot出力数</strong><span>${ranked}</span></div>
-      </div>
+    return `<div class="summary-box" style="margin-top:12px">
+      <div class="summary-row"><strong>クラブ数</strong><span>${clubs}</span></div>
+      <div class="summary-row"><strong>写真枚数</strong><span>${photos}</span></div>
+      <div class="summary-row"><strong>目つぶり候補</strong><span>${closed}</span></div>
+      <div class="summary-row"><strong>BestShot出力数</strong><span>${ranked}</span></div>
+    </div>`;
+  }
+
+  window.clubUploadBody=function(){
+    const fileName=state.file?esc(state.file.name):'未選択';
+    const status=state.running?'<span class="badge b-blue">処理中...</span>':state.result?'<span class="badge b-ok">処理完了</span>':'<span class="badge b-gray">待機中</span>';
+    const err=state.error?`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(state.error)}</div></div>`:'';
+    return `<div class="card"><div class="card-title">① クラブフォルダZIPアップロード</div><div class="card-sub">最新テンプレートのクラブ写真導線に合わせ、ZIPのトップ階層フォルダ名をクラブ名として既存APIへ送信します。</div>
+      <div class="drop" style="margin-top:12px" onclick="document.getElementById('club-folder-zip')?.click()">☁️ クラブ写真ZIPを選択</div>
+      <input id="club-folder-zip" type="file" accept=".zip,application/zip" onchange="onClubZipSelected(this)" style="display:none">
+      <div class="file-list"><div class="file-row"><span class="file-icon">📦</span><div class="file-info"><div class="file-name">${fileName}</div><div class="file-meta">folder_zip · 既存 /api/club/run に送信</div></div><span>${status}</span></div></div>${err}
+      <div class="btn-row"><button class="btn btn-primary" onclick="runClubPipeline()">AI処理を開始</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
+  };
+
+  window.clubAiBody=function(){
+    return `<div class="card"><div class="card-title">② AI Detection / Ranking</div><div class="card-sub">人数カウント、目つぶり候補、BestShotランキングをバックエンドで処理しています。</div><div class="alert a-blue" style="margin-top:12px"><span>⏳</span><div>処理中です。完了後にExportへ自動移動します。</div></div></div>`;
+  };
+
+  window.clubReviewBody=function(){
+    if(!state.result) return resultRequiredCard(2);
+    return `<div class="card"><div class="card-title">③ Review / Edit：処理結果確認</div><div class="card-sub">現行APIの処理結果を、最新テンプレートのReviewステップ内で確認します。クラブ名・撮影日・タグの詳細編集は既存の出力内容を維持します。</div>${clubSummaryBox()}<div class="btn-row"><button class="btn btn-primary" onclick="renderClubWorkflow(3)">Rename / Output Previewへ</button><button class="btn btn-ghost" onclick="renderClubWorkflow(0)">Uploadへ戻る</button></div></div>`;
+  };
+
+  window.clubRenameBody=function(){
+    if(!state.result) return resultRequiredCard(3);
+    return `<div class="card"><div class="card-title">④ Rename / Output Preview</div><div class="card-sub">バックエンド生成済みのExcelと出力ZIPをダウンロード前に確認するステップです。</div><div class="output-tree" style="margin-top:12px">Club_Output/<br>├─ Excel/　クラブ写真処理結果<br>└─ Output ZIP/　BestShot・確認用画像一式</div>${clubSummaryBox()}<div class="btn-row"><button class="btn btn-ghost" onclick="renderClubWorkflow(2)">Review/Editへ戻る</button><button class="btn btn-primary" onclick="renderClubWorkflow(4)">Exportへ</button></div></div>`;
+  };
+
+  window.clubExportBody=function(){
+    const res=state.result;
+    if(!res) return resultRequiredCard(4);
+    return `<div class="card"><div class="alert a-ok"><span>✅</span><div><strong>クラブ写真の処理が完了しました。</strong><br>既存APIが生成したExcelと出力ZIPをダウンロードできます。</div></div>${clubSummaryBox()}
       <div class="btn-row"><a class="btn btn-success" href="${absUrl(res.excel_url)}">Excelをダウンロード</a><a class="btn btn-primary" href="${absUrl(res.output_zip_url)}">出力ZIPをダウンロード</a><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div>
     </div>`;
   };
 
   window.renderClubWorkflow=function(step){
     const sec=document.getElementById('sec-club');
-    const steps=['Upload','AI Detection / Ranking','Rename / Output Preview','Export'];
+    const steps=['Upload','AI Detection','Review/Edit','Rename/Output','Export'];
     if(state.running) step=1;
-    if(state.result && step<3) step=3;
+    if(state.result && (step===undefined || step===null)) step=4;
+    step=Number.isFinite(Number(step))?Number(step):0;
     const tabs=steps.map((s,i)=>`<button class="wf-tab ${i===step?'on':''}" onclick="renderClubWorkflow(${i})">${i+1} ${s}</button>`).join('');
-    const body=step===0?clubUploadBody():(step===1?clubAiBody():clubExportBody());
-    sec.innerHTML=`<div class="alert a-info"><span>🏆</span><div><strong>クラブ写真：</strong>ZIPアップロード後に一括でAI処理し、完了後に結果をダウンロードできます。</div></div><div class="wf-tabs">${tabs}</div>${body}`;
+    const body=step===0?clubUploadBody():step===1?clubAiBody():step===2?clubReviewBody():step===3?clubRenameBody():clubExportBody();
+    sec.innerHTML=`<div class="alert a-info"><span>🏆</span><div><strong>クラブ写真：</strong>カード保持画像は使用せず、クラブフォルダ名をクラブ名として処理します。Review/Editでは撮影日・タグ・リネームを確認します。</div></div><div class="wf-tabs">${tabs}</div>${body}`;
   };
 })();
 </script>
