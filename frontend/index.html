@@ -625,10 +625,12 @@ function renderIndividualWorkflow(step){
   sec.innerHTML=`<div class="alert a-info"><span>👤</span><div><strong>個人写真：</strong>アップロードしたクラスフォルダごとに処理し、結果もクラス別に確認・出力します。</div></div><div class="wf-tabs">${tabs}</div>${body}`;
   if(step===0) bindIndividualUploadInputs();
 }
-const individualUploadState={photosZip:null,running:false,result:null,error:''};
+const individualUploadState={photosZip:null,frameConfigFile:null,running:false,result:null,error:''};
 function bindIndividualUploadInputs(){
   const p=document.getElementById('individual-photos-zip');
   if(p) p.onchange=()=>{individualUploadState.photosZip=p.files?.[0]||null; renderIndividualWorkflow(0);};
+  const f=document.getElementById('individual-frame-config-json');
+  if(f) f.onchange=()=>{individualUploadState.frameConfigFile=f.files?.[0]||null; renderIndividualWorkflow(0);};
 }
 async function runIndividualPipeline(){
   individualUploadState.error='';
@@ -642,6 +644,7 @@ async function runIndividualPipeline(){
     const photosZipFile = individualUploadState.photosZip;
     const fd=new FormData();
     fd.append("photos_zip", photosZipFile);
+    if(individualUploadState.frameConfigFile) fd.append("frame_config_file", individualUploadState.frameConfigFile);
     fd.append("school_name", schoolName);
     fd.append("year", year);
     fd.append("scoring", scoring);
@@ -660,6 +663,7 @@ async function runIndividualPipeline(){
 }
 function individualUploadBody(){
   const photosName=individualUploadState.photosZip?individualUploadState.photosZip.name:'未選択';
+  const frameConfigName=individualUploadState.frameConfigFile?individualUploadState.frameConfigFile.name:'未選択';
   const result=individualUploadState.result;
   const uploadStatus=individualUploadState.running?'<span class="badge b-blue">実行中...</span>':result?'<span class="badge b-ok">処理完了</span>':'<span class="badge b-gray">待機中</span>';
   const summary=result?`<div class="summary-box" style="margin-top:12px">
@@ -685,7 +689,9 @@ function individualUploadBody(){
     <div class="formgrid" style="margin-top:12px"><div class="field"><label>学校名</label><input id="individual-school-name" placeholder="上水高校"></div><div class="field"><label>年度</label><input id="individual-year" placeholder="2026"></div><div class="field"><label>スコアリング</label><select id="individual-scoring"><option value="local">local</option><option value="openai">openai</option></select></div></div>
     <div class="drop" style="margin-top:12px" onclick="document.getElementById('individual-photos-zip')?.click()">☁️ 個人写真ZIPを選択（クラス別フォルダを含むZIP）</div>
     <input id="individual-photos-zip" type="file" accept=".zip,application/zip" style="display:none">
-    <div class="file-list"><div class="file-row"><span class="file-icon">📦</span><div class="file-info"><div class="file-name">${photosName}</div><div class="file-meta">photos_zip · 既存 /api/individual/run に送信</div></div><span>${uploadStatus}</span></div></div>
+    <div class="drop" style="margin-top:10px" onclick="document.getElementById('individual-frame-config-json')?.click()">🧩 frame_config.jsonを選択（任意）</div>
+    <input id="individual-frame-config-json" type="file" accept=".json" style="display:none">
+    <div class="file-list"><div class="file-row"><span class="file-icon">📦</span><div class="file-info"><div class="file-name">${photosName}</div><div class="file-meta">photos_zip · 既存 /api/individual/run に送信</div></div><span>${uploadStatus}</span></div><div class="file-row"><span class="file-icon">🧩</span><div class="file-info"><div class="file-name">${frameConfigName}</div><div class="file-meta">frame_config_file · 任意JSON</div></div><span><span class="badge b-gray">任意</span></span></div></div>
     ${individualUploadState.error?`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${individualUploadState.error}</div></div>`:''}
     ${summary}
     <div class="btn-row"><button class="btn btn-primary" onclick="runIndividualPipeline()" ${individualUploadState.running?'disabled':''}>AI処理を開始</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
