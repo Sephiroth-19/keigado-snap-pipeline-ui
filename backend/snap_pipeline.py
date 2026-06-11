@@ -11,9 +11,9 @@ from typing import Optional
 import numpy as np
 import torch
 from openpyxl import Workbook
+from openpyxl.styles import Font
 from PIL import ExifTags, Image, ImageOps
 from torchvision import models, transforms
-from backend.excel_labels import SNAP_BUCKET_LABELS, SNAP_SHEET_LABELS, excel_label
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff", ".heic", ".heif"}
 
@@ -298,6 +298,53 @@ class SnapPipeline:
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, dst)
 
+    def _score_details_for_report(self, reps: list[ImageRecord]) -> dict[Path, dict[str, float]]:
+        contrast_vals: list[float] = []
+        composition_vals: list[float] = []
+        for rec in reps:
+            img = self._safe_open_image(rec.path)
+            contrast_vals.append(self._contrast_score(img))
+            composition_vals.append(self._thirds_composition_score(img))
+
+        tech = self._normalize([rec.focus_score for rec in reps])
+        brightness = self._normalize([rec.brightness_score for rec in reps])
+        comp = self._normalize(composition_vals)
+        if reps:
+            center = np.mean([rec.embedding for rec in reps], axis=0)
+            center /= np.linalg.norm(center) + 1e-12
+            rarity_raw = [1.0 - self._cosine(rec.embedding, center) for rec in reps]
+        else:
+            rarity_raw = []
+        rarity = self._normalize(rarity_raw)
+
+        details: dict[Path, dict[str, float]] = {}
+        for i, rec in enumerate(reps):
+            expression = 1.0 - abs(brightness[i] - 0.55)
+            total = (
+                WEIGHT_TECHNICAL * tech[i]
+                + WEIGHT_EXPRESSION * expression
+                + WEIGHT_COMPOSITION * comp[i]
+                + WEIGHT_RARITY * rarity[i]
+            )
+            details[rec.path] = {
+                "total": round(total * 10.0, 2),
+                "technical": round(tech[i] * 10.0, 2),
+                "expression": round(expression * 10.0, 2),
+                "composition": round(comp[i] * 10.0, 2),
+                "rarity": round(rarity[i] * 10.0, 2),
+            }
+        return details
+
+    @staticmethod
+    def _capture_time_text(rec: ImageRecord) -> str:
+        return rec.capture_time.strftime("%Y-%m-%d %H:%M:%S") if rec.capture_time else ""
+
+    @staticmethod
+    def _bold_header(ws) -> None:
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
+        ws.freeze_panes = "A2"
+
     def _write_outputs(
         self,
         output_dir: Path,
@@ -309,23 +356,22 @@ class SnapPipeline:
         summary: PipelineResult,
     ) -> None:
         sim_dir = output_dir / "similarity_clusters"
-        dedup_dir = output_dir / "dedup_candidates"
         final_dir = output_dir / "final_selected"
         ng_dir = output_dir / "ng_photos"
         other_dir = output_dir / "other_passing"
-        for d in [sim_dir, dedup_dir, final_dir, ng_dir, other_dir]:
+        for d in [sim_dir, final_dir, ng_dir, other_dir]:
             d.mkdir(parents=True, exist_ok=True)
 
         rep_paths = {r.path for r in reps}
+        cluster_ids: dict[Path, int] = {}
         for i, cluster in enumerate(clusters, start=1):
             cdir = sim_dir / f"cluster_{i:03d}"
             cdir.mkdir(parents=True, exist_ok=True)
             for rec in cluster:
+                cluster_ids[rec.path] = i
                 prefix = "REP_" if rec.path in rep_paths else ""
                 self._copy(rec.path, cdir / f"{prefix}{rec.path.name}")
 
-        for rec in reps:
-            self._copy(rec.path, dedup_dir / rec.path.name)
         for rec in final:
             self._copy(rec.path, final_dir / rec.path.name)
         for rec in ng:
@@ -333,35 +379,91 @@ class SnapPipeline:
         for rec in other:
             self._copy(rec.path, other_dir / rec.path.name)
 
+        score_details = self._score_details_for_report(reps)
+
         wb = Workbook()
-        ws = wb.active
-        ws.title = SNAP_SHEET_LABELS["summary"]
-        ws.append([excel_label("metric"), excel_label("value")])
-        for key, val in summary.__dict__.items():
-            ws.append([excel_label(key), val])
-
-        ws2 = wb.create_sheet(SNAP_SHEET_LABELS["clusters"])
-        ws2.append([excel_label("cluster_id"), excel_label("file_name"), excel_label("capture_time"), excel_label("is_representative")])
-        for i, cluster in enumerate(clusters, start=1):
-            cluster_rep = max(cluster, key=lambda x: x.focus_score)
-            for rec in cluster:
-                ws2.append(
-                    [
-                        i,
-                        rec.path.name,
-                        rec.capture_time.isoformat() if rec.capture_time else "",
-                        rec.path == cluster_rep.path,
-                    ]
-                )
-
-        ws3 = wb.create_sheet(SNAP_SHEET_LABELS["selection"])
-        ws3.append([excel_label("bucket"), excel_label("file_name")])
+        ws_best = wb.active
+        ws_best.title = "ベストショット一覧"
+        ws_best.append(
+            [
+                "ファイル名",
+                "区分",
+                "総合スコア",
+                "技術スコア",
+                "表情/明るさスコア",
+                "構図スコア",
+                "希少性スコア",
+                "類似グループID",
+                "撮影日時",
+                "コメント",
+                "選定理由",
+            ]
+        )
         for rec in final:
-            ws3.append([SNAP_BUCKET_LABELS["final_selected"], rec.path.name])
+            scores = score_details.get(rec.path, {})
+            ws_best.append(
+                [
+                    rec.path.name,
+                    "ベストショット",
+                    scores.get("total"),
+                    scores.get("technical"),
+                    scores.get("expression"),
+                    scores.get("composition"),
+                    scores.get("rarity"),
+                    cluster_ids.get(rec.path, ""),
+                    self._capture_time_text(rec),
+                    "総合評価が高く、ベストショット候補として選定されました。",
+                    "類似写真グループ内の代表候補として選定され、総合評価が高いため最終選定されました。",
+                ]
+            )
+        self._bold_header(ws_best)
+
+        ws_ng = wb.create_sheet("NG写真一覧")
+        ws_ng.append(["ファイル名", "区分", "総合スコア", "NG理由", "コメント", "類似グループID", "撮影日時"])
         for rec in ng:
-            ws3.append([SNAP_BUCKET_LABELS["ng"], rec.path.name])
+            scores = score_details.get(rec.path, {})
+            ws_ng.append(
+                [
+                    rec.path.name,
+                    "NG写真",
+                    scores.get("total"),
+                    "代表候補の中で総合評価が低いため",
+                    "代表候補の中で総合評価が低いため、NG候補として分類されました。",
+                    cluster_ids.get(rec.path, ""),
+                    self._capture_time_text(rec),
+                ]
+            )
+        self._bold_header(ws_ng)
+
+        ws_other = wb.create_sheet("未選定写真一覧")
+        ws_other.append(["ファイル名", "区分", "総合スコア", "コメント", "未選定理由", "類似グループID", "撮影日時"])
         for rec in other:
-            ws3.append([SNAP_BUCKET_LABELS["other_passing"], rec.path.name])
+            scores = score_details.get(rec.path, {})
+            ws_other.append(
+                [
+                    rec.path.name,
+                    "未選定写真",
+                    scores.get("total"),
+                    "品質基準は満たしていますが、ベストショット選定数の上限により未選定となりました。",
+                    "ベストショット選定数の上限により未選定",
+                    cluster_ids.get(rec.path, ""),
+                    self._capture_time_text(rec),
+                ]
+            )
+        self._bold_header(ws_other)
+
+        ws_summary = wb.create_sheet("統計サマリー")
+        ws_summary.append(["項目", "値"])
+        ws_summary.append(["■ 全体集計", ""])
+        ws_summary.append(["入力写真数", summary.total_input_images])
+        ws_summary.append(["類似グループ数", summary.total_clusters])
+        ws_summary.append(["代表候補数", summary.total_representative_candidates])
+        ws_summary.append(["重複削減率", summary.dedup_reduction_rate])
+        ws_summary.append(["ベストショット選定数", summary.final_selected_count])
+        ws_summary.append(["NG写真数", summary.ng_count_after_menna])
+        ws_summary.append(["未選定写真数", summary.other_passing_count])
+        ws_summary.append(["ベストショット指定数", summary.best_shot_count])
+        self._bold_header(ws_summary)
 
         wb.save(output_dir / "snap_pipeline_report.xlsx")
 

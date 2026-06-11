@@ -4,7 +4,6 @@ from datetime import datetime
 import pytest
 from openpyxl import load_workbook
 
-from backend.club_pipeline import run_club_pipeline
 from backend.excel_labels import TEACHER_SHEET_LABELS, excel_label, translate_display_value
 import numpy as np
 from PIL import Image
@@ -28,15 +27,45 @@ def test_snap_excel_labels_japanese(tmp_path: Path):
     )
     summary = PipelineResult(1, 1, 1, 0.0, 1, 1, 0, 0)
 
-    pipeline._write_outputs(tmp_path / "out", [[rec]], [rec], [rec], [], [], summary)
+    out_dir = tmp_path / "out"
+    pipeline._write_outputs(out_dir, [[rec]], [rec], [rec], [], [], summary)
 
-    wb = load_workbook(tmp_path / "out" / "snap_pipeline_report.xlsx")
-    assert wb.sheetnames == ["サマリー", "類似グループ", "選定結果"]
-    assert [c.value for c in wb["サマリー"][1]] == ["項目", "値"]
-    assert wb["選定結果"][2][0].value == "ベストショット"
+    assert not (out_dir / "dedup_candidates").exists()
+    assert (out_dir / "similarity_clusters" / "cluster_001" / "REP_a.jpg").is_file()
+    assert (out_dir / "final_selected" / "a.jpg").is_file()
+    assert (out_dir / "ng_photos").is_dir()
+    assert (out_dir / "other_passing").is_dir()
+    assert (out_dir / "snap_pipeline_report.xlsx").is_file()
+
+    wb = load_workbook(out_dir / "snap_pipeline_report.xlsx")
+    assert wb.sheetnames == ["ベストショット一覧", "NG写真一覧", "未選定写真一覧", "統計サマリー"]
+    assert [c.value for c in wb["ベストショット一覧"][1]] == [
+        "ファイル名",
+        "区分",
+        "総合スコア",
+        "技術スコア",
+        "表情/明るさスコア",
+        "構図スコア",
+        "希少性スコア",
+        "類似グループID",
+        "撮影日時",
+        "コメント",
+        "選定理由",
+    ]
+    for sheet_name in ["ベストショット一覧", "NG写真一覧", "未選定写真一覧"]:
+        headers = [c.value for c in wb[sheet_name][1]]
+        assert "コメント" in headers
+    summary_rows = {row[0].value: row[1].value for row in wb["統計サマリー"].iter_rows(min_row=2)}
+    assert summary_rows["代表候補数"] == 1
+    assert summary_rows["重複削減率"] == 0
+    assert wb["ベストショット一覧"][2][1].value == "ベストショット"
+    assert wb["ベストショット一覧"][2][9].value == "総合評価が高く、ベストショット候補として選定されました。"
 
 
 def test_club_excel_labels_japanese(tmp_path: Path):
+    pytest.importorskip("cv2")
+    from backend.club_pipeline import run_club_pipeline
+
     root = tmp_path / "in"
     club = root / "soccer"
     club.mkdir(parents=True)
@@ -93,6 +122,9 @@ def test_teacher_label_mapping_localized():
 
 
 def test_club_ranking_sheet_localized_values(tmp_path: Path):
+    pytest.importorskip("cv2")
+    from backend.club_pipeline import run_club_pipeline
+
     root = tmp_path / "in2"
     club = root / "basket"
     club.mkdir(parents=True)
