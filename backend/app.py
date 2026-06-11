@@ -135,8 +135,11 @@ def _pack_outputs(output_dir: Path) -> Path:
         zip_path.unlink()
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for p in output_dir.rglob("*"):
+            rel = p.relative_to(output_dir)
+            if "dedup_candidates" in rel.parts:
+                continue
             if p.is_file():
-                zf.write(p, p.relative_to(output_dir))
+                zf.write(p, rel)
     return zip_path
 
 
