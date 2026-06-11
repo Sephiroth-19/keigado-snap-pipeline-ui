@@ -5,6 +5,7 @@ import re
 import shutil
 import zipfile
 from pathlib import Path
+from urllib.parse import quote
 from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
@@ -68,14 +69,77 @@ def _extract_zip(zip_path: Path, dst: Path) -> None:
         zf.extractall(dst)
 
 
+
+def _individual_job_output_dir(job_id: str) -> Path:
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", job_id or ""):
+        raise HTTPException(status_code=400, detail="Invalid job_id")
+    root = (APP_STATE_DIR / "individual_jobs").resolve()
+    out = (root / job_id / "output").resolve()
+    try:
+        out.relative_to(root)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid job_id") from exc
+    return out
+
+
+def _find_individual_output_file(output_dir: Path, filename: str) -> Path:
+    if not filename or Path(filename).name != filename or any(sep in filename for sep in ("/", "\\")):
+        raise HTTPException(status_code=400, detail="Invalid preview filename")
+    if not output_dir.exists():
+        raise HTTPException(status_code=404, detail="Individual output directory not found")
+    output_root = output_dir.resolve()
+    for candidate in output_root.rglob("*"):
+        if not candidate.is_file() or candidate.name != filename:
+            continue
+        resolved = candidate.resolve()
+        try:
+            resolved.relative_to(output_root)
+        except ValueError:
+            continue
+        return resolved
+    raise HTTPException(status_code=404, detail="Preview file not found")
+
+
+def _add_individual_preview_urls(manifest: dict[str, Any], job_id: str) -> dict[str, Any]:
+    classes = manifest.get("classes")
+    if not isinstance(classes, dict):
+        return manifest
+    for class_data in classes.values():
+        entries = class_data.get("entries") if isinstance(class_data, dict) else None
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            files = entry.get("files") if isinstance(entry, dict) else None
+            if not isinstance(files, dict):
+                continue
+            for tag, value in list(files.items()):
+                if isinstance(value, str):
+                    filename = value
+                    files[tag] = {
+                        "filename": filename,
+                        "preview_url": f"/api/individual/{job_id}/preview/{quote(filename, safe='')}",
+                    }
+                elif isinstance(value, dict):
+                    filename = value.get("filename") or value.get("name")
+                    if filename:
+                        value.setdefault("filename", filename)
+                        value.setdefault(
+                            "preview_url",
+                            f"/api/individual/{job_id}/preview/{quote(str(filename), safe='')}",
+                        )
+    return manifest
+
 def _pack_outputs(output_dir: Path) -> Path:
     zip_path = APP_STATE_DIR / "snap_outputs.zip"
     if zip_path.exists():
         zip_path.unlink()
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for p in output_dir.rglob("*"):
+            rel = p.relative_to(output_dir)
+            if "dedup_candidates" in rel.parts:
+                continue
             if p.is_file():
-                zf.write(p, p.relative_to(output_dir))
+                zf.write(p, rel)
     return zip_path
 
 
@@ -384,10 +448,19 @@ async def run_individual(
 
 @app.get("/api/individual/{job_id}/result")
 def get_individual_result(job_id: str) -> dict[str, Any]:
-    manifest = APP_STATE_DIR / "individual_jobs" / job_id / "output" / "manifest.json"
+    output_dir = _individual_job_output_dir(job_id)
+    manifest = output_dir / "manifest.json"
     if not manifest.exists():
         raise HTTPException(status_code=404, detail="manifest not found")
-    return json.loads(manifest.read_text(encoding="utf-8"))
+    data = json.loads(manifest.read_text(encoding="utf-8"))
+    return _add_individual_preview_urls(data, job_id)
+
+
+@app.get("/api/individual/{job_id}/preview/{filename}")
+def preview_individual_output(job_id: str, filename: str) -> FileResponse:
+    output_dir = _individual_job_output_dir(job_id)
+    image_path = _find_individual_output_file(output_dir, filename)
+    return FileResponse(image_path, filename=image_path.name)
 
 
 @app.get("/api/individual/{job_id}/download")
