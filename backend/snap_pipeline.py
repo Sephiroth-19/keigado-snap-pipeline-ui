@@ -309,11 +309,10 @@ class SnapPipeline:
         summary: PipelineResult,
     ) -> None:
         sim_dir = output_dir / "similarity_clusters"
-        dedup_dir = output_dir / "dedup_candidates"
         final_dir = output_dir / "final_selected"
         ng_dir = output_dir / "ng_photos"
         other_dir = output_dir / "other_passing"
-        for d in [sim_dir, dedup_dir, final_dir, ng_dir, other_dir]:
+        for d in [sim_dir, final_dir, ng_dir, other_dir]:
             d.mkdir(parents=True, exist_ok=True)
 
         rep_paths = {r.path for r in reps}
@@ -324,8 +323,6 @@ class SnapPipeline:
                 prefix = "REP_" if rec.path in rep_paths else ""
                 self._copy(rec.path, cdir / f"{prefix}{rec.path.name}")
 
-        for rec in reps:
-            self._copy(rec.path, dedup_dir / rec.path.name)
         for rec in final:
             self._copy(rec.path, final_dir / rec.path.name)
         for rec in ng:
