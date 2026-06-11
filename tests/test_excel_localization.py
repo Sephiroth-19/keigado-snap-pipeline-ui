@@ -38,12 +38,28 @@ def test_snap_excel_labels_japanese(tmp_path: Path):
     assert (out_dir / "snap_pipeline_report.xlsx").is_file()
 
     wb = load_workbook(out_dir / "snap_pipeline_report.xlsx")
-    assert wb.sheetnames == ["サマリー", "類似グループ", "選定結果"]
-    assert [c.value for c in wb["サマリー"][1]] == ["項目", "値"]
-    summary_rows = {row[0].value: row[1].value for row in wb["サマリー"].iter_rows(min_row=2)}
-    assert summary_rows["代表候補写真数"] == 1
+    assert wb.sheetnames == ["ベストショット一覧", "NG写真一覧", "未選定写真一覧", "統計サマリー"]
+    assert [c.value for c in wb["ベストショット一覧"][1]] == [
+        "ファイル名",
+        "区分",
+        "総合スコア",
+        "技術スコア",
+        "表情/明るさスコア",
+        "構図スコア",
+        "希少性スコア",
+        "類似グループID",
+        "撮影日時",
+        "コメント",
+        "選定理由",
+    ]
+    for sheet_name in ["ベストショット一覧", "NG写真一覧", "未選定写真一覧"]:
+        headers = [c.value for c in wb[sheet_name][1]]
+        assert "コメント" in headers
+    summary_rows = {row[0].value: row[1].value for row in wb["統計サマリー"].iter_rows(min_row=2)}
+    assert summary_rows["代表候補数"] == 1
     assert summary_rows["重複削減率"] == 0
-    assert wb["選定結果"][2][0].value == "ベストショット"
+    assert wb["ベストショット一覧"][2][1].value == "ベストショット"
+    assert wb["ベストショット一覧"][2][9].value == "総合評価が高く、ベストショット候補として選定されました。"
 
 
 def test_club_excel_labels_japanese(tmp_path: Path):
