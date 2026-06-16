@@ -1576,7 +1576,7 @@ function normalizeTeacherResult(raw){const r=raw||{};return {summary:r.summary||
 async function runTeacherPipeline(){const zip=document.getElementById('teacher-photos-zip')?.files?.[0];const pdf=document.getElementById('teacher-roster-pdf')?.files?.[0];if(!zip||!pdf){setText('teacher-run-status','ZIPとPDFを選択してください');safeToast('ZIPとPDFを選択してください');return;}const fd=new FormData();fd.append('photos_zip',zip);fd.append('roster_pdf',pdf);setText('teacher-run-status','実行中...');try{const res=await fetch('/api/teacher/run',{method:'POST',body:fd});const data=await res.json();if(!res.ok) throw new Error(data.detail||'teacher run failed');window.appState.teacher.jobId=data.job_id;window.appState.teacher.status='running';setText('teacher-job-id',data.job_id);setText('teacher-run-status','status: running');pollTeacherStatus();}catch(e){setText('teacher-run-status','エラー: '+e.message);setText('teacher-result-json',pretty({error:e.message}));}}
 async function pollTeacherStatus(){const st=window.appState.teacher;if(!st.jobId) return;if(st.pollTimer) clearInterval(st.pollTimer);st.pollTimer=setInterval(async()=>{try{const r=await fetch(`/api/teacher/status/${st.jobId}`);const d=await r.json();setText('teacher-run-status',`status: ${d.status}`);if(d.status==='completed'){clearInterval(st.pollTimer);st.pollTimer=null;await fetchTeacherResult();if(typeof renderWorkflow==='function') renderWorkflow('teacher',4);}else if(d.status==='failed'){clearInterval(st.pollTimer);st.pollTimer=null;setText('teacher-result-json',pretty(d));}}catch(e){setText('teacher-run-status','status poll error: '+e.message);}},2000);}
 async function fetchTeacherResult(){const id=window.appState.teacher.jobId;if(!id)return;const r=await fetch(`/api/teacher/result/${id}`);const d=await r.json();window.appState.teacher.result=normalizeTeacherResult(d);setText('teacher-result-json',pretty(window.appState.teacher.result.raw));}
-async function runSnapPipeline(){const zip=document.getElementById('snap-folder-zip')?.files?.[0];const bestShotCount=(document.getElementById('snap-best-shot-count')?.value||'25').trim();if(!zip){setText('snap-run-status','ZIPを選択してください');safeToast('ZIPを選択してください');return;}if(!/^[1-9]\d*$/.test(bestShotCount)){setText('snap-run-status','エラー: Best Shot Countは1以上の整数を入力してください');safeToast('Best Shot Countは1以上の整数を入力してください');return;}const fd=new FormData();fd.append('folder_zip',zip);fd.append('best_shot_count',bestShotCount);setText('snap-run-status','実行中...');try{const r=await fetch('/api/snap/run',{method:'POST',body:fd});const d=await r.json();if(!r.ok) throw new Error(d.detail||'snap run failed');setText('snap-run-status','完了。結果を取得中...');await fetchSnapResult();if(typeof renderSnapWorkflow==='function') renderSnapWorkflow(3);}catch(e){setText('snap-run-status','エラー: '+e.message);setText('snap-result-json',pretty({error:e.message}));}}
+async function runSnapPipeline(){const zip=document.getElementById('snap-folder-zip')?.files?.[0];if(!zip){setText('snap-run-status','ZIPを選択してください');safeToast('ZIPを選択してください');return;}const fd=new FormData();fd.append('folder_zip',zip);setText('snap-run-status','実行中...');try{const r=await fetch('/api/snap/run',{method:'POST',body:fd});const d=await r.json();if(!r.ok) throw new Error(d.detail||'snap run failed');setText('snap-run-status','完了。結果を取得中...');await fetchSnapResult();if(typeof renderSnapWorkflow==='function') renderSnapWorkflow(3);}catch(e){setText('snap-run-status','エラー: '+e.message);setText('snap-result-json',pretty({error:e.message}));}}
 async function fetchSnapResult(){const r=await fetch('/api/snap/result');const d=await r.json();window.appState.snap.result=d;setText('snap-run-status','完了');setText('snap-result-json',pretty(d));}
 function downloadSnapFolder(){window.open('/api/snap/download','_blank');}
 function downloadAllSnapResults(){window.open('/api/snap/download','_blank');}
@@ -1584,7 +1584,7 @@ function downloadTeacherOutputFolder(){const id=window.appState.teacher.jobId;if
 function downloadTeacherExcel(){const id=window.appState.teacher.jobId;if(!id){safeToast('job_idがありません');return;}window.open(`/api/teacher/excel/${id}`,'_blank');}
 const _oldRenderWorkflow=window.renderWorkflow;
 window.renderWorkflow=function(kind,step){_oldRenderWorkflow(kind,step);if(kind==='teacher'&&step===0){const sec=document.getElementById('sec-teacher');if(sec){const card=sec.querySelector('.card');if(card){card.innerHTML=`<div class="card-title">アップロード</div><div class="card-sub">先生写真ZIPと教師名簿PDFを指定して実行します（PDFのみ対応）。</div><div class="btn-row" style="margin-top:12px"><input id="teacher-photos-zip" type="file" accept=".zip" class="btn btn-ghost"><span id="teacher-zip-name" class="card-sub">未選択</span></div><div class="btn-row"><input id="teacher-roster-pdf" type="file" accept=".pdf" class="btn btn-ghost"><span id="teacher-pdf-name" class="card-sub">未選択</span></div><div id="teacher-run-status" class="card-sub" style="margin-top:10px">status: idle</div><div class="card-sub">job_id: <span id="teacher-job-id">-</span></div><pre id="teacher-result-json" class="panel" style="margin-top:10px;white-space:pre-wrap">結果はここに表示されます</pre><div class="btn-row"><button class="btn btn-primary" onclick="runTeacherPipeline()">OCR/AI処理を開始</button></div>`;bindWorkflowUploadInputs();}}}
-if(kind==='teacher'&&step===4){const box=document.getElementById('teacher-result-json');if(box&&window.appState.teacher.result)box.textContent=pretty(window.appState.teacher.result.raw);} if(kind==='snap'&&step===0){const sec=document.getElementById('sec-snap');if(sec){const card=sec.querySelector('.card');if(card){card.innerHTML=`<div class="card-title">イベントZIPアップロード</div><div class="card-sub">スナップ写真ZIPをアップロードしてAI処理を実行します。</div><div class="btn-row" style="margin-top:12px"><input id="snap-folder-zip" type="file" accept=".zip" class="btn btn-ghost"><span id="snap-zip-name" class="card-sub">未選択</span></div><label class="card-sub" style="display:block;margin-top:12px" for="snap-best-shot-count">Best Shot Count</label><input id="snap-best-shot-count" type="number" min="1" step="1" value="25" class="input" style="margin-top:6px;max-width:220px"><div class="card-sub" style="margin-top:4px">選択するBest Shot写真数を指定します（既定値: 25）。</div><div id="snap-run-status" class="card-sub" style="margin-top:10px">status: idle</div><pre id="snap-result-json" class="panel" style="margin-top:10px;white-space:pre-wrap">結果はここに表示されます</pre><div class="btn-row"><button class="btn btn-primary" onclick="runSnapPipeline()">AI処理を開始</button></div>`;bindWorkflowUploadInputs();}}}
+if(kind==='teacher'&&step===4){const box=document.getElementById('teacher-result-json');if(box&&window.appState.teacher.result)box.textContent=pretty(window.appState.teacher.result.raw);} if(kind==='snap'&&step===0){const sec=document.getElementById('sec-snap');if(sec){const card=sec.querySelector('.card');if(card){card.innerHTML=`<div class="card-title">イベントZIPアップロード</div><div class="card-sub">スナップ写真ZIPをアップロードしてAI処理を実行します。Best Shot CountはExportで指定します。</div><div class="btn-row" style="margin-top:12px"><input id="snap-folder-zip" type="file" accept=".zip" class="btn btn-ghost"><span id="snap-zip-name" class="card-sub">未選択</span></div><div id="snap-run-status" class="card-sub" style="margin-top:10px">status: idle</div><pre id="snap-result-json" class="panel" style="margin-top:10px;white-space:pre-wrap">結果はここに表示されます</pre><div class="btn-row"><button class="btn btn-primary" onclick="runSnapPipeline()">AI処理を開始</button></div>`;bindWorkflowUploadInputs();}}}
 if(kind==='snap'&&step===4){const sec=document.getElementById('sec-snap');const pre=sec?.querySelector('#snap-result-json');if(pre&&window.appState.snap.result)pre.textContent=pretty(window.appState.snap.result);}
 };
 window.runTeacherPipeline=runTeacherPipeline;window.runSnapPipeline=runSnapPipeline;
@@ -1732,7 +1732,7 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
     const steps=['Upload','AI Process','Event Result','Photo Preview','Export'];
     const tabs=steps.map((s,i)=>`<button class="wf-tab ${i===step?'on':''}" onclick="renderSnapWorkflow(${i})">${i+1} ${s}</button>`).join('');
     let body='';
-    if(step===0){body=`<div class="card"><div class="card-title">イベントZIPアップロード</div><div class="card-sub">スナップ写真ZIPをアップロードしてAI処理を実行します。</div><div class="btn-row" style="margin-top:12px"><input id="snap-folder-zip" type="file" accept=".zip" class="btn btn-ghost"><span id="snap-zip-name" class="card-sub">未選択</span></div><label class="card-sub" style="display:block;margin-top:12px" for="snap-best-shot-count">Best Shot Count</label><input id="snap-best-shot-count" type="number" min="1" step="1" value="25" class="input" style="margin-top:6px;max-width:220px"><div class="card-sub" style="margin-top:4px">選択するBest Shot写真数を指定します（既定値: 25）。</div><div id="snap-run-status" class="card-sub" style="margin-top:10px">status: idle</div><pre id="snap-result-json" class="panel" style="margin-top:10px;white-space:pre-wrap">結果はここに表示されます</pre><div class="btn-row"><button class="btn btn-primary" onclick="runSnapPipeline()">AI処理を開始</button></div></div>`;}
+    if(step===0){body=`<div class="card"><div class="card-title">イベントZIPアップロード</div><div class="card-sub">スナップ写真ZIPをアップロードしてAI処理を実行します。Best Shot CountはExportで指定します。</div><div class="btn-row" style="margin-top:12px"><input id="snap-folder-zip" type="file" accept=".zip" class="btn btn-ghost"><span id="snap-zip-name" class="card-sub">未選択</span></div><div id="snap-run-status" class="card-sub" style="margin-top:10px">status: idle</div><pre id="snap-result-json" class="panel" style="margin-top:10px;white-space:pre-wrap">結果はここに表示されます</pre><div class="btn-row"><button class="btn btn-primary" onclick="runSnapPipeline()">AI処理を開始</button></div></div>`;}
     else if(step===1){body=`<div class="card"><div class="alert a-blue"><span>📸</span><div><strong>AI処理：</strong>アップロードされたイベントごとに BestShot / Passing / NG / 類似グループ / Excel を生成します。</div></div><div class="btn-row"><button class="btn btn-primary" onclick="renderSnapWorkflow(3)">プレビューを見る</button></div></div>`;}
     else if(step===2||step===3){body=`${snapPhotoPreviewSection()}<div class="btn-row"><button class="btn btn-primary" onclick="renderSnapWorkflow(4)">Exportへ</button><button class="btn btn-success" onclick="downloadAllSnapResults()">出力ZIPをダウンロード</button></div>`;}
     else{body=`<div class="card"><div class="alert a-ok"><span>✅</span><div><strong>スナップ写真の出力準備が完了しました。</strong><br>プレビュー確認後も、既存のZIPダウンロードはそのまま利用できます。</div></div><div class="btn-row"><button class="btn btn-success" onclick="downloadAllSnapResults()">出力ZIPをダウンロード</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>${snapPhotoPreviewSection()}${snapExcelPreviewSection()}`;}
@@ -1944,6 +1944,276 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
   window.setAlignedStep=setAlignedStep;
   const previousRenderWorkflow=window.renderWorkflow;
   window.renderWorkflow=function(kind,step){if(kind==='individual')return renderAlignedWorkflow('individual',step??0);if(kind==='teacher')return renderAlignedWorkflow('teacher',step===4?3:(step??0));return previousRenderWorkflow(kind,step);};
+})();
+</script>
+
+<script>
+// ===== Final alignment: Club and Snap use the latest 4-step reference workflow shell =====
+(function(){
+  window.appState=window.appState||{};
+  window.appState.club=window.appState.club||{file:null,running:false,error:'',result:null,step:0,folder:0,selected:0,output:'Clean Photos',excel:'Review Summary'};
+  window.appState.snap=window.appState.snap||{result:null,status:'',selectedZipName:'',file:null,running:false,error:'',step:0,folder:0,selected:0,output:'BestShot',excel:'Event Summary',filter:'All',previewImages:[],previewLoaded:false,previewLoading:false,bestShotCount:null,recommendedBestShotCount:null,maxBestShotCount:200};
+
+  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const asArray=v=>Array.isArray(v)?v:[];
+  const statusCls=s=>s==='Best Shot'||s==='確認済み'||s==='OK'?'b-ok':s==='Passing'||s==='保留'?'b-blue':s==='NG'||s==='要確認'||s==='要修正'?'b-warn':'b-gray';
+  const clean=s=>String(s??'').replace(/\s+/g,'').trim();
+  const splitFile=raw=>{const m=String(raw||'').match(/^(.*)\.([A-Za-z0-9]+)$/);return m?{base:m[1],ext:m[2].toLowerCase()}:{base:String(raw||''),ext:'jpg'};};
+  const firstVal=(obj,keys)=>{for(const k of keys){const v=obj?.[k];if(v!==undefined&&v!==null&&v!=='')return v;}return '';};
+  const firstImageSrc=obj=>String(firstVal(obj,['previewUrl','preview_url','image_url','imageUrl','thumbnail_url','thumbnailUrl','url','src','data_url'])||'');
+  const isRealImageSrc=src=>/^(data:image\/|https?:\/\/|\/api\/|\/static\/|blob:)/.test(String(src||''));
+  const absUrl=url=>!url?'#':(/^https?:\/\//.test(url)?url:url);
+  const snapSummary=()=>window.appState.snap?.result?.summary||window.appState.snap?.result||null;
+  const snapEventRows=()=>asArray(snapSummary()?.events||snapSummary()?.event_summaries);
+  const snapEventName=e=>e?.display_event_name||e?.event_name||e?.name||'event';
+  const snapEventSafeName=e=>e?.safe_event_name||e?.output_folder||e?.event_name||e?.name||'event';
+  const snapRecommendedCount=summary=>Math.max(1,Math.round(Number(summary?.total_representative_candidates||0)*0.3)||1);
+  function syncSnapCountsFromSummary(summary, resetSelection=false){
+    const st=window.appState.snap;
+    const reps=Number(summary?.total_representative_candidates||0);
+    const ng=Number(summary?.ng_count_after_menna||0);
+    const recommended=reps?snapRecommendedCount(summary):Number(st.recommendedBestShotCount||st.bestShotCount||10);
+    const max=reps?Math.max(1,reps-ng):200;
+    st.recommendedBestShotCount=recommended;
+    st.maxBestShotCount=max;
+    if(resetSelection||!st.bestShotCount)st.bestShotCount=Number(summary?.best_shot_count||recommended);
+    st.bestShotCount=Math.max(1,Math.min(max,Number(st.bestShotCount)||recommended));
+  }
+
+  const flow={
+    club:[['Upload','クラブ写真'],['Processing','目閉じ・人数'],['Result Review & Correction','結果確認・振分'],['Output Review','最終出力確認']],
+    snap:[['Upload','イベントフォルダ'],['Processing','類似・品質判定'],['Result Review & Correction','結果確認・振分'],['Output Review','最終出力確認']]
+  };
+  const refData={
+    club:{title:'クラブ写真',icon:'🏆',note:'クラブフォルダ別に目閉じ・人数確認を行い、Best Shot / Passing / NGを確認します。',naming:'フォルダ名_撮影日_元ファイル名_札01/本01　例：バドミントン部_20260403_IMG0045_本01.jpg',folders:[
+      {name:'バドミントン部',meta:'18枚 / 目閉じ・人数確認',items:[
+        {icon:'🏆',orig:'IMG0045.jpg',ren:'バドミントン部_20260403_IMG0045_本01.jpg',status:'Best Shot',meta:'人数15 / 目つぶりなし / score 92',club:'バドミントン部',date:'20260403',tag:'本01'},
+        {icon:'📘',orig:'IMG0046.jpg',ren:'バドミントン部_20260403_IMG0046_札01.jpg',status:'Passing',meta:'人数14 / 目つぶり1名候補 / 確認用',club:'バドミントン部',date:'20260403',tag:'札01'},
+        {icon:'🚫',orig:'IMG0047.jpg',ren:'バドミントン部_20260403_IMG0047_NG01.jpg',status:'NG',meta:'人数0 / 顔検出なし',club:'バドミントン部',date:'20260403',tag:'NG01'}
+      ]},
+      {name:'サッカー部',meta:'22枚 / Best Shot候補あり',items:[
+        {icon:'🏆',orig:'IMG1012.jpg',ren:'サッカー部_20260403_IMG1012_本01.jpg',status:'Best Shot',meta:'人数18 / 目つぶりなし / score 89',club:'サッカー部',date:'20260403',tag:'本01'},
+        {icon:'📘',orig:'IMG1013.jpg',ren:'サッカー部_20260403_IMG1013_札01.jpg',status:'Passing',meta:'人数17 / 表情確認',club:'サッカー部',date:'20260403',tag:'札01'}
+      ]}
+    ]},
+    snap:{title:'スナップ写真',icon:'📸',note:'イベントフォルダ別に類似写真整理・品質判定を行い、Best Shot / Passing / NGを確認します。',naming:'イベントフォルダ別に出力。セレクト枚数はOutput Reviewで1〜200枚の範囲で指定できます。',folders:[
+      {name:'運動会',meta:'125枚 / 出力枚数は最後に指定',items:[
+        {icon:'🏆',orig:'IMG1201.jpg',ren:'運動会/BestShot/IMG1201.jpg',status:'Best Shot',meta:'類似グループA / 代表候補 / score 91',event:'運動会'},
+        {icon:'📘',orig:'IMG1202.jpg',ren:'運動会/Passing/IMG1202.jpg',status:'Passing',meta:'類似グループA / 予備候補',event:'運動会'},
+        {icon:'🚫',orig:'IMG1203.jpg',ren:'運動会/NG/IMG1203.jpg',status:'NG',meta:'ブレ / 目つぶり候補',event:'運動会'}
+      ]},
+      {name:'修学旅行',meta:'138枚 / イベント別出力',items:[
+        {icon:'🏆',orig:'IMG2201.jpg',ren:'修学旅行/BestShot/IMG2201.jpg',status:'Best Shot',meta:'集合 / 代表候補 / score 94',event:'修学旅行'},
+        {icon:'📘',orig:'IMG2202.jpg',ren:'修学旅行/Passing/IMG2202.jpg',status:'Passing',meta:'同一場面の予備候補',event:'修学旅行'}
+      ]}
+    ]}
+  };
+
+  function mapClubResultItem(row){
+    const club=firstVal(row,['club_name','club','folder'])||'Club';
+    const orig=firstVal(row,['original_file','filename','file_name','name'])||'club_photo.jpg';
+    const rank=firstVal(row,['rank'])||1;
+    const ren=firstVal(row,['renamed_file','renamed','output_filename'])||`${club}_20260403_${splitFile(orig).base}_本${String(rank).padStart(2,'0')}.${splitFile(orig).ext}`;
+    const status=row?.ng_flag?'NG':Number(rank)===1?'Best Shot':'Passing';
+    const score=firstVal(row,['total_score','score'])||'-';
+    return {icon:status==='Best Shot'?'🏆':status==='NG'?'🚫':'📘',orig,ren,status,meta:`score ${score} / ${firstVal(row,['ng_reason'])||'backend result'}`,club,date:'20260403',tag:ren.match(/_(本|札|NG)\d+\./)?.[0]?.slice(1,-1)||'本01',image_url:firstImageSrc(row),raw:row};
+  }
+  function clubFolders(){
+    const result=window.appState.club?.result;
+    const items=asArray(result?.items).map(mapClubResultItem);
+    if(items.length){
+      const grouped=new Map();
+      items.forEach(item=>{if(!grouped.has(item.club))grouped.set(item.club,[]);grouped.get(item.club).push(item);});
+      return [...grouped.entries()].map(([name,rows])=>({name,meta:'backend result',items:rows}));
+    }
+    return refData.club.folders;
+  }
+  function snapFolders(){
+    const r=snapSummary();
+    const summaries=snapEventRows();
+    const previewImages=asArray(window.appState.snap?.previewImages);
+    const statusForImage=img=>img?.category_key==='best'?'Best Shot':img?.category_key==='passing'?'Passing':img?.category_key==='ng'?'NG':'Similarity';
+    if(previewImages.length){
+      const grouped=new Map();
+      previewImages.forEach(img=>{
+        if(img.category_key==='similarity')return;
+        const key=img.event_id||img.output_folder||img.safe_event_name||img.event_name||'event_1';
+        if(!grouped.has(key)){
+          grouped.set(key,{event_id:img.event_id,name:img.display_event_name||img.event_name||img.output_folder||key,safeName:img.safe_event_name||img.output_folder||key,items:[]});
+        }
+        const group=grouped.get(key);
+        const status=statusForImage(img);
+        group.items.push({icon:status==='Best Shot'?'🏆':status==='Passing'?'📘':'🚫',orig:img.name,ren:img.relative_path,status,meta:`${img.category} / ${img.output_folder||group.safeName}`,event:group.name,image_url:img.url,raw:img});
+      });
+      const byId=new Map([...grouped.values()].map(g=>[g.event_id||g.safeName,g]));
+      const ordered=summaries.length?summaries.map(e=>byId.get(e.event_id)||byId.get(snapEventSafeName(e))||{event_id:e.event_id,name:snapEventName(e),safeName:snapEventSafeName(e),items:[]}).filter(Boolean):[...grouped.values()];
+      return ordered.map(g=>({name:g.name,meta:`${g.items.length}枚 / backend preview`,items:g.items}));
+    }
+    if(summaries.length){
+      return summaries.map(e=>({name:snapEventName(e),meta:`${e.total_input_images||0}枚 / BestShot ${e.final_selected_count||e.best_shot_count||0}`,items:[
+        {icon:'🏆',orig:`${snapEventName(e)}_bestshot_preview.jpg`,ren:`${snapEventSafeName(e)}/final_selected/`,status:'Best Shot',meta:`final selected ${e.final_selected_count||0}`,event:snapEventName(e)},
+        {icon:'📘',orig:`${snapEventName(e)}_passing_preview.jpg`,ren:`${snapEventSafeName(e)}/other_passing/`,status:'Passing',meta:`passing ${e.other_passing_count||0}`,event:snapEventName(e)},
+        {icon:'🚫',orig:`${snapEventName(e)}_ng_preview.jpg`,ren:`${snapEventSafeName(e)}/ng_photos/`,status:'NG',meta:`NG ${e.ng_count_after_menna||e.ng_count||0}`,event:snapEventName(e)}
+      ]}));
+    }
+    return refData.snap.folders;
+  }
+  function folders(kind){return kind==='club'?clubFolders():snapFolders();}
+  function wfState(kind){return window.appState[kind];}
+  function hasBackend(kind){return kind==='club'?!!window.appState.club.result:!!window.appState.snap.result;}
+  function currentItems(kind){const st=wfState(kind);const f=folders(kind)[st.folder]||folders(kind)[0];return f?.items||[];}
+  function currentItem(kind){const st=wfState(kind);const arr=currentItems(kind);if(st.selected>=arr.length)st.selected=0;return arr[st.selected]||arr[0];}
+  function previewMarkup(item){const src=firstImageSrc(item);if(isRealImageSrc(src))return `<img src="${esc(src)}" alt="${esc(item.orig)}">`;return `<div class="big">${esc(item.icon||'🖼️')}</div>`;}
+  function setStep(kind,step){const st=wfState(kind);st.step=Math.max(0,Math.min(3,Number(step)||0));renderReferenceWorkflow(kind,st.step);}
+
+  function header(kind){
+    const st=wfState(kind), d=refData[kind];
+    return `<div class="ref-shell-head"><div class="card-title">${d.icon} ${d.title}</div><div class="card-sub">${d.note}</div><div class="ref-mini">Preview source: ${hasBackend(kind)?'backend result':'demo fallback'}</div><div class="ref-flow">${flow[kind].map((x,i)=>`<div class="ref-flow-step ${st.step===i?'on':''}" onclick="setReferenceStep('${kind}',${i})"><strong>0${i+1} ${x[0]}</strong><span>${x[1]}</span></div>`).join('')}</div><div class="ref-naming"><strong>命名ルール：</strong>${d.naming}</div></div>`;
+  }
+  function fileRow(icon,name,meta,status){return `<div class="file-row"><span class="file-icon">${icon}</span><div class="file-info"><div class="file-name">${esc(name)}</div><div class="file-meta">${esc(meta)}</div></div><span>${status||''}</span></div>`;}
+  function uploadBody(kind){
+    if(kind==='club'){
+      const st=window.appState.club;
+      const status=st.running?'<span class="badge b-blue">処理中...</span>':st.result?'<span class="badge b-ok">処理完了</span>':'<span class="badge b-gray">待機中</span>';
+      return `<div class="card"><div class="card-title">01 Upload</div><div class="card-sub">クラブ写真ZIPをアップロードし、既存APIのFormData（folder_zip）で /api/club/run に送信します。</div><div class="drop" style="margin-top:12px" onclick="document.getElementById('club-folder-zip')?.click()">📁 クラブ写真ZIPをアップロード<br><span class="card-sub">ZIPのトップ階層フォルダ名をクラブ名として扱います。</span></div><input id="club-folder-zip" type="file" accept=".zip,application/zip" onchange="onClubZipSelected(this)" style="display:none"><div class="file-list">${fileRow('📦',st.file?.name||'未選択','folder_zip · 既存 /api/club/run に送信',status)}</div>${st.error?`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(st.error)}</div></div>`:''}<div class="btn-row"><button class="btn btn-primary" onclick="runClubPipeline()" ${st.running?'disabled':''}>次へ：Processing</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
+    }
+    const st=window.appState.snap;
+    const status=st.running?'<span class="badge b-blue">処理中...</span>':st.result?'<span class="badge b-ok">処理完了</span>':'<span class="badge b-gray">待機中</span>';
+    return `<div class="card"><div class="card-title">01 Upload</div><div class="card-sub">イベントZIPをアップロードし、既存APIのFormData（folder_zip）で /api/snap/run に送信します。最終セレクト枚数はOutput Reviewで調整できます。</div><div class="drop" style="margin-top:12px" onclick="document.getElementById('snap-folder-zip')?.click()">📁 イベントフォルダZIPをアップロード（複数イベント対応）<br><span class="card-sub">イベントごとのBestShot / Passing / NG / Excelを生成します。</span></div><input id="snap-folder-zip" type="file" accept=".zip,application/zip" onchange="onSnapZipSelected(this)" style="display:none"><div class="file-list">${fileRow('📦',st.file?.name||st.selectedZipName||'未選択','folder_zip · 既存 /api/snap/run に送信',status)}</div><div id="snap-run-status" class="card-sub" style="margin-top:10px">${st.status||'status: idle'}</div>${st.error?`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(st.error)}</div></div>`:''}<div class="btn-row"><button class="btn btn-primary" onclick="runSnapPipeline()" ${st.running?'disabled':''}>次へ：Processing</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
+  }
+  function processingBody(kind){
+    const rows=folders(kind).map(f=>{const c=f.items.reduce((a,x)=>{a[x.status]=(a[x.status]||0)+1;return a;},{});return `<tr><td>📁 ${esc(f.name)}</td><td>${f.items.length} photos</td><td>${Object.entries(c).map(([k,v])=>`<span class="badge ${statusCls(k)}">${esc(k)}: ${v}</span>`).join(' ')}</td><td>${esc(f.meta)}</td></tr>`;}).join('');
+    const running=wfState(kind).running;
+    return `<div class="card"><div class="card-title">02 Processing</div><div class="card-sub">フォルダ単位で処理状態を確認します。</div>${running?'<div class="alert a-blue" style="margin-top:12px"><span>⏳</span><div>バックエンド処理中です。完了後にResult Review & Correctionへ移動します。</div></div>':''}<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Folder / Group</th><th>Photos</th><th>Status Summary</th><th>Details</th></tr></thead><tbody>${rows}</tbody></table></div><div class="btn-row"><button class="btn btn-ghost" onclick="setReferenceStep('${kind}',0)">戻る</button><button class="btn btn-primary" onclick="setReferenceStep('${kind}',2)">次へ：結果確認・修正</button></div></div>`;
+  }
+  function folderTabs(kind){const st=wfState(kind);return `<div class="ref-folder-tabs">${folders(kind).map((f,i)=>`<button class="ref-folder-tab ${st.folder===i?'on':''}" onclick="selectReferenceFolder('${kind}',${i})">📁 ${esc(f.name)}</button>`).join('')}</div>`;}
+  function snapFilterTabs(){
+    const st=window.appState.snap;
+    const filters=['All','Best Shot','Passing','NG'];
+    return `<div class="snap-preview-tabs">${filters.map(f=>`<button class="btn btn-ghost btn-sm ${st.filter===f?'on':''}" onclick="setSnapReviewFilter('${f}')">${f==='All'?'All':f==='Best Shot'?'Best':f}</button>`).join('')}</div>`;
+  }
+  function reviewBody(kind){
+    const st=wfState(kind), fs=folders(kind);if(st.folder>=fs.length)st.folder=0;const folder=fs[st.folder]||fs[0];const item=currentItem(kind);const counts=(folder?.items||[]).reduce((a,x)=>{a[x.status]=(a[x.status]||0)+1;return a;},{});
+    const helper=kind==='snap'?'<div class="alert a-info" style="margin-top:12px"><span>📸</span><div>イベントごとにAI処理結果を確認できます。イベントを選択して、Best Shot / Passing / NG を確認してください。</div></div>':'';
+    const filters=kind==='snap'?snapFilterTabs():'';
+    return `<div class="card"><div class="card-title">03 Result Review & Correction / 結果確認・修正</div><div class="card-sub">AI処理結果を確認し、Best Shot / Passing / NG の振分とリネーム要素の修正をこの画面で行います。</div>${helper}${folderTabs(kind)}${filters}<div class="ref-status-board"><div class="ref-stat-card"><strong>${(folder?.items||[]).length}</strong><span>Photos</span></div>${Object.entries(counts).map(([k,v])=>`<div class="ref-stat-card"><strong><span class="badge ${statusCls(k)}">${esc(k)} ${v}</span></strong><span>${esc(folder.name)}</span></div>`).join('')}</div><div class="ref-result-layout"><div>${previewPanel(kind,item,folder)}${manualPanel(kind,item)}</div><div>${photoList(kind,true)}</div></div><div class="btn-row"><button class="btn btn-ghost" onclick="setReferenceStep('${kind}',1)">戻る</button><button class="btn btn-primary" onclick="setReferenceStep('${kind}',3)">次へ：Output Review</button></div></div>`;
+  }
+  function previewPanel(kind,item,folder){
+    if(!item)return `<div class="panel">表示する写真がありません。</div>`;
+    return `<div class="ref-preview-panel"><div><div class="ref-preview-photo">${previewMarkup(item)}<strong>${esc(item.orig)}</strong><div class="ref-mini">${esc(folder?.name||'')}</div></div><div class="ref-photo-meta"><strong>検出情報：</strong>${esc(item.meta)}<br><strong>Output Preview：</strong><br><span class="mono">${esc(item.ren)}</span><br><span class="badge ${statusCls(item.status)}" style="margin-top:8px">${esc(item.status)}</span>${isRealImageSrc(firstImageSrc(item))?'':'<div class="ref-mini" style="margin-top:8px">実画像URLが結果に含まれないため、メタデータ表示にフォールバックしています。</div>'}</div></div><div class="btn-row"><button class="btn btn-ghost" onclick="prevReferencePhoto('${kind}')">← 前へ</button><button class="btn btn-ghost" onclick="nextReferencePhoto('${kind}')">次へ →</button><button class="btn btn-primary" onclick="openReferenceViewer('${kind}')">拡大表示</button></div></div>`;
+  }
+  function photoList(kind,actions){
+    const st=wfState(kind), folder=folders(kind)[st.folder]||folders(kind)[0];
+    let entries=(folder?.items||[]).map((item,index)=>({item,index}));
+    if(kind==='snap'&&st.filter&&st.filter!=='All')entries=entries.filter(row=>row.item.status===st.filter);
+    return `<div class="ref-photo-list"><div class="ref-photo-list-head"><div><strong>写真リスト：${esc(folder?.name||'')}</strong><div class="ref-mini">クリックで左側の大きなプレビューに表示</div></div><span class="badge b-info">${entries.length} photos</span></div><div class="ref-photo-list-body">${entries.map(({item:x,index:i})=>`<div class="ref-photo-row ${st.selected===i?'on':''}" onclick="selectReferencePhoto('${kind}',${i})"><div class="ref-photo-thumb">${isRealImageSrc(firstImageSrc(x))?`<img src="${esc(firstImageSrc(x))}" alt="${esc(x.orig)}" style="width:100%;height:100%;object-fit:cover;border-radius:9px">`:esc(x.icon)}</div><div><div class="ref-file-name">${esc(x.orig)}</div><div class="ref-mini">${esc(x.meta)}</div></div><div class="ref-rename">${esc(x.ren)}<br><span class="badge ${statusCls(x.status)}">${esc(x.status)}</span></div>${actions?`<div class="btn-row" style="margin-top:0"><button class="btn btn-success btn-sm" onclick="event.stopPropagation();moveReferencePhoto('${kind}',${i},'Best Shot')">Best</button><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();moveReferencePhoto('${kind}',${i},'Passing')">Passing</button><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();moveReferencePhoto('${kind}',${i},'NG')">NG</button></div>`:''}</div>`).join('')||'<div class="empty-note">表示する写真がありません。</div>'}</div></div>`;
+  }
+  function manualPanel(kind,item){
+    if(!item)return '';
+    const fp=splitFile(item.orig);
+    if(kind==='club'){
+      return `<div class="ref-manual-panel"><div class="card-title">手入力修正 / Manual Rename</div><div class="card-sub">クラブ名・撮影日・タグを確認し、必要な場合だけ修正します。</div><div class="ref-edit-grid"><div class="field"><label>Club Name</label><input class="ref-club" value="${esc(item.club||'バドミントン部')}" oninput="updateReferenceRenamePreview(this,'club')"></div><div class="field"><label>Shooting Date</label><input class="ref-date" value="${esc(item.date||'20260403')}" oninput="updateReferenceRenamePreview(this,'club')"></div><div class="field"><label>Original File</label><input class="ref-original" value="${esc(item.orig)}" oninput="updateReferenceRenamePreview(this,'club')"><div class="ref-mini">拡張子は元ファイルから保持</div></div><div class="field"><label>Photo Tag / Ranking</label><input class="ref-tag" value="${esc(item.tag||'本01')}" oninput="updateReferenceRenamePreview(this,'club')"></div></div><div class="ref-live-preview"><div class="label">Rename Preview</div><div class="value ref-preview-name">${esc(item.club||'バドミントン部')}_${esc(item.date||'20260403')}_${esc(fp.base)}_${esc(item.tag||'本01')}.${esc(fp.ext)}</div></div><div class="btn-row"><button class="btn btn-success" onclick="toast('クラブ写真のリネームを保存しました')">リネームを保存</button><button class="btn btn-ghost" onclick="toast('自動候補を再計算しました')">自動候補を再計算</button></div></div>`;
+    }
+    return `<div class="ref-manual-panel"><div class="card-title">ステータス修正 / Event Review</div><div class="card-sub">イベント別にBest Shot / Passing / NGを確認します。セレクト枚数はOutput Reviewで指定します。</div><div class="ref-live-preview"><div class="label">Current Output</div><div class="value">${esc(item.ren)}</div></div><div class="btn-row"><button class="btn btn-success" onclick="moveReferencePhoto('snap',${wfState('snap').selected},'Best Shot')">Best Shotへ</button><button class="btn btn-ghost" onclick="moveReferencePhoto('snap',${wfState('snap').selected},'Passing')">Passingへ</button><button class="btn btn-danger" onclick="moveReferencePhoto('snap',${wfState('snap').selected},'NG')">NGへ</button></div></div>`;
+  }
+  function outputCards(kind){return kind==='club'?[['Clean Photos','マークなしクリーン写真'],['Marked Photos','目閉じ・人数マーク付き写真'],['Excel Report','スコア・目閉じ・人数']]:[['BestShot','イベント別採用'],['Passing','保留'],['NG','除外候補'],['Excel Report','イベント別結果']];}
+  function snapAllEventsSummaryBlock(){
+    const summary=snapSummary();
+    const events=snapEventRows();
+    if(!summary&&!events.length)return '';
+    const totals=summary||{};
+    const eventCards=events.map(e=>`<div class="ref-output-card"><div class="icon">📁</div><strong>${esc(snapEventName(e))}</strong><span>Best ${Number(e.final_selected_count||e.best_shot_count||0)} / Passing ${Number(e.other_passing_count||0)} / NG ${Number(e.ng_count_after_menna||e.ng_count||0)}</span><span class="mono">${esc(e.report_file||`${snapEventSafeName(e)}/snap_pipeline_report.xlsx`)}</span></div>`).join('');
+    return `<div class="ref-output-preview"><div class="card-title">全イベントサマリー</div><div class="card-sub">イベントごとの出力フォルダを分けて生成します。ダウンロードZIPには all_events_summary.json / all_events_summary.xlsx と各イベントフォルダが含まれます。</div><div class="ref-status-board" style="margin-top:12px"><div class="ref-stat-card"><strong>${Number(totals.total_input_images||0)}</strong><span>Input</span></div><div class="ref-stat-card"><strong>${Number(totals.final_selected_count||0)}</strong><span>Best</span></div><div class="ref-stat-card"><strong>${Number(totals.other_passing_count||0)}</strong><span>Passing</span></div><div class="ref-stat-card"><strong>${Number(totals.ng_count_after_menna||0)}</strong><span>NG</span></div></div><div class="ref-output-grid" style="margin-top:12px">${eventCards||'<div class="card-sub">イベント結果がありません。</div>'}</div></div>`;
+  }
+  function outputBody(kind){
+    const st=wfState(kind), cards=outputCards(kind);if(!cards.some(x=>x[0]===st.output))st.output=cards[0][0];
+    const body=st.output==='Excel Report'?excelPreview(kind):outputPreview(kind,st.output);
+    const summary=snapSummary();if(kind==='snap'&&summary)syncSnapCountsFromSummary(summary,false);
+    const recommended=Number(st.recommendedBestShotCount||10), maxCount=Number(st.maxBestShotCount||200), current=Number(st.bestShotCount||recommended);
+    const countBox=kind==='snap'?`<div class="snap-count-box"><div class="card-title">Best Shot Count</div><div class="card-sub">この値を各イベントへ個別に適用し、イベントごとの候補数を超えないよう自動調整します。初期値は全代表候補数の約30%です。</div><div style="margin-top:8px"><label for="snap-final-best-shot-count">Best Shot Count</label><input id="snap-final-best-shot-count" type="number" min="1" max="${maxCount}" step="1" value="${current}" onchange="setSnapBestShotCount(this.value)" oninput="setSnapBestShotCount(this.value)">枚</div><div class="ref-mini" style="margin-top:6px">初期推奨: ${recommended}枚 / 推奨上限: ${maxCount}枚 / 代表候補数: ${summary?.total_representative_candidates??'-'}枚</div></div>`:'';
+    const snapSummaryBlock=kind==='snap'?snapAllEventsSummaryBlock():'';
+    return `<div class="card"><div class="card-title">04 Output Review / Download</div><div class="card-sub">最終出力フォルダまたはExcel Reportをクリックすると、画面内で内容を確認できます。</div>${snapSummaryBlock}<div class="ref-output-grid">${cards.map(x=>`<div class="ref-output-card ${st.output===x[0]?'on':''}" onclick="setReferenceOutput('${kind}','${x[0]}')"><div class="icon">${x[0]==='Excel Report'?'📊':'📁'}</div><strong>${esc(x[0])}</strong><span>${esc(x[1])}</span></div>`).join('')}</div>${body}${kind==='snap'?snapBackendPreviewBlock():''}${countBox}<div class="btn-row"><button class="btn btn-ghost" onclick="setReferenceStep('${kind}',2)">戻る</button>${downloadButtons(kind)}<button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
+  }
+  function outputPreview(kind,current){
+    let all=folders(kind).flatMap(f=>f.items.map(x=>({folder:f.name,...x})));
+    if(kind==='snap'&&current!=='Excel Report')all=all.filter(x=>current==='BestShot'?x.status==='Best Shot':x.status===current);
+    if(kind==='club'&&current==='Marked Photos')all=all.filter(x=>x.status!=='NG');
+    if(kind==='club'&&current==='Clean Photos')all=all.filter(x=>x.status==='Best Shot'||x.status==='Passing');
+    const snapTree='├─ all_events_summary.json<br>├─ all_events_summary.xlsx<br>└─ [event]/<br>　 ├─ final_selected/<br>　 ├─ other_passing/<br>　 ├─ ng_photos/<br>　 ├─ similarity_clusters/<br>　 └─ snap_pipeline_report.xlsx';
+    return `<div class="ref-output-preview"><div class="card-title">出力フォルダプレビュー：${esc(current)}</div><div class="ref-mini">${hasBackend(kind)?'実バックエンド結果を表示中':'バックエンド結果なし：デモプレビューを表示中'}</div><div class="ref-icon-grid">${all.map(x=>`<div class="ref-mini-photo"><div class="pic">${previewMarkup(x)}</div><div class="nm">${esc(x.orig)}</div><div class="ref-mini">${esc(x.folder)} / <span class="badge ${statusCls(x.status)}">${esc(x.status)}</span></div><div class="rn">${esc(x.ren)}</div></div>`).join('')||'<div class="card-sub">表示する写真がありません。</div>'}</div><div class="ref-photo-meta" style="margin-top:12px"><strong>${kind==='club'?'Club_Output':'snap_outputs'}/</strong><br>${kind==='club'?'├─ ranked_photos/<br>├─ ranked_photos_marked/<br>└─ club_result.xlsx':snapTree}</div></div>`;
+  }
+  function excelPreview(kind){
+    const tabs=kind==='club'?['Best Shot Scoring','Eye Closure Detection','People Count','Review Summary']:['Event Summary','Similarity Group','BestShot Selection'];
+    const tab=wfState(kind).excel||tabs[0];
+    const rows=folders(kind).flatMap(f=>f.items.map((x,i)=>[f.name,x.orig,x.ren,`<span class="badge ${statusCls(x.status)}">${esc(x.status)}</span>`,`${esc(tab)} row ${i+1}`]));
+    return `<div class="ref-output-preview"><div class="card-title">Excel Report Preview</div><div class="card-sub">${kind==='club'?'ベストショット選定スコア、目閉じ検出、人数カウントの結果を画面内で確認します。':'イベント別結果・類似グループ・BestShot選定を確認します。'}</div><div class="ref-excel-tabs">${tabs.map(t=>`<button class="ref-excel-tab ${tab===t?'on':''}" onclick="setReferenceExcel('${kind}','${t}')">${esc(t)}</button>`).join('')}</div><div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>Folder</th><th>File</th><th>Output / Name</th><th>Status</th><th>Sheet Note</th></tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+  }
+  function snapBackendPreviewBlock(){
+    return `<div class="ref-output-preview"><div class="card-title">Backend Preview: BestShot / Passing / NG / Excel</div><div class="card-sub">バックエンドがプレビューURLを返す場合はここに実画像とExcel内容を表示します。</div><div class="snap-preview-tabs"><button class="btn btn-ghost btn-sm on" data-mode="final" onclick="selectSnapPreviewMode('final')">BestShot / Passing / NG</button><button class="btn btn-ghost btn-sm" data-mode="similarity" onclick="selectSnapPreviewMode('similarity')">類似グループ</button></div><div id="snapPreviewContent"><div class="card-sub">読み込み中...</div></div><div class="btn-row"><button class="btn btn-primary" onclick="previewSnapExcel()">Excelをプレビュー</button></div><div id="snapExcelPreviewBox"></div></div>`;
+  }
+  function downloadButtons(kind){
+    if(kind==='club'){
+      const r=window.appState.club.result;
+      if(r)return `<a class="btn btn-success" href="${esc(absUrl(r.excel_url))}" target="_blank">Excelをダウンロード</a><a class="btn btn-primary" href="${esc(absUrl(r.output_zip_url))}" target="_blank">出力ZIPをダウンロード</a>`;
+      return `<button class="btn btn-success" onclick="downloadClubExcel()">Excelをダウンロード</button><button class="btn btn-primary" onclick="downloadClubFolder()">出力フォルダをダウンロード</button>`;
+    }
+    return `<button class="btn btn-success" onclick="downloadAllSnapResults()">セレクト${Number(window.appState.snap.bestShotCount||25)}枚で出力ZIPをダウンロード</button>`;
+  }
+
+  window.setReferenceStep=setStep;
+  window.selectReferenceFolder=function(kind,i){const st=wfState(kind);st.folder=i;st.selected=0;renderReferenceWorkflow(kind,st.step);};
+  window.setSnapReviewFilter=function(filter){const st=window.appState.snap;st.filter=filter;st.selected=0;renderReferenceWorkflow('snap',st.step);};
+  window.selectReferencePhoto=function(kind,i){const st=wfState(kind);st.selected=i;renderReferenceWorkflow(kind,st.step);};
+  window.prevReferencePhoto=function(kind){const arr=currentItems(kind);if(!arr.length)return;const st=wfState(kind);st.selected=(st.selected+arr.length-1)%arr.length;renderReferenceWorkflow(kind,st.step);};
+  window.nextReferencePhoto=function(kind){const arr=currentItems(kind);if(!arr.length)return;const st=wfState(kind);st.selected=(st.selected+1)%arr.length;renderReferenceWorkflow(kind,st.step);};
+  window.moveReferencePhoto=function(kind,i,status){const item=currentItems(kind)[i];if(!item)return;item.status=status;item.icon=status==='Best Shot'?'🏆':status==='Passing'?'📘':'🚫';if(kind==='snap')item.ren=`${item.event||folders(kind)[wfState(kind).folder].name}/${status.replace(' ','')}/${item.orig}`;toast(`${item.orig} を ${status} に移動しました`);renderReferenceWorkflow(kind,wfState(kind).step);};
+  window.setReferenceOutput=function(kind,name){wfState(kind).output=name;renderReferenceWorkflow(kind,3);};
+  window.setReferenceExcel=function(kind,tab){wfState(kind).excel=tab;renderReferenceWorkflow(kind,3);};
+  window.setSnapBestShotCount=function(value){const st=window.appState.snap;const max=Number(st.maxBestShotCount||200);const n=Math.max(1,Math.min(max,Number(value)||1));st.bestShotCount=n;const el=document.getElementById('snap-final-best-shot-count');if(el)el.value=n;};
+  window.updateReferenceRenamePreview=function(el,kind){const p=el.closest('.ref-manual-panel');if(!p)return;const fp=splitFile(p.querySelector('.ref-original')?.value||'IMG0001.jpg');const out=`${clean(p.querySelector('.ref-club')?.value||'Club')}_${clean(p.querySelector('.ref-date')?.value||'20260403')}_${fp.base}_${clean(p.querySelector('.ref-tag')?.value||'本01')}.${fp.ext}`;const target=p.querySelector('.ref-preview-name');if(target)target.textContent=out;};
+  window.closeReferenceViewer=function(){document.getElementById('refPreviewModal')?.remove();};
+  window.openReferenceViewer=function(kind){const item=currentItem(kind), folder=folders(kind)[wfState(kind).folder];if(!item)return;closeReferenceViewer();document.body.insertAdjacentHTML('beforeend',`<div id="refPreviewModal" style="position:fixed;inset:0;background:rgba(15,27,48,.62);z-index:999;display:flex;align-items:center;justify-content:center;padding:24px" onclick="if(event.target.id==='refPreviewModal')closeReferenceViewer()"><div class="card" style="max-width:780px;width:100%;max-height:90vh;overflow:auto;margin:0"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><div class="card-title">${esc(refData[kind].title)}：拡大表示</div><div class="card-sub">${esc(folder?.name||'')} / ${esc(item.orig)}</div></div><button class="btn btn-ghost" onclick="closeReferenceViewer()">閉じる</button></div><div class="ref-preview-photo" style="height:360px;margin-top:12px">${previewMarkup(item)}<strong>${esc(item.orig)}</strong><div class="ref-mini">${esc(item.meta)}</div></div><div class="ref-photo-meta"><strong>出力名：</strong><br><span class="mono">${esc(item.ren)}</span><br><span class="badge ${statusCls(item.status)}" style="margin-top:8px">${esc(item.status)}</span></div><div class="btn-row"><button class="btn btn-ghost" onclick="prevReferencePhoto('${kind}');openReferenceViewer('${kind}')">← 前へ</button><button class="btn btn-ghost" onclick="nextReferencePhoto('${kind}');openReferenceViewer('${kind}')">次へ →</button></div></div></div>`);};
+
+  window.onClubZipSelected=function(input){const f=input.files&&input.files[0];const st=window.appState.club;st.error='';if(!f){st.file=null;renderReferenceWorkflow('club',0);return;}if(!f.name.toLowerCase().endsWith('.zip')){st.file=null;st.error='ZIPファイル（.zip）のみアップロードできます。';input.value='';}else st.file=f;renderReferenceWorkflow('club',0);};
+  window.runClubPipeline=async function(){const st=window.appState.club;if(st.running)return;st.error='';if(!st.file){st.error='先にZIPファイルを選択してください。';return renderReferenceWorkflow('club',0);}st.running=true;st.result=null;renderReferenceWorkflow('club',1);try{const fd=new FormData();fd.append('folder_zip',st.file);const res=await fetch('/api/club/run',{method:'POST',body:fd});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data?.detail||'クラブ写真の処理に失敗しました。');st.result=data;st.running=false;toast('クラブ写真の処理が完了しました');renderReferenceWorkflow('club',2);}catch(e){st.running=false;st.error=e?.message||'クラブ写真の処理に失敗しました。';renderReferenceWorkflow('club',0);}};
+  window.onSnapZipSelected=function(input){const f=input.files&&input.files[0];const st=window.appState.snap;st.error='';if(!f){st.file=null;st.selectedZipName='';renderReferenceWorkflow('snap',0);return;}if(!f.name.toLowerCase().endsWith('.zip')){st.file=null;st.selectedZipName='';st.error='ZIPファイル（.zip）のみアップロードできます。';input.value='';}else{st.file=f;st.selectedZipName=f.name;}renderReferenceWorkflow('snap',0);};
+  async function loadSnapPreviewImages(rerender=true){
+    const st=window.appState.snap;
+    if(st.previewLoading)return;
+    st.previewLoading=true;
+    try{
+      const res=await fetch('/api/snap/preview-images?mode=final');
+      const data=await res.json().catch(()=>({images:[]}));
+      if(res.ok){st.previewImages=data.images||[];st.previewLoaded=true;}
+    }catch(_e){
+      st.previewImages=[];
+    }finally{
+      st.previewLoading=false;
+    }
+    if(rerender&&st.step===2)renderReferenceWorkflow('snap',2);
+  }
+  window.runSnapPipeline=async function(){const st=window.appState.snap;if(st.running)return;st.error='';if(!st.file){st.error='ZIPを選択してください。';return renderReferenceWorkflow('snap',0);}st.running=true;st.status='実行中...';st.result=null;st.previewImages=[];st.previewLoaded=false;st.bestShotCount=null;st.recommendedBestShotCount=null;renderReferenceWorkflow('snap',1);try{const fd=new FormData();fd.append('folder_zip',st.file);const res=await fetch('/api/snap/run',{method:'POST',body:fd});const data=await res.json();if(!res.ok)throw new Error(data.detail||'snap run failed');st.result=data?.summary||data;st.status='完了';try{const r=await fetch('/api/snap/result');if(r.ok)st.result=await r.json();}catch(_e){}syncSnapCountsFromSummary(snapSummary(),true);await loadSnapPreviewImages(false);st.running=false;toast('スナップ写真の処理が完了しました');renderReferenceWorkflow('snap',2);}catch(e){st.running=false;st.error=e.message;st.status='エラー: '+e.message;renderReferenceWorkflow('snap',0);}};
+  function triggerSnapZipDownload(){const a=document.createElement('a');a.href='/api/snap/download';a.download='snap_outputs.zip';document.body.appendChild(a);a.click();a.remove();}
+  window.downloadAllSnapResults=async function(){const st=window.appState.snap;if(st.running)return;st.error='';const selected=Number(document.getElementById('snap-final-best-shot-count')?.value||st.bestShotCount||st.recommendedBestShotCount||1);window.setSnapBestShotCount(selected);st.status='出力更新中...';try{const fd=new FormData();fd.append('best_shot_count',String(st.bestShotCount));const res=await fetch('/api/snap/export',{method:'POST',body:fd});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data?.detail||'出力更新に失敗しました。');st.result=data?.summary||data;st.previewImages=[];st.previewLoaded=false;syncSnapCountsFromSummary(snapSummary(),false);await loadSnapPreviewImages(false);st.status='出力更新完了';toast(`Best Shot Count ${st.bestShotCount}枚で出力を更新しました`);renderReferenceWorkflow('snap',3);triggerSnapZipDownload();}catch(e){st.error=e?.message||'出力更新に失敗しました。';st.status='エラー: '+st.error;toast(st.error);renderReferenceWorkflow('snap',3);}};
+  window.downloadSnapFolder=window.downloadAllSnapResults;
+
+  window.renderReferenceWorkflow=function(kind,step){
+    const sec=document.getElementById('sec-'+kind);if(!sec)return;
+    const st=wfState(kind);st.step=Math.max(0,Math.min(3,Number(step)||0));
+    const body=st.step===0?uploadBody(kind):st.step===1?processingBody(kind):st.step===2?reviewBody(kind):outputBody(kind);
+    sec.innerHTML=header(kind)+body;
+    if(kind==='snap'&&st.step===2&&st.result&&!st.previewLoaded&&!st.previewLoading)setTimeout(()=>loadSnapPreviewImages(true),0);
+    if(kind==='snap'&&st.step===3&&typeof selectSnapPreviewMode==='function')setTimeout(()=>selectSnapPreviewMode('final'),0);
+  };
+  window.renderClubWorkflow=function(step){renderReferenceWorkflow('club',step===4?3:(step??window.appState.club.step??0));};
+  window.renderSnapWorkflow=function(step){renderReferenceWorkflow('snap',step===4?3:(step??window.appState.snap.step??0));};
+
+  const previousWorkflow=window.renderWorkflow;
+  window.renderWorkflow=function(kind,step){
+    if(kind==='club')return renderReferenceWorkflow('club',step===4?3:(step??0));
+    if(kind==='snap')return renderReferenceWorkflow('snap',step===4?3:(step??0));
+    return previousWorkflow(kind,step);
+  };
 })();
 </script>
 

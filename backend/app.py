@@ -18,7 +18,7 @@ from backend.teacher_jobs import router as teacher_router
 from openpyxl import Workbook, load_workbook
 from backend.excel_labels import SNAP_SHEET_LABELS, excel_label
 
-from backend.snap_pipeline import DEFAULT_BEST_SHOT_COUNT, SnapPipeline
+from backend.snap_pipeline import SnapPipeline
 from backend.preview_images import collect_snap_preview_images
 from backend.club_pipeline import run_club_pipeline
 from backend.individual_pipeline import (
@@ -45,9 +45,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-pipeline = SnapPipeline()
+pipeline: SnapPipeline | Any | None = None
 latest_summary: dict[str, Any] | None = None
 latest_zip_path: Path | None = None
+
+
+def _get_snap_pipeline() -> SnapPipeline | Any:
+    global pipeline
+    if pipeline is None:
+        pipeline = SnapPipeline()
+    return pipeline
 
 
 def _reset_dirs() -> None:
@@ -65,8 +72,20 @@ def _save_upload(file: UploadFile, dst: Path) -> Path:
 
 
 def _extract_zip(zip_path: Path, dst: Path) -> None:
+    dst_root = dst.resolve()
     with zipfile.ZipFile(zip_path, "r") as zf:
-        zf.extractall(dst)
+        for member in zf.infolist():
+            target = (dst / member.filename).resolve()
+            try:
+                target.relative_to(dst_root)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail="ZIP contains an unsafe path.") from exc
+            if member.is_dir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(member, "r") as src, target.open("wb") as out:
+                shutil.copyfileobj(src, out)
 
 
 
@@ -153,26 +172,61 @@ def _safe_event_name(name: str) -> str:
     return sanitized.strip("_") or "event"
 
 
-def _discover_event_dirs(input_root: Path) -> list[tuple[str, Path]]:
+def _unique_event_name(raw_name: str, index: int, used: set[str]) -> tuple[str, str]:
+    fallback = f"event_{index}"
+    display_name = raw_name.strip() or fallback
+    event_name = _safe_event_name(display_name)
+    if not event_name or event_name == "event":
+        event_name = fallback
+    base_name = event_name
+    suffix = 2
+    while event_name in used:
+        event_name = f"{base_name}_{suffix}"
+        suffix += 1
+    used.add(event_name)
+    return event_name, display_name
+
+
+def _discover_event_dirs(input_root: Path) -> list[dict[str, Any]]:
     top_dirs = [p for p in sorted(input_root.iterdir()) if p.is_dir()]
-    event_dirs: list[tuple[str, Path]] = []
+    event_dirs: list[dict[str, Any]] = []
+    used_names: set[str] = set()
 
     for d in top_dirs:
         if _has_images(d):
-            event_dirs.append((_safe_event_name(d.name), d))
+            index = len(event_dirs) + 1
+            event_name, display_name = _unique_event_name(d.name, index, used_names)
+            event_dirs.append(
+                {
+                    "event_id": f"event_{index}",
+                    "event_name": event_name,
+                    "display_event_name": display_name,
+                    "input_dir": d,
+                    "output_folder": event_name,
+                }
+            )
 
     if event_dirs:
         return event_dirs
 
     if _has_images(input_root):
-        return [("event_1", input_root)]
+        event_name, display_name = _unique_event_name("event_1", 1, used_names)
+        return [
+            {
+                "event_id": "event_1",
+                "event_name": event_name,
+                "display_event_name": display_name,
+                "input_dir": input_root,
+                "output_folder": event_name,
+            }
+        ]
 
     return []
 
 
-def _parse_snap_best_shot_count(value: str | None) -> int:
+def _parse_snap_best_shot_count(value: str | None) -> int | None:
     if value is None or value == "":
-        return DEFAULT_BEST_SHOT_COUNT
+        return None
     if not re.fullmatch(r"[1-9]\d*", value.strip()):
         raise HTTPException(status_code=400, detail="Best Shot Count must be a positive whole number.")
     return int(value.strip())
@@ -187,7 +241,9 @@ def _write_all_events_summary(output_root: Path, event_summaries: list[dict[str,
     ws = wb.active
     ws.title = SNAP_SHEET_LABELS["all_events_summary"]
     headers = [
+        "event_id",
         "event_name",
+        "display_event_name",
         "total_input_images",
         "total_clusters",
         "total_representative_candidates",
@@ -196,11 +252,97 @@ def _write_all_events_summary(output_root: Path, event_summaries: list[dict[str,
         "final_selected_count",
         "ng_count_after_menna",
         "other_passing_count",
+        "output_folder",
     ]
     ws.append([excel_label(h) for h in headers])
     for row in event_summaries:
         ws.append([row.get(k) for k in headers])
     wb.save(output_root / "all_events_summary.xlsx")
+
+
+def _run_snap_pipeline_from_current_input(parsed_best_shot_count: int | None) -> dict[str, Any]:
+    global latest_summary, latest_zip_path
+
+    events = _discover_event_dirs(INPUT_DIR)
+    event_summaries: list[dict[str, Any]] = []
+
+    for event in events:
+        event_output_dir = OUTPUT_DIR / event["output_folder"]
+        summary = _get_snap_pipeline().run(
+            event["input_dir"],
+            event_output_dir,
+            best_shot_count=parsed_best_shot_count,
+        )
+        event_summaries.append(
+            {
+                "event_id": event["event_id"],
+                "event_name": event["event_name"],
+                "display_event_name": event["display_event_name"],
+                "output_folder": event["output_folder"],
+                **summary.__dict__,
+            }
+        )
+
+    if not event_summaries:
+        event_summaries = [
+            {
+                "event_id": "event_1",
+                "event_name": "event_1",
+                "display_event_name": "event_1",
+                "total_input_images": 0,
+                "total_clusters": 0,
+                "total_representative_candidates": 0,
+                "dedup_reduction_rate": 0.0,
+                "best_shot_count": parsed_best_shot_count or 0,
+                "final_selected_count": 0,
+                "ng_count_after_menna": 0,
+                "other_passing_count": 0,
+                "output_folder": "event_1",
+            }
+        ]
+
+    _write_all_events_summary(OUTPUT_DIR, event_summaries)
+
+    total_summary = {
+        "event_name": "all_events",
+        "display_event_name": "全イベント",
+        "total_input_images": sum(e["total_input_images"] for e in event_summaries),
+        "total_clusters": sum(e["total_clusters"] for e in event_summaries),
+        "total_representative_candidates": sum(e["total_representative_candidates"] for e in event_summaries),
+        "dedup_reduction_rate": 0.0,
+        "best_shot_count": sum(e["best_shot_count"] for e in event_summaries),
+        "final_selected_count": sum(e["final_selected_count"] for e in event_summaries),
+        "ng_count_after_menna": sum(e["ng_count_after_menna"] for e in event_summaries),
+        "other_passing_count": sum(e["other_passing_count"] for e in event_summaries),
+        "output_folder": ".",
+    }
+    if total_summary["total_input_images"] > 0:
+        total_summary["dedup_reduction_rate"] = round(
+            (1 - (total_summary["total_representative_candidates"] / total_summary["total_input_images"])) * 100, 2
+        )
+
+    public_events = [
+        {
+            "event_id": e["event_id"],
+            "event_name": e["display_event_name"],
+            "display_event_name": e["display_event_name"],
+            "safe_event_name": e["event_name"],
+            "output_folder": e["output_folder"],
+            "total_input_images": e["total_input_images"],
+            "total_clusters": e["total_clusters"],
+            "total_representative_candidates": e["total_representative_candidates"],
+            "best_shot_count": e["best_shot_count"],
+            "final_selected_count": e["final_selected_count"],
+            "ng_count": e["ng_count_after_menna"],
+            "ng_count_after_menna": e["ng_count_after_menna"],
+            "other_passing_count": e["other_passing_count"],
+            "report_file": f"{e['output_folder']}/snap_pipeline_report.xlsx",
+        }
+        for e in event_summaries
+    ]
+    latest_summary = {**total_summary, "events": public_events, "event_summaries": event_summaries}
+    latest_zip_path = _pack_outputs(OUTPUT_DIR)
+    return latest_summary
 
 
 @app.post("/api/snap/run")
@@ -209,8 +351,6 @@ async def run_snap_pipeline(
     folder_zip: UploadFile | None = File(default=None),
     best_shot_count: str | None = Form(default=None),
 ) -> dict[str, Any]:
-    global latest_summary, latest_zip_path
-
     if not images and not folder_zip:
         raise HTTPException(status_code=400, detail="Upload image files or one zip folder.")
 
@@ -229,56 +369,38 @@ async def run_snap_pipeline(
         _extract_zip(zip_path, INPUT_DIR)
         zip_path.unlink(missing_ok=True)
 
-    events = _discover_event_dirs(INPUT_DIR)
-    event_summaries: list[dict[str, Any]] = []
+    summary = _run_snap_pipeline_from_current_input(parsed_best_shot_count)
+    return {"status": "ok", "summary": summary}
 
-    for event_name, event_input_dir in events:
-        event_output_dir = OUTPUT_DIR / event_name
-        summary = pipeline.run(event_input_dir, event_output_dir, best_shot_count=parsed_best_shot_count)
-        event_summaries.append({"event_name": event_name, **summary.__dict__})
 
-    if not event_summaries:
-        event_summaries = [
-            {
-                "event_name": "event_1",
-                "total_input_images": 0,
-                "total_clusters": 0,
-                "total_representative_candidates": 0,
-                "dedup_reduction_rate": 0.0,
-                "best_shot_count": parsed_best_shot_count,
-                "final_selected_count": 0,
-                "ng_count_after_menna": 0,
-                "other_passing_count": 0,
-            }
-        ]
-
-    _write_all_events_summary(OUTPUT_DIR, event_summaries)
-
-    total_summary = {
-        "event_name": "all_events",
-        "total_input_images": sum(e["total_input_images"] for e in event_summaries),
-        "total_clusters": sum(e["total_clusters"] for e in event_summaries),
-        "total_representative_candidates": sum(e["total_representative_candidates"] for e in event_summaries),
-        "dedup_reduction_rate": 0.0,
-        "best_shot_count": parsed_best_shot_count,
-        "final_selected_count": sum(e["final_selected_count"] for e in event_summaries),
-        "ng_count_after_menna": sum(e["ng_count_after_menna"] for e in event_summaries),
-        "other_passing_count": sum(e["other_passing_count"] for e in event_summaries),
-    }
-    if total_summary["total_input_images"] > 0:
-        total_summary["dedup_reduction_rate"] = round(
-            (1 - (total_summary["total_representative_candidates"] / total_summary["total_input_images"])) * 100, 2
-        )
-
-    latest_summary = {**total_summary, "event_summaries": event_summaries}
-    latest_zip_path = _pack_outputs(OUTPUT_DIR)
-    return {"status": "ok", "summary": latest_summary}
+@app.post("/api/snap/export")
+async def export_snap_pipeline(best_shot_count: str | None = Form(default=None)) -> dict[str, Any]:
+    parsed_best_shot_count = _parse_snap_best_shot_count(best_shot_count)
+    if not INPUT_DIR.exists() or not _has_images(INPUT_DIR):
+        raise HTTPException(status_code=404, detail="No uploaded snap images available. Run /api/snap/run first.")
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    summary = _run_snap_pipeline_from_current_input(parsed_best_shot_count)
+    return {"status": "ok", "summary": summary}
 
 
 @app.get("/api/snap/preview-images")
-def preview_snap_images(mode: str = Query(default="final", pattern="^(final|similarity|candidates|all)$")) -> dict[str, Any]:
-    images = collect_snap_preview_images(OUTPUT_DIR, mode=mode)
-    return {"status": "ok", "mode": mode, "count": len(images), "images": images}
+def preview_snap_images(
+    mode: str = Query(default="final", pattern="^(final|similarity|candidates|all)$"),
+    event_id: str | None = Query(default=None),
+    event_name: str | None = Query(default=None),
+    bucket: str | None = Query(
+        default=None,
+        pattern="^(final_selected|best|bestshot|other_passing|passing|ng_photos|ng|similarity_clusters|similarity)$",
+    ),
+) -> dict[str, Any]:
+    images = collect_snap_preview_images(
+        OUTPUT_DIR,
+        mode=mode,
+        event_id=event_id,
+        event_name=event_name,
+        bucket=bucket,
+    )
+    return {"status": "ok", "mode": mode, "event_id": event_id, "event_name": event_name, "bucket": bucket, "count": len(images), "images": images}
 
 
 @app.get("/api/snap/preview-file")
