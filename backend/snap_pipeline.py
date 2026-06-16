@@ -29,7 +29,9 @@ WEIGHT_TECHNICAL = 0.30
 WEIGHT_EXPRESSION = 0.25
 WEIGHT_COMPOSITION = 0.25
 WEIGHT_RARITY = 0.20
-DEFAULT_BEST_SHOT_COUNT = 25
+DEFAULT_BEST_SHOT_COUNT = None
+DEFAULT_BEST_SHOT_RATIO = 0.30
+NG_TAIL_RATIO = 0.05
 
 
 @dataclass
@@ -266,30 +268,40 @@ class SnapPipeline:
         scored.sort(key=lambda x: x[1], reverse=True)
         return scored
 
+    @staticmethod
+    def _recommended_best_shot_count(total_representatives: int) -> int:
+        if total_representatives < 1:
+            return 0
+        return max(1, int(round(total_representatives * DEFAULT_BEST_SHOT_RATIO)))
+
+    @staticmethod
+    def _ng_tail_count(total_representatives: int) -> int:
+        if total_representatives <= 1:
+            return 0
+        return min(max(1, int(round(total_representatives * NG_TAIL_RATIO))), total_representatives - 1)
+
     def _select_buckets(
-        self, reps: list[ImageRecord], best_shot_count: int = DEFAULT_BEST_SHOT_COUNT
+        self, reps: list[ImageRecord], best_shot_count: int | None = None
     ) -> tuple[list[ImageRecord], list[ImageRecord], list[ImageRecord]]:
         if not reps:
             return [], [], []
 
+        if best_shot_count is not None and (not isinstance(best_shot_count, int) or best_shot_count < 1):
+            raise ValueError("best_shot_count must be a positive integer.")
+
         scored = self._score_representatives(reps)
         ordered = [r for r, _ in scored]
 
-        if not isinstance(best_shot_count, int) or best_shot_count < 1:
-            raise ValueError("best_shot_count must be a positive integer.")
+        ng_count = self._ng_tail_count(len(ordered))
+        ng = ordered[-ng_count:] if ng_count else []
+        non_ng = ordered[:-ng_count] if ng_count else ordered
 
-        final_count = min(best_shot_count, len(ordered))
-        final = ordered[:final_count]
-
-        remaining = ordered[final_count:]
-        # NG: bottom tail from remaining and also very dark/very blurry representatives
-        if remaining:
-            tail_ng_count = max(1, int(round(len(remaining) * 0.2)))
-            ng = remaining[-tail_ng_count:]
-            other = remaining[:-tail_ng_count]
-        else:
-            ng = []
-            other = []
+        requested_count = (
+            self._recommended_best_shot_count(len(ordered)) if best_shot_count is None else best_shot_count
+        )
+        final_count = min(requested_count, len(non_ng))
+        final = non_ng[:final_count]
+        other = non_ng[final_count:]
 
         return final, ng, other
 
@@ -471,9 +483,9 @@ class SnapPipeline:
         self,
         input_dir: Path,
         output_dir: Path,
-        best_shot_count: int = DEFAULT_BEST_SHOT_COUNT,
+        best_shot_count: int | None = None,
     ) -> PipelineResult:
-        if not isinstance(best_shot_count, int) or best_shot_count < 1:
+        if best_shot_count is not None and (not isinstance(best_shot_count, int) or best_shot_count < 1):
             raise ValueError("best_shot_count must be a positive integer.")
         image_paths = self._collect_images(input_dir)
         records = self._load_records(image_paths)
@@ -491,7 +503,7 @@ class SnapPipeline:
             total_clusters=len(clusters),
             total_representative_candidates=len(reps),
             dedup_reduction_rate=dedup_reduction_rate,
-            best_shot_count=best_shot_count,
+            best_shot_count=len(final),
             final_selected_count=len(final),
             ng_count_after_menna=len(ng),
             other_passing_count=len(other),

@@ -36,7 +36,9 @@ SNAP_SHEET_LABELS = {
 }
 
 SNAP_COLUMN_LABELS = {
+    "event_id": "イベントID",
     "event_name": "イベント名",
+    "display_event_name": "表示イベント名",
     "total_input_images": "入力画像数",
     "total_clusters": "類似グループ数",
     "total_representative_candidates": "代表候補写真数",
@@ -45,6 +47,7 @@ SNAP_COLUMN_LABELS = {
     "final_selected_count": "ベストショット選定枚数",
     "ng_count_after_menna": "NG写真枚数",
     "other_passing_count": "通過写真枚数",
+    "output_folder": "出力フォルダ",
     "cluster_id": "類似グループID",
     "capture_time": "撮影日時",
     "is_representative": "代表写真",
