@@ -34,6 +34,9 @@ IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff", ".heic"
 RANK_TOKEN = "本"
 RANK_PAD = 2
 MODEL_VISION = os.getenv("OPENAI_MODEL_VISION", os.getenv("MODEL_VISION", "gpt-5.4"))
+EYE_CLOSED_RATIO_THRESHOLD = float(os.getenv("CLUB_EYE_CLOSED_RATIO_THRESHOLD", "0.24"))
+LEFT_EYE_LANDMARK_IDX = list(range(33, 43))
+RIGHT_EYE_LANDMARK_IDX = list(range(87, 97))
 
 PHOTO_EVAL_PROMPT = """
 You are a professional photo editor selecting the best shot for a school club album.
@@ -71,9 +74,9 @@ JSON schema:
 class FaceDetail:
     face_index: int
     bbox: tuple[int, int, int, int]
-    left_eye_ratio: float
-    right_eye_ratio: float
-    eye_closed: bool
+    left_eye_ratio: float | None
+    right_eye_ratio: float | None
+    eye_closed: bool | None
 
 
 @dataclass
@@ -169,28 +172,97 @@ def _shooting_date(path: Path) -> str:
     return datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y%m%d")
 
 
+def _eye_aspect_ratio(landmarks: np.ndarray, indices: list[int]) -> float | None:
+    if landmarks is None or landmarks.shape[0] <= max(indices):
+        return None
+    pts = landmarks[indices]
+    width = float(pts[:, 0].max() - pts[:, 0].min())
+    height = float(pts[:, 1].max() - pts[:, 1].min())
+    if width < 1:
+        return None
+    return round(height / width, 4)
+
+
+def _landmark_points_for_log(landmarks: np.ndarray, indices: list[int]) -> list[tuple[int, int]]:
+    return [(int(round(x)), int(round(y))) for x, y in landmarks[indices]]
+
+
 def _analyze_faces(image_bgr: np.ndarray, face_app: Any | None):
     vis = image_bgr.copy(); details=[]
     if face_app is not None:
         faces = face_app.get(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB))
+        logger.debug("Club eye-close detection face count=%s threshold=%s", len(faces), EYE_CLOSED_RATIO_THRESHOLD)
         for i,f in enumerate(faces,1):
             x1,y1,x2,y2=[int(v) for v in f.bbox]
-            kps = f.kps if hasattr(f, "kps") else None
-            closed=False
-            lr=rr=0.0
-            if kps is not None and len(kps)>=2:
-                lr=rr=0.3
+            lmk = getattr(f, "landmark_2d_106", None)
+            closed: bool | None = None
+            lr: float | None = None
+            rr: float | None = None
+            if lmk is None or getattr(lmk, "shape", (0,))[0] <= max(RIGHT_EYE_LANDMARK_IDX):
+                logger.warning(
+                    "Club eye-close landmarks missing face_index=%s bbox=%s landmark_shape=%s",
+                    i,
+                    (x1, y1, x2, y2),
+                    getattr(lmk, "shape", None),
+                )
+            else:
+                lr = _eye_aspect_ratio(lmk, LEFT_EYE_LANDMARK_IDX)
+                rr = _eye_aspect_ratio(lmk, RIGHT_EYE_LANDMARK_IDX)
+                logger.debug(
+                    "Club eye-close landmarks face_index=%s bbox=%s left_points=%s right_points=%s",
+                    i,
+                    (x1, y1, x2, y2),
+                    _landmark_points_for_log(lmk, LEFT_EYE_LANDMARK_IDX),
+                    _landmark_points_for_log(lmk, RIGHT_EYE_LANDMARK_IDX),
+                )
+                if lr is None or rr is None:
+                    logger.warning(
+                        "Club eye-close ratio unavailable face_index=%s bbox=%s left_ratio=%s right_ratio=%s",
+                        i,
+                        (x1, y1, x2, y2),
+                        lr,
+                        rr,
+                    )
+                else:
+                    closed = lr <= EYE_CLOSED_RATIO_THRESHOLD or rr <= EYE_CLOSED_RATIO_THRESHOLD
+                logger.debug(
+                    "Club eye-close ratios face_index=%s left_ratio=%s right_ratio=%s threshold=%s closed=%s",
+                    i,
+                    lr,
+                    rr,
+                    EYE_CLOSED_RATIO_THRESHOLD,
+                    closed,
+                )
             details.append(FaceDetail(i,(x1,y1,x2,y2),lr,rr,closed))
-            cv2.rectangle(vis,(x1,y1),(x2,y2),(0,180,0),2)
+            color = (0, 0, 255) if closed is True else (0, 180, 0) if closed is False else (0, 200, 220)
+            cv2.rectangle(vis,(x1,y1),(x2,y2),color,2)
+            if closed is True:
+                cv2.putText(vis, "EYES CLOSED", (x1, max(15, y1 - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
     else:
         g=cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
         face = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
         eye = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
-        for i,(x,y,w,h) in enumerate(face.detectMultiScale(g,1.15,5,minSize=(50,50)),1):
-            closed = len(eye.detectMultiScale(g[y:y+h, x:x+w],1.1,4,minSize=(10,10)))==0
-            details.append(FaceDetail(i,(x,y,x+w,y+h),0.0,0.0,closed))
+        faces = face.detectMultiScale(g,1.15,5,minSize=(50,50))
+        logger.debug("Club eye-close Haar fallback face count=%s", len(faces))
+        for i,(x,y,w,h) in enumerate(faces,1):
+            eye_hits = eye.detectMultiScale(g[y:y+h, x:x+w],1.1,4,minSize=(10,10))
+            closed = len(eye_hits)==0
+            logger.debug(
+                "Club eye-close Haar fallback face_index=%s bbox=%s eye_hits=%s closed=%s",
+                i,
+                (x,y,x+w,y+h),
+                len(eye_hits),
+                closed,
+            )
+            details.append(FaceDetail(i,(x,y,x+w,y+h),None,None,closed))
             cv2.rectangle(vis,(x,y),(x+w,y+h),(0,0,255) if closed else (0,180,0),2)
-    closed_count=sum(1 for d in details if d.eye_closed)
+    closed_count=sum(1 for d in details if d.eye_closed is True)
+    logger.debug(
+        "Club eye-close image result face_count=%s closed_face_count=%s closed_photo=%s",
+        len(details),
+        closed_count,
+        closed_count > 0,
+    )
     cv2.putText(vis, f"People:{len(details)} ClosedEyes:{closed_count}",(10,25),cv2.FONT_HERSHEY_SIMPLEX,0.7,(255,0,0),2)
     return len(details), closed_count, details, vis
 
@@ -249,6 +321,14 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
                 logger.warning("Skipping unreadable club image: %s", p)
                 continue
             pc,cc,fd,vis=_analyze_faces(img,face_app)
+            logger.debug(
+                "Club eye-close per-image file=%s face_count=%s closed_face_count=%s closed_photo=%s threshold=%s",
+                p,
+                pc,
+                cc,
+                cc > 0,
+                EYE_CLOSED_RATIO_THRESHOLD,
+            )
             (marked/club).mkdir(parents=True,exist_ok=True); (clean/club).mkdir(parents=True,exist_ok=True)
             marked_path = marked / club / p.name
             clean_path = clean / club / p.name

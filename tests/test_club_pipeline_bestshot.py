@@ -62,3 +62,62 @@ def test_ranked_marked_uses_marked_image_and_renamed_filename(tmp_path: Path, mo
     assert clean_img is not None
     assert marked_img is not None
     assert np.abs(clean_img.astype(np.int16) - marked_img.astype(np.int16)).sum() > 0
+
+
+def test_analyze_faces_calculates_eye_ratios_from_landmarks():
+    import numpy as np
+    from backend import club_pipeline
+
+    class FakeFace:
+        def __init__(self, landmarks):
+            self.bbox = np.array([10, 10, 80, 80], dtype=np.float32)
+            self.landmark_2d_106 = landmarks
+
+    class FakeFaceApp:
+        def __init__(self, face):
+            self.face = face
+
+        def get(self, image):
+            return [self.face]
+
+    landmarks = np.zeros((106, 2), dtype=np.float32)
+    for offset, idx in enumerate(club_pipeline.LEFT_EYE_LANDMARK_IDX):
+        landmarks[idx] = [20 + offset, 30 + (offset % 2) * 2]
+    for offset, idx in enumerate(club_pipeline.RIGHT_EYE_LANDMARK_IDX):
+        landmarks[idx] = [50 + offset, 30 + (offset % 2) * 5]
+
+    image = np.full((100, 100, 3), 255, dtype=np.uint8)
+    person_count, closed_count, details, _ = club_pipeline._analyze_faces(image, FakeFaceApp(FakeFace(landmarks)))
+
+    assert person_count == 1
+    assert closed_count == 1
+    assert details[0].left_eye_ratio != 0.3
+    assert details[0].right_eye_ratio != 0.3
+    assert details[0].left_eye_ratio <= club_pipeline.EYE_CLOSED_RATIO_THRESHOLD
+    assert details[0].right_eye_ratio > club_pipeline.EYE_CLOSED_RATIO_THRESHOLD
+    assert details[0].eye_closed is True
+
+
+def test_analyze_faces_logs_missing_landmarks_without_defaulting_to_open(caplog):
+    import logging
+    import numpy as np
+    from backend import club_pipeline
+
+    class FakeFace:
+        bbox = np.array([10, 10, 80, 80], dtype=np.float32)
+        landmark_2d_106 = None
+
+    class FakeFaceApp:
+        def get(self, image):
+            return [FakeFace()]
+
+    image = np.full((100, 100, 3), 255, dtype=np.uint8)
+    with caplog.at_level(logging.WARNING, logger="backend.club_pipeline"):
+        person_count, closed_count, details, _ = club_pipeline._analyze_faces(image, FakeFaceApp())
+
+    assert person_count == 1
+    assert closed_count == 0
+    assert details[0].left_eye_ratio is None
+    assert details[0].right_eye_ratio is None
+    assert details[0].eye_closed is None
+    assert "landmarks missing" in caplog.text
