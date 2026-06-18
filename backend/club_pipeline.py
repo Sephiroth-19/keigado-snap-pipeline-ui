@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import io
 import json
+import logging
 import os
 import shutil
 import zipfile
@@ -16,6 +17,8 @@ import numpy as np
 from openpyxl import Workbook
 from PIL import ExifTags, Image
 from backend.excel_labels import CLUB_SHEET_LABELS, excel_label, translate_display_value
+
+logger = logging.getLogger(__name__)
 
 try:
     from insightface.app import FaceAnalysis
@@ -98,13 +101,61 @@ def _get_client():
 
 
 def _collect_club_images(extracted_root: Path):
+    """Collect image files grouped by their top-level club folder."""
     out = {}
-    for club_dir in sorted([p for p in extracted_root.iterdir() if p.is_dir()]):
-        imgs = [p for p in sorted(club_dir.rglob("*")) if p.is_file() and p.suffix.lower() in IMAGE_EXTS]
-        if imgs:
-            out[club_dir.name] = imgs
+    detected = [p for p in sorted(extracted_root.rglob("*")) if p.is_file() and p.suffix.lower() in IMAGE_EXTS]
+    logger.info("Club pipeline detected image count=%s paths=%s", len(detected), [str(p) for p in detected])
+    for image_path in detected:
+        rel = image_path.relative_to(extracted_root)
+        if len(rel.parts) < 2:
+            logger.warning("Ignoring club image without a club folder: %s", image_path)
+            continue
+        out.setdefault(rel.parts[0], []).append(image_path)
+    logger.info("Club pipeline detected club count=%s names=%s", len(out), list(out))
     return out
 
+
+def _read_image(path: Path) -> np.ndarray | None:
+    """Read images from paths that may contain non-ASCII characters."""
+    try:
+        data = np.fromfile(path, dtype=np.uint8)
+        if data.size == 0:
+            return None
+        return cv2.imdecode(data, cv2.IMREAD_COLOR)
+    except Exception:
+        logger.exception("Failed to read club image: %s", path)
+        return None
+
+
+def _write_image(path: Path, image: np.ndarray) -> None:
+    """Write images to paths that may contain non-ASCII characters."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    ext = path.suffix or ".jpg"
+    ok, encoded = cv2.imencode(ext, image)
+    if not ok:
+        raise ValueError(f"Failed to encode output image: {path}")
+    encoded.tofile(path)
+
+
+
+def _safe_extract_zip(zip_path: Path, dst: Path) -> list[str]:
+    dst_root = dst.resolve()
+    with zipfile.ZipFile(zip_path) as zf:
+        names = zf.namelist()
+        logger.info("Club pipeline zip contents=%s", names)
+        for member in zf.infolist():
+            target = (dst / member.filename).resolve()
+            try:
+                target.relative_to(dst_root)
+            except ValueError as exc:
+                raise ValueError("ZIP contains an unsafe path.") from exc
+            if member.is_dir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(member, "r") as src, target.open("wb") as out_file:
+                shutil.copyfileobj(src, out_file)
+    return names
 
 def _shooting_date(path: Path) -> str:
     try:
@@ -178,8 +229,12 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
     ranked=club_out/"ranked_photos"; ranked_marked=club_out/"ranked_photos_marked"; ng_root=club_out/"ng_photos"; marked=club_out/"marked_images"; clean=club_out/"clean_images"
     if out.exists(): shutil.rmtree(out)
     for d in [extracted,ranked,ranked_marked,ng_root,marked,clean]: d.mkdir(parents=True,exist_ok=True)
-    zipfile.ZipFile(input_zip_path).extractall(extracted)
+    logger.info("Club pipeline input zip=%s output_root=%s", input_zip_path, out)
+    _safe_extract_zip(Path(input_zip_path), extracted)
+    logger.info("Club pipeline extracted input path=%s", extracted)
     clubs=_collect_club_images(extracted)
+    if not clubs:
+        raise ValueError("No club images were detected in the uploaded ZIP. Images must be inside club folders.")
     face_app=None
     if FaceAnalysis is not None:
         try:
@@ -189,19 +244,23 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
     marked_outputs: dict[tuple[str, str], Path] = {}
     for club,images in clubs.items():
         for p in images:
-            img=cv2.imread(str(p));
-            if img is None: continue
+            img=_read_image(p)
+            if img is None:
+                logger.warning("Skipping unreadable club image: %s", p)
+                continue
             pc,cc,fd,vis=_analyze_faces(img,face_app)
             (marked/club).mkdir(parents=True,exist_ok=True); (clean/club).mkdir(parents=True,exist_ok=True)
             marked_path = marked / club / p.name
             clean_path = clean / club / p.name
-            cv2.imwrite(str(marked_path), vis)
-            cv2.imwrite(str(clean_path), img)
+            _write_image(marked_path, vis)
+            _write_image(clean_path, img)
             marked_outputs[(club, p.name)] = marked_path
             ev=_evaluate_with_gpt(client,p,pc) if client else None
             if not ev: ev=_fallback_eval(pc,cc)
             total,ng,reason=_score(ev,cc)
             results.append(ClubImageResult(club,p,_shooting_date(p),pc,cc>0,cc,fd,ev,ng,reason,total))
+    if not results:
+        raise ValueError("Club images were detected, but none could be read or processed.")
     by={}
     for r in results: by.setdefault(r.club_name,[]).append(r)
     for club,rows in by.items():
@@ -236,5 +295,8 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
     for r in sorted(results,key=lambda x:(x.club_name,x.rank)):
         if r.ng_flag: ngs.append([r.club_name,r.path.name,translate_display_value(r.ng_flag),translate_display_value(r.ng_reason)])
     wb.save(excel)
+    logger.info("Club pipeline output root path=%s", club_out)
+    generated_files = [str(p.relative_to(club_out)) for p in sorted(club_out.rglob("*")) if p.is_file()]
+    logger.info("Club pipeline generated output files=%s", generated_files)
     jsonp.write_text(json.dumps({"summary":{"club_count":len(by),"photo_count":len(results)},"items":[{"club_name":r.club_name,"original_file":r.path.name,"rank":r.rank,"renamed_file":r.renamed,"ng_flag":r.ng_flag,"ng_reason":r.ng_reason,"total_score":r.total_score,"evaluation":r.eval_data} for r in sorted(results,key=lambda x:(x.club_name,x.rank))]},ensure_ascii=False,indent=2),encoding="utf-8")
     return {"status":"completed","summary":{"club_count":len(by),"photo_count":len(results)},"excel_path":str(excel),"json_path":str(jsonp),"output_dir":str(club_out)}

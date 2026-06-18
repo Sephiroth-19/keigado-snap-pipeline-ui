@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import shutil
 import zipfile
@@ -48,6 +49,7 @@ app.add_middleware(
 pipeline: SnapPipeline | Any | None = None
 latest_summary: dict[str, Any] | None = None
 latest_zip_path: Path | None = None
+logger = logging.getLogger(__name__)
 
 
 def _get_snap_pipeline() -> SnapPipeline | Any:
@@ -633,10 +635,17 @@ async def run_club(folder_zip: UploadFile = File(...)) -> dict[str, Any]:
     output_dir = job_root / "output"
     input_dir.mkdir(parents=True, exist_ok=True)
 
+    logger.info("Club upload filename=%s", folder_zip.filename)
     zip_path = _save_upload(folder_zip, input_dir)
-    result = run_club_pipeline(str(zip_path), str(output_dir))
+    logger.info("Club saved upload path=%s", zip_path)
+    try:
+        result = run_club_pipeline(str(zip_path), str(output_dir))
+    except ValueError as exc:
+        logger.exception("Club pipeline failed validation for upload=%s", zip_path)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     output_zip = job_root / "club_output.zip"
+    logger.info("Club output root path=%s", result.get("output_dir"))
     with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zf:
         club_output_dir = Path(result["output_dir"])
         allowed = {"ranked_photos", "ranked_photos_marked", "club_result.xlsx"}
@@ -646,6 +655,8 @@ async def run_club(folder_zip: UploadFile = File(...)) -> dict[str, Any]:
             rel = p.relative_to(club_output_dir)
             if rel.parts and rel.parts[0] in allowed:
                 zf.write(p, p.relative_to(club_output_dir.parent))
+    with zipfile.ZipFile(output_zip) as zf:
+        logger.info("Club final zip contents=%s", zf.namelist())
 
     return {
         "job_id": job_id,
