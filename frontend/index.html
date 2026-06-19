@@ -2070,12 +2070,13 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
     const st=wfState(kind), d=refData[kind];
     return `<div class="ref-shell-head"><div class="card-title">${d.icon} ${d.title}</div><div class="card-sub">${d.note}</div><div class="ref-mini">Preview source: ${hasBackend(kind)?'backend result':'demo fallback'}</div><div class="ref-flow">${flow[kind].map((x,i)=>`<div class="ref-flow-step ${st.step===i?'on':''}" onclick="setReferenceStep('${kind}',${i})"><strong>0${i+1} ${x[0]}</strong><span>${x[1]}</span></div>`).join('')}</div><div class="ref-naming"><strong>命名ルール：</strong>${d.naming}</div></div>`;
   }
-  function fileRow(icon,name,meta,status){return `<div class="file-row"><span class="file-icon">${icon}</span><div class="file-info"><div class="file-name">${esc(name)}</div><div class="file-meta">${esc(meta)}</div></div><span>${status||''}</span></div>`;}
+  function fileRow(icon,name,meta,status,action=''){return `<div class="file-row"><span class="file-icon">${icon}</span><div class="file-info"><div class="file-name">${esc(name)}</div><div class="file-meta">${esc(meta)}</div></div><span>${status||''}</span>${action}</div>`;}
   function uploadBody(kind){
     if(kind==='club'){
       const st=window.appState.club;
       const status=st.running?'<span class="badge b-blue">処理中...</span>':st.result?'<span class="badge b-ok">処理完了</span>':'<span class="badge b-gray">待機中</span>';
-      return `<div class="card"><div class="card-title">01 Upload</div><div class="card-sub">クラブ写真ZIPをアップロードし、既存APIのFormData（folder_zip）で /api/club/run に送信します。</div><div class="drop" style="margin-top:12px" onclick="document.getElementById('club-folder-zip')?.click()">📁 クラブ写真ZIPをアップロード<br><span class="card-sub">ZIPのトップ階層フォルダ名をクラブ名として扱います。</span></div><input id="club-folder-zip" type="file" accept=".zip,application/zip" onchange="onClubZipSelected(this)" style="display:none"><div class="file-list">${fileRow('📦',st.file?.name||'未選択','folder_zip · 既存 /api/club/run に送信',status)}</div>${st.error?`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(st.error)}</div></div>`:''}<div class="btn-row"><button class="btn btn-primary" onclick="runClubPipeline()" ${st.running?'disabled':''}>次へ：Processing</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
+      const remove=st.file?'<button type="button" class="btn btn-danger btn-sm" onclick="removeClubZip(event)" '+(st.running?'disabled':'')+'>削除</button>':'';
+      return `<div class="card"><div class="card-title">01 Upload</div><div class="card-sub">クラブ写真ZIPをアップロードし、既存APIのFormData（folder_zip）で /api/club/run に送信します。</div><div class="drop" style="margin-top:12px" onclick="document.getElementById('club-folder-zip')?.click()">📁 クラブ写真ZIPをアップロード<br><span class="card-sub">ZIPのトップ階層フォルダ名をクラブ名として扱います。</span></div><input id="club-folder-zip" type="file" accept=".zip,application/zip" onchange="onClubZipSelected(this)" style="display:none"><div class="file-list">${fileRow('📦',st.file?.name||'未選択','folder_zip · 既存 /api/club/run に送信',status,remove)}</div>${st.error?`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(st.error)}</div></div>`:''}<div class="btn-row"><button class="btn btn-primary" onclick="runClubPipeline()" ${st.running?'disabled':''}>次へ：Processing</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
     }
     const st=window.appState.snap;
     const status=st.running?'<span class="badge b-blue">処理中...</span>':st.result?'<span class="badge b-ok">処理完了</span>':'<span class="badge b-gray">待機中</span>';
@@ -2174,8 +2175,69 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
   window.closeReferenceViewer=function(){document.getElementById('refPreviewModal')?.remove();};
   window.openReferenceViewer=function(kind){const item=currentItem(kind), folder=folders(kind)[wfState(kind).folder];if(!item)return;closeReferenceViewer();document.body.insertAdjacentHTML('beforeend',`<div id="refPreviewModal" style="position:fixed;inset:0;background:rgba(15,27,48,.62);z-index:999;display:flex;align-items:center;justify-content:center;padding:24px" onclick="if(event.target.id==='refPreviewModal')closeReferenceViewer()"><div class="card" style="max-width:780px;width:100%;max-height:90vh;overflow:auto;margin:0"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><div class="card-title">${esc(refData[kind].title)}：拡大表示</div><div class="card-sub">${esc(folder?.name||'')} / ${esc(item.orig)}</div></div><button class="btn btn-ghost" onclick="closeReferenceViewer()">閉じる</button></div><div class="ref-preview-photo" style="height:360px;margin-top:12px">${previewMarkup(item)}<strong>${esc(item.orig)}</strong><div class="ref-mini">${esc(item.meta)}</div></div><div class="ref-photo-meta"><strong>出力名：</strong><br><span class="mono">${esc(item.ren)}</span><br><span class="badge ${statusCls(item.status)}" style="margin-top:8px">${esc(item.status)}</span></div><div class="btn-row"><button class="btn btn-ghost" onclick="prevReferencePhoto('${kind}');openReferenceViewer('${kind}')">← 前へ</button><button class="btn btn-ghost" onclick="nextReferencePhoto('${kind}');openReferenceViewer('${kind}')">次へ →</button></div></div></div>`);};
 
-  window.onClubZipSelected=function(input){const f=input.files&&input.files[0];const st=window.appState.club;st.error='';if(!f){st.file=null;renderReferenceWorkflow('club',0);return;}if(!f.name.toLowerCase().endsWith('.zip')){st.file=null;st.error='ZIPファイル（.zip）のみアップロードできます。';input.value='';}else st.file=f;renderReferenceWorkflow('club',0);};
-  window.runClubPipeline=async function(){const st=window.appState.club;if(st.running)return;st.error='';if(!st.file){st.error='先にZIPファイルを選択してください。';return renderReferenceWorkflow('club',0);}st.running=true;st.result=null;renderReferenceWorkflow('club',1);try{const fd=new FormData();fd.append('folder_zip',st.file);const res=await fetch('/api/club/run',{method:'POST',body:fd});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data?.detail||'クラブ写真の処理に失敗しました。');st.result=data;st.running=false;toast('クラブ写真の処理が完了しました');renderReferenceWorkflow('club',2);}catch(e){st.running=false;st.error=e?.message||'クラブ写真の処理に失敗しました。';renderReferenceWorkflow('club',0);}};
+  function resetClubWorkflowState(nextFile=null){
+    const st=window.appState.club;
+    st.file=nextFile;
+    st.running=false;
+    st.error='';
+    st.result=null;
+    st.step=0;
+    st.folder=0;
+    st.selected=0;
+    st.output='Clean Photos';
+    st.excel='Review Summary';
+    closeReferenceViewer();
+  }
+  window.removeClubZip=function(event){
+    event?.stopPropagation?.();
+    resetClubWorkflowState(null);
+    const input=document.getElementById('club-folder-zip');
+    if(input)input.value='';
+    renderReferenceWorkflow('club',0);
+  };
+  window.onClubZipSelected=function(input){
+    const f=input.files&&input.files[0];
+    if(!f){resetClubWorkflowState(null);renderReferenceWorkflow('club',0);return;}
+    if(!f.name.toLowerCase().endsWith('.zip')){
+      resetClubWorkflowState(null);
+      window.appState.club.error='ZIPファイル（.zip）のみアップロードできます。';
+      input.value='';
+    }else{
+      resetClubWorkflowState(f);
+    }
+    renderReferenceWorkflow('club',0);
+  };
+  window.runClubPipeline=async function(){
+    const st=window.appState.club;
+    if(st.running)return;
+    st.error='';
+    if(!st.file){st.error='先にZIPファイルを選択してください。';return renderReferenceWorkflow('club',0);}
+    const runFile=st.file;
+    st.running=true;
+    st.result=null;
+    st.folder=0;
+    st.selected=0;
+    let nextStep=0;
+    try{
+      renderReferenceWorkflow('club',1);
+      const fd=new FormData();
+      fd.append('folder_zip',runFile);
+      const res=await fetch('/api/club/run',{method:'POST',body:fd});
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok)throw new Error(data?.detail||'クラブ写真の処理に失敗しました。');
+      st.result=data;
+      st.output='Clean Photos';
+      st.excel='Review Summary';
+      toast('クラブ写真の処理が完了しました');
+      nextStep=2;
+    }catch(e){
+      st.error=e?.message||'クラブ写真の処理に失敗しました。';
+      nextStep=0;
+    }finally{
+      st.running=false;
+      renderReferenceWorkflow('club',nextStep);
+    }
+  };
   window.onSnapZipSelected=function(input){const f=input.files&&input.files[0];const st=window.appState.snap;st.error='';if(!f){st.file=null;st.selectedZipName='';renderReferenceWorkflow('snap',0);return;}if(!f.name.toLowerCase().endsWith('.zip')){st.file=null;st.selectedZipName='';st.error='ZIPファイル（.zip）のみアップロードできます。';input.value='';}else{st.file=f;st.selectedZipName=f.name;}renderReferenceWorkflow('snap',0);};
   async function loadSnapPreviewImages(rerender=true){
     const st=window.appState.snap;
