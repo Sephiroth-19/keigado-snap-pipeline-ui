@@ -188,7 +188,10 @@ def _landmark_points_for_log(landmarks: np.ndarray, indices: list[int]) -> list[
 
 
 def _analyze_faces(image_bgr: np.ndarray, face_app: Any | None):
+    img_h, img_w = image_bgr.shape[:2]
     vis = image_bgr.copy(); details=[]
+    face_label_scale = max(0.8, img_w / 1400)
+    face_label_thickness = max(2, int(img_w / 800))
     if face_app is not None:
         faces = face_app.get(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB))
         logger.debug("Club eye-close detection face count=%s threshold=%s", len(faces), EYE_CLOSED_RATIO_THRESHOLD)
@@ -237,7 +240,7 @@ def _analyze_faces(image_bgr: np.ndarray, face_app: Any | None):
             color = (0, 0, 255) if closed is True else (0, 180, 0) if closed is False else (0, 200, 220)
             cv2.rectangle(vis,(x1,y1),(x2,y2),color,2)
             if closed is True:
-                cv2.putText(vis, "EYES CLOSED", (x1, max(15, y1 - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                cv2.putText(vis, "EYES CLOSED", (x1, max(15, y1 - 6)), cv2.FONT_HERSHEY_SIMPLEX, face_label_scale, color, face_label_thickness)
     else:
         g=cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
         face = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
@@ -263,7 +266,11 @@ def _analyze_faces(image_bgr: np.ndarray, face_app: Any | None):
         closed_count,
         closed_count > 0,
     )
-    cv2.putText(vis, f"People:{len(details)} ClosedEyes:{closed_count}",(10,25),cv2.FONT_HERSHEY_SIMPLEX,0.7,(255,0,0),2)
+    font_scale = max(1.2, img_w / 900)
+    thickness = max(3, int(img_w / 500))
+    x = max(20, int(img_w * 0.015))
+    y = max(50, int(img_h * 0.05))
+    cv2.putText(vis, f"People:{len(details)} ClosedEyes:{closed_count}",(x,y),cv2.FONT_HERSHEY_SIMPLEX,font_scale,(255,0,0),thickness)
     return len(details), closed_count, details, vis
 
 

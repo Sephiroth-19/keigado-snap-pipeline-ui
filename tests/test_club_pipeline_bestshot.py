@@ -121,3 +121,54 @@ def test_analyze_faces_logs_missing_landmarks_without_defaulting_to_open(caplog)
     assert details[0].right_eye_ratio is None
     assert details[0].eye_closed is None
     assert "landmarks missing" in caplog.text
+
+
+def test_analyze_faces_uses_dynamic_marked_text_size(monkeypatch):
+    import numpy as np
+    from backend import club_pipeline
+
+    class FakeFace:
+        bbox = np.array([100, 120, 240, 300], dtype=np.float32)
+
+        def __init__(self, landmarks):
+            self.landmark_2d_106 = landmarks
+
+    class FakeFaceApp:
+        def __init__(self, face):
+            self.face = face
+
+        def get(self, image):
+            return [self.face]
+
+    put_text_calls = []
+
+    def fake_put_text(img, text, org, font_face, font_scale, color, thickness):
+        put_text_calls.append(
+            {
+                "text": text,
+                "org": org,
+                "font_scale": font_scale,
+                "thickness": thickness,
+            }
+        )
+        return img
+
+    monkeypatch.setattr(club_pipeline.cv2, "putText", fake_put_text)
+
+    landmarks = np.zeros((106, 2), dtype=np.float32)
+    for offset, idx in enumerate(club_pipeline.LEFT_EYE_LANDMARK_IDX):
+        landmarks[idx] = [120 + offset, 150]
+    for offset, idx in enumerate(club_pipeline.RIGHT_EYE_LANDMARK_IDX):
+        landmarks[idx] = [170 + offset, 150]
+
+    image = np.full((1000, 1800, 3), 255, dtype=np.uint8)
+    club_pipeline._analyze_faces(image, FakeFaceApp(FakeFace(landmarks)))
+
+    face_label_call = next(call for call in put_text_calls if call["text"] == "EYES CLOSED")
+    summary_call = next(call for call in put_text_calls if call["text"] == "People:1 ClosedEyes:1")
+
+    assert face_label_call["font_scale"] == max(0.8, 1800 / 1400)
+    assert face_label_call["thickness"] == max(2, int(1800 / 800))
+    assert summary_call["font_scale"] == max(1.2, 1800 / 900)
+    assert summary_call["thickness"] == max(3, int(1800 / 500))
+    assert summary_call["org"] == (max(20, int(1800 * 0.015)), max(50, int(1000 * 0.05)))
