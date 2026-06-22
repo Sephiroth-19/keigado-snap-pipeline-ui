@@ -1,4 +1,7 @@
 import unittest
+from tempfile import TemporaryDirectory
+from pathlib import Path
+from types import SimpleNamespace
 
 from backend.snap_pipeline import SnapPipeline
 
@@ -58,6 +61,19 @@ class SnapPipelineSelectionTests(unittest.TestCase):
             with self.subTest(invalid_value=invalid_value):
                 with self.assertRaises(ValueError):
                     pipeline._select_buckets(list(range(40)), best_shot_count=invalid_value)  # type: ignore[arg-type]
+
+    def test_run_allows_missing_best_shot_count_for_recommended_selection(self) -> None:
+        pipeline = self._pipeline_with_ranked_scores()
+        pipeline._collect_images = lambda _input_dir: [Path("IMG_0001.jpg"), Path("IMG_0002.jpg")]  # type: ignore[method-assign]
+        pipeline._load_records = lambda _image_paths: [SimpleNamespace(focus_score=2), SimpleNamespace(focus_score=1)]  # type: ignore[method-assign]
+        pipeline._cluster_records = lambda records: [[record] for record in records]  # type: ignore[method-assign]
+        pipeline._write_outputs = lambda *_args, **_kwargs: None  # type: ignore[method-assign]
+
+        with TemporaryDirectory() as tmpdir:
+            summary = pipeline.run(Path("input"), Path(tmpdir) / "output")
+
+        self.assertEqual(summary.best_shot_count, 1)
+        self.assertEqual(summary.final_selected_count, 1)
 
 
 if __name__ == "__main__":

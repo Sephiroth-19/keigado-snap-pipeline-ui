@@ -286,8 +286,8 @@ class SnapPipeline:
         if not reps:
             return [], [], []
 
-        if best_shot_count is not None and (not isinstance(best_shot_count, int) or best_shot_count < 1):
-            raise ValueError("best_shot_count must be a positive integer.")
+        if best_shot_count is not None and (not isinstance(best_shot_count, int) or not 1 <= best_shot_count <= 200):
+            raise ValueError("best_shot_count must be an integer between 1 and 200.")
 
         scored = self._score_representatives(reps)
         ordered = [r for r, _ in scored]
@@ -485,8 +485,8 @@ class SnapPipeline:
         output_dir: Path,
         best_shot_count: int | None = None,
     ) -> PipelineResult:
-        if best_shot_count is not None and (not isinstance(best_shot_count, int) or best_shot_count < 1):
-            raise ValueError("best_shot_count must be a positive integer.")
+        if best_shot_count is not None and (not isinstance(best_shot_count, int) or not 1 <= best_shot_count <= 200):
+            raise ValueError("best_shot_count must be an integer between 1 and 200.")
         image_paths = self._collect_images(input_dir)
         records = self._load_records(image_paths)
         clusters = self._cluster_records(records)

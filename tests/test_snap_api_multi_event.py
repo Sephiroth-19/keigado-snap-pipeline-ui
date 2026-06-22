@@ -10,10 +10,15 @@ from backend.snap_pipeline import PipelineResult
 
 
 class FakeSnapPipeline:
+    def __init__(self) -> None:
+        self.requested_counts: list[int | None] = []
+
     def run(self, input_dir: Path, output_dir: Path, best_shot_count: int | None = None) -> PipelineResult:
+        self.requested_counts.append(best_shot_count)
         image_paths = sorted(
             p for p in input_dir.rglob("*") if p.suffix.lower() in {".jpg", ".jpeg", ".png"}
         )
+        selected_count = min(best_shot_count if best_shot_count is not None else 1, len(image_paths)) if image_paths else 0
         for folder in ["final_selected", "ng_photos", "other_passing", "similarity_clusters/cluster_001"]:
             (output_dir / folder).mkdir(parents=True, exist_ok=True)
         if image_paths:
@@ -29,10 +34,10 @@ class FakeSnapPipeline:
             total_clusters=1 if image_paths else 0,
             total_representative_candidates=len(image_paths),
             dedup_reduction_rate=0.0,
-            best_shot_count=1 if image_paths else 0,
-            final_selected_count=1 if image_paths else 0,
+            best_shot_count=selected_count,
+            final_selected_count=selected_count,
             ng_count_after_menna=0,
-            other_passing_count=max(0, len(image_paths) - 1),
+            other_passing_count=max(0, len(image_paths) - selected_count),
         )
 
 
@@ -47,7 +52,8 @@ def _zip_upload(entries: dict[str, bytes]) -> io.BytesIO:
 
 class SnapApiMultiEventTests(unittest.TestCase):
     def setUp(self) -> None:
-        app_module.pipeline = FakeSnapPipeline()
+        self.pipeline = FakeSnapPipeline()
+        app_module.pipeline = self.pipeline
         self.client = TestClient(app_module.app)
 
     def test_snap_run_multi_event_zip_outputs_separate_event_folders(self) -> None:
@@ -102,6 +108,30 @@ class SnapApiMultiEventTests(unittest.TestCase):
             names = set(zf.namelist())
         self.assertIn("event_1/final_selected/IMG0001.jpg", names)
         self.assertIn("event_1/snap_pipeline_report.xlsx", names)
+
+    def test_snap_run_can_repeat_without_count_then_export_with_final_count(self) -> None:
+        first_upload = _zip_upload({"first/IMG0001.jpg": b"a", "first/IMG0002.jpg": b"b"})
+        second_upload = _zip_upload({"second/IMG1001.jpg": b"c", "second/IMG1002.jpg": b"d"})
+
+        first = self.client.post("/api/snap/run", files={"folder_zip": ("first.zip", first_upload, "application/zip")})
+        second = self.client.post("/api/snap/run", files={"folder_zip": ("second.zip", second_upload, "application/zip")})
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(self.pipeline.requested_counts, [None, None])
+
+        download = self.client.get("/api/snap/download")
+        self.assertEqual(download.status_code, 200)
+        with zipfile.ZipFile(io.BytesIO(download.content), "r") as zf:
+            names = set(zf.namelist())
+        self.assertIn("second/final_selected/IMG1001.jpg", names)
+        self.assertNotIn("first/final_selected/IMG0001.jpg", names)
+
+        export = self.client.post("/api/snap/export", data={"best_shot_count": "2"})
+
+        self.assertEqual(export.status_code, 200)
+        self.assertEqual(self.pipeline.requested_counts, [None, None, 2])
+        self.assertEqual(export.json()["summary"]["best_shot_count"], 2)
 
 
 if __name__ == "__main__":
