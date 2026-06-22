@@ -1646,6 +1646,22 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
   window.nextPhotoReviewImage=function(){if(!snapPreviewState.modalImages.length)return;snapPreviewState.modalIndex=(snapPreviewState.modalIndex+1)%snapPreviewState.modalImages.length;updatePhotoReviewModal();};
   window.zoomPhotoReview=function(delta){const img=document.getElementById('photoReviewImage');if(!img)return;snapPreviewState.modalZoom=Math.max(.4,Math.min(4,snapPreviewState.modalZoom+delta));img.style.transform=`scale(${snapPreviewState.modalZoom})`;};
   window.resetPhotoReviewZoom=function(){const img=document.getElementById('photoReviewImage');snapPreviewState.modalZoom=1;if(img)img.style.transform='scale(1)';};
+  window.resetSnapPreviewState=function(){
+    snapPreviewState.mode='final';
+    snapPreviewState.images=[];
+    snapPreviewState.excel=null;
+    snapPreviewState.activeFile=0;
+    snapPreviewState.activeSheet=0;
+    snapPreviewState.modalImages=[];
+    snapPreviewState.modalIndex=0;
+    snapPreviewState.modalZoom=1;
+    snapPreviewState.modalLabel='';
+    window.closePhotoReviewModal?.();
+    const preview=document.getElementById('snapPreviewContent');
+    if(preview)preview.innerHTML='<div class="card-sub">読み込み中...</div>';
+    const excel=document.getElementById('snapExcelPreviewBox');
+    if(excel)excel.innerHTML='';
+  };
 
   async function fetchSnapImages(mode='final'){
     snapPreviewState.mode=mode;
@@ -2080,7 +2096,8 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
     }
     const st=window.appState.snap;
     const status=st.running?'<span class="badge b-blue">処理中...</span>':st.result?'<span class="badge b-ok">処理完了</span>':'<span class="badge b-gray">待機中</span>';
-    return `<div class="card"><div class="card-title">01 Upload</div><div class="card-sub">イベントZIPをアップロードし、既存APIのFormData（folder_zip）で /api/snap/run に送信します。最終セレクト枚数はOutput Reviewで調整できます。</div><div class="drop" style="margin-top:12px" onclick="document.getElementById('snap-folder-zip')?.click()">📁 イベントフォルダZIPをアップロード（複数イベント対応）<br><span class="card-sub">イベントごとのBestShot / Passing / NG / Excelを生成します。</span></div><input id="snap-folder-zip" type="file" accept=".zip,application/zip" onchange="onSnapZipSelected(this)" style="display:none"><div class="file-list">${fileRow('📦',st.file?.name||st.selectedZipName||'未選択','folder_zip · 既存 /api/snap/run に送信',status)}</div><div id="snap-run-status" class="card-sub" style="margin-top:10px">${st.status||'status: idle'}</div>${st.error?`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(st.error)}</div></div>`:''}<div class="btn-row"><button class="btn btn-primary" onclick="runSnapPipeline()" ${st.running?'disabled':''}>次へ：Processing</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
+    const remove=st.file?'<button type="button" class="btn btn-danger btn-sm" onclick="removeSnapZip(event)" '+(st.running?'disabled':'')+'>削除</button>':'';
+    return `<div class="card"><div class="card-title">01 Upload</div><div class="card-sub">イベントZIPをアップロードし、既存APIのFormData（folder_zip）で /api/snap/run に送信します。最終セレクト枚数はOutput Reviewで調整できます。</div><div class="drop" style="margin-top:12px" onclick="document.getElementById('snap-folder-zip')?.click()">📁 イベントフォルダZIPをアップロード（複数イベント対応）<br><span class="card-sub">イベントごとのBestShot / Passing / NG / Excelを生成します。</span></div><input id="snap-folder-zip" type="file" accept=".zip,application/zip" onchange="onSnapZipSelected(this)" style="display:none"><div class="file-list">${fileRow('📦',st.file?.name||st.selectedZipName||'未選択','folder_zip · 既存 /api/snap/run に送信',status,remove)}</div><div id="snap-run-status" class="card-sub" style="margin-top:10px">${st.status||'status: idle'}</div>${st.error?`<div class="alert a-warn" style="margin-top:10px"><span>⚠️</span><div>${esc(st.error)}</div></div>`:''}<div class="btn-row"><button class="btn btn-primary" onclick="runSnapPipeline()" ${st.running?'disabled':''}>次へ：Processing</button><button class="btn btn-ghost" onclick="projectSec('dash')">Dashboardへ戻る</button></div></div>`;
   }
   function processingBody(kind){
     const rows=folders(kind).map(f=>{const c=f.items.reduce((a,x)=>{a[x.status]=(a[x.status]||0)+1;return a;},{});return `<tr><td>📁 ${esc(f.name)}</td><td>${f.items.length} photos</td><td>${Object.entries(c).map(([k,v])=>`<span class="badge ${statusCls(k)}">${esc(k)}: ${v}</span>`).join(' ')}</td><td>${esc(f.meta)}</td></tr>`;}).join('');
@@ -2238,23 +2255,123 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
       renderReferenceWorkflow('club',nextStep);
     }
   };
-  window.onSnapZipSelected=function(input){const f=input.files&&input.files[0];const st=window.appState.snap;st.error='';if(!f){st.file=null;st.selectedZipName='';renderReferenceWorkflow('snap',0);return;}if(!f.name.toLowerCase().endsWith('.zip')){st.file=null;st.selectedZipName='';st.error='ZIPファイル（.zip）のみアップロードできます。';input.value='';}else{st.file=f;st.selectedZipName=f.name;}renderReferenceWorkflow('snap',0);};
+  function resetSnapWorkflowState(nextFile=null){
+    const st=window.appState.snap;
+    st.file=nextFile;
+    st.selectedZipName=nextFile?.name||'';
+    st.running=false;
+    st.error='';
+    st.status='';
+    st.result=null;
+    st.stateVersion=(Number(st.stateVersion)||0)+1;
+    st.step=0;
+    st.folder=0;
+    st.selected=0;
+    st.output='BestShot';
+    st.excel='Event Summary';
+    st.filter='All';
+    st.previewImages=[];
+    st.previewLoaded=false;
+    st.previewLoading=false;
+    st.bestShotCount=null;
+    st.recommendedBestShotCount=null;
+    st.maxBestShotCount=200;
+    try{selectedSnapEvent='sports';selectedSnapFolder='best';finalBestCount=25;}catch(_e){}
+    closeReferenceViewer();
+    window.resetSnapPreviewState?.();
+  }
+  window.removeSnapZip=function(event){
+    event?.stopPropagation?.();
+    resetSnapWorkflowState(null);
+    const input=document.getElementById('snap-folder-zip');
+    if(input)input.value='';
+    renderReferenceWorkflow('snap',0);
+  };
+  window.onSnapZipSelected=function(input){
+    const f=input.files&&input.files[0];
+    if(!f){resetSnapWorkflowState(null);renderReferenceWorkflow('snap',0);return;}
+    if(!f.name.toLowerCase().endsWith('.zip')){
+      resetSnapWorkflowState(null);
+      window.appState.snap.error='ZIPファイル（.zip）のみアップロードできます。';
+      input.value='';
+    }else{
+      resetSnapWorkflowState(f);
+    }
+    renderReferenceWorkflow('snap',0);
+  };
   async function loadSnapPreviewImages(rerender=true){
     const st=window.appState.snap;
     if(st.previewLoading)return;
+    const requestVersion=Number(st.stateVersion)||0;
     st.previewLoading=true;
     try{
       const res=await fetch('/api/snap/preview-images?mode=final');
       const data=await res.json().catch(()=>({images:[]}));
+      if((Number(st.stateVersion)||0)!==requestVersion)return;
       if(res.ok){st.previewImages=data.images||[];st.previewLoaded=true;}
     }catch(_e){
-      st.previewImages=[];
+      if((Number(st.stateVersion)||0)===requestVersion)st.previewImages=[];
     }finally{
-      st.previewLoading=false;
+      if((Number(st.stateVersion)||0)===requestVersion)st.previewLoading=false;
     }
+    if((Number(st.stateVersion)||0)!==requestVersion)return;
     if(rerender&&st.step===2)renderReferenceWorkflow('snap',2);
   }
-  window.runSnapPipeline=async function(){const st=window.appState.snap;if(st.running)return;st.error='';if(!st.file){st.error='ZIPを選択してください。';return renderReferenceWorkflow('snap',0);}st.running=true;st.status='実行中...';st.result=null;st.previewImages=[];st.previewLoaded=false;st.bestShotCount=null;st.recommendedBestShotCount=null;renderReferenceWorkflow('snap',1);try{const fd=new FormData();fd.append('folder_zip',st.file);const res=await fetch('/api/snap/run',{method:'POST',body:fd});const data=await res.json();if(!res.ok)throw new Error(data.detail||'snap run failed');st.result=data?.summary||data;st.status='完了';try{const r=await fetch('/api/snap/result');if(r.ok)st.result=await r.json();}catch(_e){}syncSnapCountsFromSummary(snapSummary(),true);await loadSnapPreviewImages(false);st.running=false;toast('スナップ写真の処理が完了しました');renderReferenceWorkflow('snap',2);}catch(e){st.running=false;st.error=e.message;st.status='エラー: '+e.message;renderReferenceWorkflow('snap',0);}};
+  window.runSnapPipeline=async function(){
+    const st=window.appState.snap;
+    if(st.running)return;
+    st.error='';
+    if(!st.file){st.error='ZIPを選択してください。';return renderReferenceWorkflow('snap',0);}
+    const runFile=st.file;
+    st.running=true;
+    st.status='実行中...';
+    st.result=null;
+    st.stateVersion=(Number(st.stateVersion)||0)+1;
+    const runVersion=st.stateVersion;
+    st.folder=0;
+    st.selected=0;
+    st.output='BestShot';
+    st.excel='Event Summary';
+    st.filter='All';
+    st.previewImages=[];
+    st.previewLoaded=false;
+    st.previewLoading=false;
+    st.bestShotCount=null;
+    st.recommendedBestShotCount=null;
+    window.resetSnapPreviewState?.();
+    renderReferenceWorkflow('snap',1);
+    let nextStep=0;
+    try{
+      const fd=new FormData();
+      fd.append('folder_zip',runFile);
+      const res=await fetch('/api/snap/run',{method:'POST',body:fd});
+      const data=await res.json();
+      if(!res.ok)throw new Error(data.detail||'snap run failed');
+      if(st.stateVersion!==runVersion||st.file!==runFile)return;
+      st.result=data?.summary||data;
+      st.status='完了';
+      try{
+        const r=await fetch('/api/snap/result');
+        if(r.ok&&st.stateVersion===runVersion&&st.file===runFile)st.result=await r.json();
+      }catch(_e){}
+      if(st.stateVersion!==runVersion||st.file!==runFile)return;
+      syncSnapCountsFromSummary(snapSummary(),true);
+      await loadSnapPreviewImages(false);
+      if(st.stateVersion!==runVersion||st.file!==runFile)return;
+      toast('スナップ写真の処理が完了しました');
+      nextStep=2;
+    }catch(e){
+      if(st.stateVersion!==runVersion||st.file!==runFile)return;
+      st.error=e.message;
+      st.status='エラー: '+e.message;
+      nextStep=0;
+    }finally{
+      if(st.stateVersion===runVersion&&st.file===runFile){
+        st.running=false;
+        renderReferenceWorkflow('snap',nextStep);
+      }
+    }
+  };
   function triggerSnapZipDownload(){const a=document.createElement('a');a.href='/api/snap/download';a.download='snap_outputs.zip';document.body.appendChild(a);a.click();a.remove();}
   window.downloadAllSnapResults=async function(){const st=window.appState.snap;if(st.running)return;st.error='';const selected=Number(document.getElementById('snap-final-best-shot-count')?.value||st.bestShotCount||st.recommendedBestShotCount||1);window.setSnapBestShotCount(selected);st.status='出力更新中...';try{const fd=new FormData();fd.append('best_shot_count',String(st.bestShotCount));const res=await fetch('/api/snap/export',{method:'POST',body:fd});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data?.detail||'出力更新に失敗しました。');st.result=data?.summary||data;st.previewImages=[];st.previewLoaded=false;syncSnapCountsFromSummary(snapSummary(),false);await loadSnapPreviewImages(false);st.status='出力更新完了';toast(`Best Shot Count ${st.bestShotCount}枚で出力を更新しました`);renderReferenceWorkflow('snap',3);triggerSnapZipDownload();}catch(e){st.error=e?.message||'出力更新に失敗しました。';st.status='エラー: '+st.error;toast(st.error);renderReferenceWorkflow('snap',3);}};
   window.downloadSnapFolder=window.downloadAllSnapResults;

@@ -1,5 +1,17 @@
 from __future__ import annotations
 
+# ── Make onnxruntime-gpu find CUDA via PyTorch's bundled libraries ──
+import os
+try:
+    import torch as _torch
+    _torch_lib = os.path.join(os.path.dirname(_torch.__file__), "lib")
+    if os.path.isdir(_torch_lib):
+        os.environ["PATH"] = _torch_lib + os.pathsep + os.environ.get("PATH", "")
+    del _torch, _torch_lib
+except Exception:
+    pass
+# ───────────────────────────────────────────────────────────────────
+
 import json
 import logging
 import re
@@ -9,6 +21,13 @@ from pathlib import Path
 from urllib.parse import quote
 from typing import Any
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s │ %(name)s │ %(message)s",
+    force=True,
+)
+
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -18,6 +37,7 @@ from dotenv import load_dotenv
 from backend.teacher_jobs import router as teacher_router
 from openpyxl import Workbook, load_workbook
 from backend.excel_labels import SNAP_SHEET_LABELS, excel_label
+from backend.preview_images import image_media_type, list_preview_images, safe_resolve_preview_path
 
 from backend.snap_pipeline import SnapPipeline
 from backend.preview_images import collect_snap_preview_images
@@ -229,9 +249,16 @@ def _discover_event_dirs(input_root: Path) -> list[dict[str, Any]]:
 def _parse_snap_best_shot_count(value: str | None) -> int | None:
     if value is None or value == "":
         return None
-    if not re.fullmatch(r"[1-9]\d*", value.strip()):
-        raise HTTPException(status_code=400, detail="Best Shot Count must be a positive whole number.")
-    return int(value.strip())
+
+    raw = value.strip()
+    if not re.fullmatch(r"[1-9]\d*", raw):
+        raise HTTPException(status_code=400, detail="Best Shot Count must be an integer between 1 and 200.")
+
+    parsed = int(raw)
+    if parsed > 200:
+        raise HTTPException(status_code=400, detail="Best Shot Count must be an integer between 1 and 200.")
+
+    return parsed
 
 
 def _write_all_events_summary(output_root: Path, event_summaries: list[dict[str, Any]]) -> None:
@@ -499,6 +526,7 @@ def download_outputs() -> FileResponse:
 async def run_individual(
     photos_zip: UploadFile = File(...),
     roster_file: UploadFile | None = File(default=None),
+    frame_config_file: UploadFile | None = File(default=None),
     school_name: str = Form(default=""),
     year: str = Form(default=""),
     scoring: str = Form(default="local"),
@@ -536,6 +564,13 @@ async def run_individual(
     roster_path = None
     if roster_file and roster_file.filename:
         roster_path = _save_upload(roster_file, roster_dir)
+    frame_config_path = None
+    if frame_config_file and frame_config_file.filename:
+        if not frame_config_file.filename.lower().endswith(".json"):
+            raise HTTPException(status_code=400, detail="frame_config_file must be .json")
+        frame_config_path = output_dir / "frame_config.json"
+        with frame_config_path.open("wb") as f:
+            shutil.copyfileobj(frame_config_file.file, f)
 
     print("[individual/app] received school_name=", school_name)
     print("[individual/app] received year=", year)
@@ -552,6 +587,8 @@ async def run_individual(
             "max_backups": 0,
             "class_mapping": None,
             "no_roster_mode": roster_path is None,
+            "enable_face_offsets": frame_config_path is not None,
+            "frame_config_file": str(frame_config_path) if frame_config_path else None,
         },
     )
 
@@ -585,6 +622,24 @@ def preview_individual_output(job_id: str, filename: str) -> FileResponse:
     output_dir = _individual_job_output_dir(job_id)
     image_path = _find_individual_output_file(output_dir, filename)
     return FileResponse(image_path, filename=image_path.name)
+
+
+@app.get("/api/individual/{job_id}/preview-images")
+def get_individual_preview_images(job_id: str) -> dict[str, Any]:
+    output_dir = APP_STATE_DIR / "individual_jobs" / job_id / "output"
+    images = list_preview_images(
+        output_dir,
+        f"/api/individual/{job_id}/preview-image",
+        "Individual Photo",
+    )
+    return {"job_id": job_id, "count": len(images), "images": images}
+
+
+@app.get("/api/individual/{job_id}/preview-image")
+def get_individual_preview_image(job_id: str, path: str) -> FileResponse:
+    output_dir = APP_STATE_DIR / "individual_jobs" / job_id / "output"
+    image_path = safe_resolve_preview_path(output_dir, path)
+    return FileResponse(image_path, media_type=image_media_type(image_path), filename=image_path.name)
 
 
 @app.get("/api/individual/{job_id}/download")
