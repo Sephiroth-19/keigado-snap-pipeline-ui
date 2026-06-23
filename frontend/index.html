@@ -40,7 +40,7 @@
 @media(max-width:900px){.event-summary-grid,.scope-check-grid,.target-check-grid,.found-locations{grid-template-columns:1fr}.project-create-compact{width:100%}}
 
 /* Reference UI integration: project search, school master, workflow nav polish */
-.sidebar .nav-label{margin-top:18px}.project-filter-card{border-top:4px solid var(--teal)}.project-type-strip{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px;margin:12px 0 14px}.type-chip{border:1px solid var(--border);background:#fff;border-radius:10px;padding:10px 12px;text-align:left;cursor:pointer;box-shadow:var(--sh1);font-family:inherit}.type-chip:hover{border-color:var(--teal);box-shadow:var(--sh2)}.type-chip.on{border-color:var(--teal);background:var(--tealPale);box-shadow:0 0 0 3px rgba(13,140,140,.12)}.type-chip .type-title{font-weight:900;color:var(--navy);font-size:12px}.type-chip .type-sub{font-size:10.5px;color:var(--g500);margin-top:2px}.project-search-grid{display:grid;grid-template-columns:1.15fr .75fr 1fr 1fr .75fr .85fr;gap:10px}.sort-chip-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}.sort-chip{border:1px solid var(--border);background:#fff;color:var(--g600);border-radius:999px;padding:6px 10px;font-size:11.5px;font-weight:900;cursor:pointer;font-family:inherit}.sort-chip:hover{border-color:var(--teal);color:var(--teal)}.sort-chip.on{background:var(--navy);border-color:var(--navy);color:#fff}.master-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}.metric-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:var(--sh1)}.metric-card .metric{font-size:24px;font-weight:900;color:var(--navy)}.metric-card .label{font-size:11px;color:var(--g500);font-weight:900}.project-nav{position:sticky;top:58px;z-index:8}.project-nav .tab-btn{min-height:38px}.wf-tabs{position:sticky;top:104px;z-index:7;background:rgba(238,242,247,.96);backdrop-filter:blur(6px);padding:8px 0}.school-code{font-weight:900;color:var(--teal);letter-spacing:.03em}@media(max-width:1180px){.project-search-grid{grid-template-columns:repeat(3,1fr)}.project-type-strip,.master-summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.project-search-grid,.project-type-strip,.master-summary{grid-template-columns:1fr}}
+.sidebar .nav-label{margin-top:18px}#page-projects .topbar{min-height:62px;padding:0 24px}#page-projects .tb-title{font-size:18px}#page-projects .pinner{padding:18px 24px 32px}.project-filter-card{border-top:0}.project-filter-card .card-title,.project-list-card .card-title{font-size:14px}.project-type-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:12px 0}.type-chip{border:1px solid var(--border);background:#fff;border-radius:10px;padding:10px 12px;text-align:left;cursor:pointer;box-shadow:var(--sh1);font-family:inherit;min-height:66px}.type-chip:hover{border-color:var(--teal);box-shadow:var(--sh2)}.type-chip.on{border-color:var(--teal);background:var(--tealPale);box-shadow:0 0 0 2px rgba(13,140,140,.12)}.type-chip .type-title{font-weight:900;color:var(--navy);font-size:12px}.type-chip .type-sub{font-size:10.5px;color:var(--g500);margin-top:2px}.project-search-grid{display:grid;grid-template-columns:1.2fr .8fr 1fr .9fr .8fr .8fr;gap:10px}.project-list-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}.sort-chip-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;padding:10px;background:var(--g50);border:1px solid var(--border);border-radius:12px}.sort-chip-row .sort-label{font-size:11.5px;color:var(--g500);font-weight:900}.sort-chip{border:1px solid var(--border);background:#fff;color:var(--g600);border-radius:999px;padding:6px 11px;font-size:12px;font-weight:900;cursor:pointer;font-family:inherit}.sort-chip:hover{border-color:var(--teal);color:var(--teal)}.sort-chip.on{background:var(--teal);border-color:var(--teal);color:#fff}.keyboard-help{margin-top:8px;color:var(--g500);font-size:11px}.project-card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}.project-card{border:1px solid var(--border);background:#fff;border-radius:12px;padding:14px;box-shadow:var(--sh1);cursor:pointer;transition:.15s}.project-card:hover{border-color:var(--teal);transform:translateY(-1px);box-shadow:var(--sh2)}.project-card .code{font-family:ui-monospace,Menlo,monospace;color:var(--g500);font-size:11px}.project-card-title{font-size:14px;font-weight:900;color:var(--navy)}.master-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}.metric-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:var(--sh1)}.metric-card .metric{font-size:24px;font-weight:900;color:var(--navy)}.metric-card .label{font-size:11px;color:var(--g500);font-weight:900}.project-nav{position:sticky;top:58px;z-index:8}.project-nav .tab-btn{min-height:38px}.wf-tabs{position:sticky;top:104px;z-index:7;background:rgba(238,242,247,.96);backdrop-filter:blur(6px);padding:8px 0}.school-code{font-weight:900;color:var(--teal);letter-spacing:.03em}@media(max-width:1180px){.project-search-grid{grid-template-columns:repeat(3,1fr)}.project-type-strip,.master-summary{grid-template-columns:repeat(2,1fr)}.project-card-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.project-search-grid,.project-type-strip,.master-summary,.project-card-grid{grid-template-columns:1fr}#page-projects .topbar{padding:0 14px}#page-projects .pinner{padding:14px}}
 
 </style>
 </head>
@@ -60,9 +60,8 @@
   </aside>
   <main class="main">
     <section id="page-projects" class="page active">
-      <div class="topbar"><div><div class="tb-title">プロジェクト一覧</div><div class="tb-sub">既存プロジェクトは検索して開き、新しい学校は新規作成から追加します</div></div><button class="btn btn-primary" onclick="openWizard(1)">＋ 新規プロジェクト作成</button></div>
+      <div class="topbar"><div><div class="tb-title">プロジェクト一覧</div><div class="tb-sub">学校案件・新規取引校・学校以外案件・一時処理案件を検索して開きます</div></div><button class="btn btn-primary" onclick="openWizard(1)">＋ 新規プロジェクト作成</button></div>
       <div class="pinner">
-        <div class="alert a-info"><span>💡</span><div><strong>効率化方針：</strong>100校以上の運用を想定し、一覧表示を標準にします。学校名・年度・ステータスで絞り込み、必要なプロジェクトだけを開きます。</div></div>
         <div class="card wizard" id="wizard">
           <div class="wizard-head"><div><div class="card-title">新規プロジェクト作成モード</div><div class="card-sub">学校情報、利用機能、作成内容を確認してから開始します。</div></div><button class="btn btn-ghost btn-sm" onclick="closeWizard()">閉じる</button></div>
           <div class="steps"><span class="step-pill on" id="stepP1">1 学校・年度情報</span><span class="step-pill" id="stepP2">2 利用機能の選択</span><span class="step-pill" id="stepP3">3 作成内容の確認</span><span class="step-pill" id="stepP4">4 作成完了</span></div>
@@ -86,7 +85,8 @@
           </div>
         </div>
         <div class="card project-filter-card">
-          <div class="project-tools"><div><div class="card-title">既存プロジェクト検索 / Project Search</div><div class="card-sub">キーワード・学校コード・学校名・プロジェクト種別・年度・ステータスで絞り込み、対象のDashboardを開きます。</div></div><div class="project-create-compact"><div class="card-title">＋ 新規プロジェクト作成</div><div class="card-sub">学校案件・学校以外案件・一時処理案件を追加します。</div><div class="btn-row" style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="openWizard(1)">作成を開始</button></div></div></div>
+          <div class="card-title">プロジェクト検索</div>
+          <div class="card-sub">学校以外案件・一時処理案件は「キーワード」または「プロジェクト種別」で検索します。</div>
           <div class="project-type-strip" id="projectTypeStrip">
             <button class="type-chip on" data-type="すべて" onclick="setProjectTypeFilter('すべて')"><div class="type-title">すべて</div><div class="type-sub">All project types</div></button>
             <button class="type-chip" data-type="学校案件" onclick="setProjectTypeFilter('学校案件')"><div class="type-title">学校案件</div><div class="type-sub">既存取引校・年度案件</div></button>
@@ -96,11 +96,19 @@
           </div>
           <div class="project-search-grid"><div class="field"><label>キーワード</label><input id="filterKeyword" placeholder="プロジェクト名・機能・メモ"></div><div class="field"><label>学校コード</label><input id="filterSchoolCode" placeholder="例：SCH-0001"></div><div class="field"><label>学校名</label><input id="filterSchool" placeholder="例：上水高校 / Chihaya"></div><div class="field"><label>プロジェクト種別</label><select id="filterProjectType"><option value="すべて">すべて</option><option value="学校案件">学校案件</option><option value="新規取引校">新規取引校</option><option value="学校以外案件">学校以外案件</option><option value="一時的な写真処理案件">一時的な写真処理案件</option></select></div><div class="field"><label>年度</label><select id="filterYear"><option value="すべて">すべて</option><option value="2027年度">2027年度</option><option value="2026年度">2026年度</option><option value="2025年度">2025年度</option></select></div><div class="field"><label>ステータス</label><select id="filterStatus"><option value="すべて">すべて</option><option value="処理中">処理中</option><option value="準備中">準備中</option><option value="完了">完了</option><option value="未開始">未開始</option></select></div></div>
           <input id="filterSort" type="hidden" value="registeredDesc">
-          <div class="sort-chip-row"><span class="card-sub" style="font-weight:900;margin-top:0">Sort</span><button class="sort-chip on" data-sort="registeredDesc" onclick="setProjectSort('registeredDesc')">登録日 新しい順</button><button class="sort-chip" data-sort="registeredAsc" onclick="setProjectSort('registeredAsc')">登録日 古い順</button><button class="sort-chip" data-sort="status" onclick="setProjectSort('status')">ステータス</button><button class="sort-chip" data-sort="year" onclick="setProjectSort('year')">年度</button><button class="sort-chip" data-sort="code" onclick="setProjectSort('code')">学校コード</button><button class="sort-chip" data-sort="name" onclick="setProjectSort('name')">プロジェクト名</button><div class="view-toggle" style="margin-left:auto"><button id="viewListBtn" class="on" onclick="setProjectView('list')">一覧</button><button id="viewCardsBtn" onclick="setProjectView('cards')">カード</button></div></div>
-          <div class="btn-row"><button class="btn btn-primary" onclick="renderProjects();toast('検索条件を適用しました')">検索する</button><button class="btn btn-ghost" onclick="clearFilter()">条件をクリア</button><button class="btn btn-ghost" onclick="showPage('school-master')">学校マスターを開く</button></div><div id="filterResult" class="card-sub" style="margin-top:8px">All projects are shown.</div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="renderProjects();toast('検索条件を適用しました')">検索する</button><button class="btn btn-ghost" onclick="clearFilter()">条件をクリア</button><button class="btn btn-ghost" onclick="showPage('school-master')">学校マスターを開く</button><span id="filterResult" class="card-sub" style="margin-top:0">All projects are shown.</span></div>
         </div>
-        <div id="projectsCards" class="grid grid-3" style="display:none"></div>
-        <div id="projectsList" class="card"><div class="table-wrap"><table><thead><tr><th>学校コード</th><th>Project</th><th>種別</th><th>Year</th><th>Status</th><th>Open Items</th><th>Functions</th><th>Action</th></tr></thead><tbody id="projectsTableBody"></tbody></table></div><div class="pagination-row"><div class="small" id="paginationInfo">20件ずつ表示します</div><div class="btn-row" style="margin-top:0"><button class="btn btn-ghost btn-sm" onclick="prevProjectPage()">← 前へ</button><button class="btn btn-ghost btn-sm" onclick="nextProjectPage()">次へ →</button></div></div></div>
+        <div class="card project-list-card">
+          <div class="project-list-head">
+            <div><div class="card-title">プロジェクトリスト</div><div class="card-sub">開くと、各ワークフローをフォルダ別に操作できます。表示形式は一覧/カードで切替できます。</div></div>
+            <div class="view-toggle"><button id="viewListBtn" class="on" onclick="setProjectView('list')">一覧</button><button id="viewCardsBtn" onclick="setProjectView('cards')">カード</button></div>
+          </div>
+          <div class="sort-chip-row"><strong class="sort-label">並び替え：</strong><button class="sort-chip on" data-sort="registeredDesc" onclick="setProjectSort('registeredDesc')">登録日 新しい順</button><button class="sort-chip" data-sort="registeredAsc" onclick="setProjectSort('registeredAsc')">登録日 古い順</button><button class="sort-chip" data-sort="status" onclick="setProjectSort('status')">ステータス</button><button class="sort-chip" data-sort="year" onclick="setProjectSort('year')">年度</button><button class="sort-chip" data-sort="code" onclick="setProjectSort('code')">学校コード</button><button class="sort-chip" data-sort="name" onclick="setProjectSort('name')">プロジェクト名</button></div>
+          <div class="keyboard-help">キーボード操作：↑↓でプロジェクト選択、Enterで開くことができます。</div>
+          <div id="projectsCards" class="project-card-grid" style="display:none"></div>
+          <div id="projectsList" class="table-wrap" style="margin-top:12px"><table><thead><tr><th>コード</th><th>プロジェクト名</th><th>種別</th><th>学校名</th><th>年度</th><th>ステータス</th><th>登録日</th><th>利用ワークフロー</th><th>操作</th></tr></thead><tbody id="projectsTableBody"></tbody></table></div>
+          <div class="pagination-row"><div class="small" id="paginationInfo">20件ずつ表示します</div><div class="btn-row" style="margin-top:0"><button class="btn btn-ghost btn-sm" onclick="prevProjectPage()">← 前へ</button><button class="btn btn-ghost btn-sm" onclick="nextProjectPage()">次へ →</button></div></div>
+        </div>
       </div>
     </section>
     <section id="page-school-master" class="page">
@@ -760,6 +768,8 @@ function setProjectSort(sort){const el=document.getElementById('filterSort');if(
 function projectMatchesSchool(p,term){if(!term)return true;const t=String(term).toLowerCase().trim();return [p.name,...(p.aliases||[])].some(x=>String(x).toLowerCase().includes(t));}
 function getFilteredProjects(){ensureProjectMetadata();const keyword=(document.getElementById('filterKeyword')?.value||'').toLowerCase().trim();const code=(document.getElementById('filterSchoolCode')?.value||'').toLowerCase().trim();const school=document.getElementById('filterSchool')?.value.trim()||'';const type=document.getElementById('filterProjectType')?.value||'すべて';const yearRaw=document.getElementById('filterYear')?.value||'すべて';const statusRaw=document.getElementById('filterStatus')?.value||'すべて';const sort=document.getElementById('filterSort')?.value||'registeredDesc';const yearNorm=normalizeYear(yearRaw), statusNorm=normalizeStatus(statusRaw);let arr=projects.filter(p=>(!keyword||projectSearchBlob(p).includes(keyword))&&(!code||String(p.schoolCode).toLowerCase().includes(code))&&projectMatchesSchool(p,school)&&(type==='すべて'||p.type===type)&&(yearRaw==='すべて'||yearNorm===''||normalizeYear(p.year)===yearNorm)&&(statusRaw==='すべて'||normalizeStatus(p.status)===statusNorm));arr.sort((a,b)=>{if(sort==='registeredAsc')return String(a.registeredAt||a.updatedAt||'').localeCompare(String(b.registeredAt||b.updatedAt||''));if(sort==='status')return normalizeStatus(a.status).localeCompare(normalizeStatus(b.status),'ja')||a.name.localeCompare(b.name,'ja');if(sort==='year')return normalizeYear(b.year).localeCompare(normalizeYear(a.year))||a.name.localeCompare(b.name,'ja');if(sort==='code')return String(a.schoolCode||'').localeCompare(String(b.schoolCode||''),'ja');if(sort==='name')return String(a.projectName||a.name).localeCompare(String(b.projectName||b.name),'ja');return String(b.registeredAt||b.updatedAt||'').localeCompare(String(a.registeredAt||a.updatedAt||''));});return arr;}
 function renderProjects(){ensureProjectMetadata();syncProjectTypeButtons();const arr=getFilteredProjects();lastProjectResult=arr;const total=arr.length;const pages=Math.max(1,Math.ceil(total/projectPageSize));if(projectPage>pages)projectPage=pages;const start=(projectPage-1)*projectPageSize;const pageArr=arr.slice(start,start+projectPageSize);const showing=total?`${start+1}〜${start+pageArr.length}`:'0';const result=document.getElementById('filterResult');if(result)result.innerHTML=`<span class="result-count-strong">${total}件中 ${showing}件を表示しています。</span>（検索条件：キーワード / 学校コード / 種別 / 年度 / ステータス）`;const cards=document.getElementById('projectsCards'), list=document.getElementById('projectsList');if(cards)cards.style.display=projectView==='cards'?'grid':'none';if(list)list.style.display=projectView==='list'?'block':'none';const pi=document.getElementById('paginationInfo');if(pi)pi.textContent=`Page ${projectPage} / ${pages}　${total}件中 ${showing}件`;const noResult='<div class="card empty-note">該当するプロジェクトがありません。条件を変更するか「条件をクリア」を押してください。</div>';if(cards)cards.innerHTML=pageArr.map(p=>`<div class="card click" onclick="openProject('${p.id}')"><div class="card-title">🏫 ${p.projectName||p.name}</div><div class="card-sub"><span class="school-code">${p.schoolCode}</span> · ${p.name} · ${p.year} · 登録日 ${p.registeredAt||p.updatedAt||'—'}</div><div class="btn-row">${projectTypeBadge(p.type)} ${statusBadge(p.status)} ${p.openItems?`<span class="badge b-err">未解決 ${p.openItems}件</span>`:`<span class="badge b-info">${p.functions.length}機能</span>`}</div><p class="card-sub" style="margin-top:10px">${p.functions.join(' / ')}</p><div class="btn-row"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openProject('${p.id}')">Dashboardを開く</button><button class="btn btn-warn btn-sm" onclick="event.stopPropagation();openProject('${p.id}');projectSec('individual')">${p.status==='準備中'||p.status==='未開始'?'初期設定を続ける':'処理を続ける'}</button><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();showPage('school-master')">学校マスター</button></div></div>`).join('')||noResult;const tbody=document.getElementById('projectsTableBody');if(tbody)tbody.innerHTML=pageArr.map(p=>`<tr onclick="openProject('${p.id}')" style="cursor:pointer"><td><span class="school-code">${p.schoolCode}</span></td><td><strong>${p.projectName||p.name}</strong><div class="card-sub">${p.name} · 登録日 ${p.registeredAt||p.updatedAt||'—'}</div></td><td>${projectTypeBadge(p.type)}</td><td>${p.year}</td><td>${statusBadge(p.status)}</td><td>${p.openItems?p.openItems+'件':'—'}</td><td>${p.functions.length}</td><td><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openProject('${p.id}')">Dashboardを開く</button> <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();toast('${p.name} の詳細を表示')">詳細</button></td></tr>`).join('') || `<tr><td colspan="8" class="empty-note">該当するプロジェクトがありません。</td></tr>`;}
+function workflowSummary(p){return (p.functions||[]).join(' / ')||'未設定';}
+function renderProjects(){ensureProjectMetadata();syncProjectTypeButtons();const arr=getFilteredProjects();lastProjectResult=arr;const total=arr.length;const pages=Math.max(1,Math.ceil(total/projectPageSize));if(projectPage>pages)projectPage=pages;const start=(projectPage-1)*projectPageSize;const pageArr=arr.slice(start,start+projectPageSize);const showing=total?`${start+1}〜${start+pageArr.length}`:'0';const result=document.getElementById('filterResult');if(result)result.innerHTML=`<span class="result-count-strong">${total}件中 ${showing}件を表示しています。</span>`;const cards=document.getElementById('projectsCards'), list=document.getElementById('projectsList');if(cards)cards.style.display=projectView==='cards'?'grid':'none';if(list)list.style.display=projectView==='list'?'block':'none';document.getElementById('viewCardsBtn')?.classList.toggle('on',projectView==='cards');document.getElementById('viewListBtn')?.classList.toggle('on',projectView==='list');const pi=document.getElementById('paginationInfo');if(pi)pi.textContent=`Page ${projectPage} / ${pages}　${total}件中 ${showing}件`;const noResult='<div class="empty-note">該当するプロジェクトがありません。条件を変更するか「条件をクリア」を押してください。</div>';if(cards)cards.innerHTML=pageArr.map(p=>`<div class="project-card" onclick="openProject('${p.id}')"><div class="code">${p.schoolCode||'—'}</div><div class="project-card-title">${p.projectName||p.name}</div><div class="card-sub">${p.name||'—'} · ${p.year||'—'} · 登録日 ${p.registeredAt||p.updatedAt||'—'}</div><div class="btn-row">${projectTypeBadge(p.type)} ${statusBadge(p.status)} ${p.openItems?`<span class="badge b-err">確認 ${p.openItems}件</span>`:''}</div><p class="card-sub" style="margin-top:10px">${workflowSummary(p)}</p><div class="btn-row"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openProject('${p.id}')">開く</button><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();toast('${p.name} の詳細を表示')">詳細</button></div></div>`).join('')||noResult;const tbody=document.getElementById('projectsTableBody');if(tbody)tbody.innerHTML=pageArr.map(p=>`<tr onclick="openProject('${p.id}')" style="cursor:pointer"><td><span class="school-code">${p.schoolCode||'—'}</span></td><td><strong>${p.projectName||p.name}</strong><div class="card-sub">${p.memo||'Keigado Album Flow'}</div></td><td>${projectTypeBadge(p.type)}</td><td>${p.name||'—'}</td><td>${p.year||'—'}</td><td>${statusBadge(p.status)}</td><td>${p.registeredAt||p.updatedAt||'—'}</td><td>${workflowSummary(p)}</td><td><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openProject('${p.id}')">開く</button> <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();toast('${p.name} の詳細を表示')">詳細</button></td></tr>`).join('') || `<tr><td colspan="9" class="empty-note">該当するプロジェクトがありません。</td></tr>`;}
 function clearFilter(){['filterKeyword','filterSchoolCode','filterSchool'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});if(document.getElementById('filterProjectType'))document.getElementById('filterProjectType').value='すべて';if(document.getElementById('filterYear'))document.getElementById('filterYear').value='すべて';if(document.getElementById('filterStatus'))document.getElementById('filterStatus').value='すべて';if(document.getElementById('filterSort'))document.getElementById('filterSort').value='registeredDesc';document.querySelectorAll('.sort-chip').forEach(x=>x.classList.toggle('on',x.dataset.sort==='registeredDesc'));projectPage=1;renderProjects();toast('検索条件をクリアしました');}
 function renderSchoolMaster(){ensureProjectMetadata();const grouped=new Map();projects.forEach(p=>{const key=p.schoolCode;if(!grouped.has(key))grouped.set(key,{code:p.schoolCode,name:p.name,projects:[],status:p.masterStatus,type:p.type,latest:p.year});const g=grouped.get(key);g.projects.push(p);if(normalizeYear(p.year)>normalizeYear(g.latest))g.latest=p.year;if(p.status==='処理中')g.status='稼働中';});const rows=[...grouped.values()].slice(0,40);const count=document.getElementById('masterSchoolCount');if(count)count.textContent=grouped.size;const active=document.getElementById('masterActiveCount');if(active)active.textContent=[...grouped.values()].filter(g=>g.status==='稼働中'||g.projects.some(p=>p.status==='処理中')).length;const nw=document.getElementById('masterNewCount');if(nw)nw.textContent=projects.filter(p=>p.type==='新規取引校').length;const temp=document.getElementById('masterTempCount');if(temp)temp.textContent=projects.filter(p=>p.type==='一時的な写真処理案件').length;const body=document.getElementById('schoolMasterRows');if(body)body.innerHTML=rows.map(g=>`<tr><td><span class="school-code">${g.code}</span></td><td><strong>${g.name}</strong><div class="card-sub">${g.type}</div></td><td>${g.projects.length}件<div class="card-sub">${g.projects.slice(0,2).map(p=>p.projectName||p.name).join(' / ')}</div></td><td>${g.latest}</td><td>${statusBadge(g.status||'有効')}</td><td><button class="btn btn-primary btn-sm" onclick="openProject('${g.projects[0].id}')">関連Project</button> <button class="btn btn-ghost btn-sm" onclick="toast('${g.name} のマスター編集はUI-onlyです')">編集</button></td></tr>`).join('');}
 
@@ -1984,6 +1994,12 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
   const snapEventName=e=>e?.display_event_name||e?.event_name||e?.name||'event';
   const snapEventSafeName=e=>e?.safe_event_name||e?.output_folder||e?.event_name||e?.name||'event';
   const snapRecommendedCount=summary=>Math.max(1,Math.round(Number(summary?.total_representative_candidates||0)*0.3)||1);
+  const clubRankLabel=rank=>rank?`本${String(Number(rank)).padStart(2,'0')}`:'除外';
+  function clubRenameFor(item,rank){
+    if(!rank)return '';
+    const fp=splitFile(item.orig||item.original_file||'club_photo.jpg');
+    return `${item.club||item.club_name||'Club'}_${item.date||item.shooting_date||'00000000'}_${fp.base}_${clubRankLabel(rank)}.${fp.ext}`;
+  }
   function syncSnapCountsFromSummary(summary, resetSelection=false){
     const st=window.appState.snap;
     const reps=Number(summary?.total_representative_candidates||0);
@@ -2028,11 +2044,18 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
   function mapClubResultItem(row){
     const club=firstVal(row,['club_name','club','folder'])||'Club';
     const orig=firstVal(row,['original_file','filename','file_name','name'])||'club_photo.jpg';
-    const rank=firstVal(row,['rank'])||1;
-    const ren=firstVal(row,['renamed_file','renamed','output_filename'])||`${club}_20260403_${splitFile(orig).base}_本${String(rank).padStart(2,'0')}.${splitFile(orig).ext}`;
-    const status=row?.ng_flag?'NG':Number(rank)===1?'Best Shot':'Passing';
+    const aiRank=Number(firstVal(row,['ai_rank','rank'])||1);
+    const finalRank=row?.excluded?null:Number(firstVal(row,['final_rank','rank'])||aiRank);
+    const finalLabel=row?.excluded?'除外':firstVal(row,['final_rank_label'])||clubRankLabel(finalRank);
+    const aiLabel=firstVal(row,['ai_rank_label','rank_label'])||clubRankLabel(aiRank);
+    const date=firstVal(row,['shooting_date','date'])||'00000000';
+    const ren=row?.excluded?'除外 / not used':firstVal(row,['final_renamed_file','renamed_file','renamed','output_filename'])||`${club}_${date}_${splitFile(orig).base}_${clubRankLabel(finalRank)}.${splitFile(orig).ext}`;
+    const status=row?.excluded?'Excluded':Number(finalRank)===1?'Best Shot':'Passing';
     const score=firstVal(row,['total_score','score'])||'-';
-    return {icon:status==='Best Shot'?'🏆':status==='NG'?'🚫':'📘',orig,ren,status,meta:`score ${score} / ${firstVal(row,['ng_reason'])||'backend result'}`,club,date:'20260403',tag:ren.match(/_(本|札|NG)\d+\./)?.[0]?.slice(1,-1)||'本01',image_url:firstImageSrc(row),raw:row};
+    const people=firstVal(row,['person_count'])||'-';
+    const closed=firstVal(row,['closed_eye_face_count'])||0;
+    const eyeText=row?.eyes_closed_photo?`目つぶり${closed}名候補`:'目つぶりなし';
+    return {icon:status==='Best Shot'?'🏆':status==='Excluded'?'🚫':'📘',orig,ren,status,meta:`AI ${aiLabel} / 最終 ${finalLabel} / 人数 ${people} / ${eyeText} / score ${score}`,club,date,tag:finalLabel,aiRank,aiLabel,finalRank,finalLabel,personCount:people,closedEyeCount:closed,eyesClosed:!!row?.eyes_closed_photo,image_url:firstImageSrc(row),raw:row};
   }
   function clubFolders(){
     const result=window.appState.club?.result;
@@ -2124,13 +2147,22 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
     const st=wfState(kind), folder=folders(kind)[st.folder]||folders(kind)[0];
     let entries=(folder?.items||[]).map((item,index)=>({item,index}));
     if(kind==='snap'&&st.filter&&st.filter!=='All')entries=entries.filter(row=>row.item.status===st.filter);
-    return `<div class="ref-photo-list"><div class="ref-photo-list-head"><div><strong>写真リスト：${esc(folder?.name||'')}</strong><div class="ref-mini">クリックで左側の大きなプレビューに表示</div></div><span class="badge b-info">${entries.length} photos</span></div><div class="ref-photo-list-body">${entries.map(({item:x,index:i})=>`<div class="ref-photo-row ${st.selected===i?'on':''}" onclick="selectReferencePhoto('${kind}',${i})"><div class="ref-photo-thumb">${isRealImageSrc(firstImageSrc(x))?`<img src="${esc(firstImageSrc(x))}" alt="${esc(x.orig)}" style="width:100%;height:100%;object-fit:cover;border-radius:9px">`:esc(x.icon)}</div><div><div class="ref-file-name">${esc(x.orig)}</div><div class="ref-mini">${esc(x.meta)}</div></div><div class="ref-rename">${esc(x.ren)}<br><span class="badge ${statusCls(x.status)}">${esc(x.status)}</span></div>${actions?`<div class="btn-row" style="margin-top:0"><button class="btn btn-success btn-sm" onclick="event.stopPropagation();moveReferencePhoto('${kind}',${i},'Best Shot')">Best</button><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();moveReferencePhoto('${kind}',${i},'Passing')">Passing</button><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();moveReferencePhoto('${kind}',${i},'NG')">NG</button></div>`:''}</div>`).join('')||'<div class="empty-note">表示する写真がありません。</div>'}</div></div>`;
+    const maxRank=Math.max(3,(folder?.items||[]).length);
+    const clubRankSelect=(x,i)=>`<select onclick="event.stopPropagation()" onchange="setClubFinalRank(${i},this.value)"><option value="exclude" ${x.finalRank?'':'selected'}>除外</option>${Array.from({length:maxRank},(_,n)=>n+1).map(rank=>`<option value="${rank}" ${Number(x.finalRank)===rank?'selected':''}>${clubRankLabel(rank)}</option>`).join('')}</select>`;
+    const actionHtml=(x,i)=>{
+      if(!actions)return '';
+      if(kind==='club')return `<div class="btn-row" style="margin-top:0">${clubRankSelect(x,i)}</div>`;
+      return `<div class="btn-row" style="margin-top:0"><button class="btn btn-success btn-sm" onclick="event.stopPropagation();moveReferencePhoto('${kind}',${i},'Best Shot')">Best</button><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();moveReferencePhoto('${kind}',${i},'Passing')">Passing</button><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();moveReferencePhoto('${kind}',${i},'NG')">NG</button></div>`;
+    };
+    return `<div class="ref-photo-list"><div class="ref-photo-list-head"><div><strong>写真リスト：${esc(folder?.name||'')}</strong><div class="ref-mini">クリックで左側の大きなプレビューに表示</div></div><span class="badge b-info">${entries.length} photos</span></div><div class="ref-photo-list-body">${entries.map(({item:x,index:i})=>`<div class="ref-photo-row ${st.selected===i?'on':''}" onclick="selectReferencePhoto('${kind}',${i})"><div class="ref-photo-thumb">${isRealImageSrc(firstImageSrc(x))?`<img src="${esc(firstImageSrc(x))}" alt="${esc(x.orig)}" style="width:100%;height:100%;object-fit:cover;border-radius:9px">`:esc(x.icon)}</div><div><div class="ref-file-name">${esc(x.orig)}</div><div class="ref-mini">${esc(x.meta)}</div></div><div class="ref-rename">${esc(x.ren)}<br><span class="badge ${statusCls(x.status)}">${esc(x.status)}</span></div>${actionHtml(x,i)}</div>`).join('')||'<div class="empty-note">表示する写真がありません。</div>'}</div></div>`;
   }
   function manualPanel(kind,item){
     if(!item)return '';
-    const fp=splitFile(item.orig);
     if(kind==='club'){
-      return `<div class="ref-manual-panel"><div class="card-title">手入力修正 / Manual Rename</div><div class="card-sub">クラブ名・撮影日・タグを確認し、必要な場合だけ修正します。</div><div class="ref-edit-grid"><div class="field"><label>Club Name</label><input class="ref-club" value="${esc(item.club||'バドミントン部')}" oninput="updateReferenceRenamePreview(this,'club')"></div><div class="field"><label>Shooting Date</label><input class="ref-date" value="${esc(item.date||'20260403')}" oninput="updateReferenceRenamePreview(this,'club')"></div><div class="field"><label>Original File</label><input class="ref-original" value="${esc(item.orig)}" oninput="updateReferenceRenamePreview(this,'club')"><div class="ref-mini">拡張子は元ファイルから保持</div></div><div class="field"><label>Photo Tag / Ranking</label><input class="ref-tag" value="${esc(item.tag||'本01')}" oninput="updateReferenceRenamePreview(this,'club')"></div></div><div class="ref-live-preview"><div class="label">Rename Preview</div><div class="value ref-preview-name">${esc(item.club||'バドミントン部')}_${esc(item.date||'20260403')}_${esc(fp.base)}_${esc(item.tag||'本01')}.${esc(fp.ext)}</div></div><div class="btn-row"><button class="btn btn-success" onclick="toast('クラブ写真のリネームを保存しました')">リネームを保存</button><button class="btn btn-ghost" onclick="toast('自動候補を再計算しました')">自動候補を再計算</button></div></div>`;
+      const st=wfState('club'), folder=folders('club')[st.folder]||{items:[]};
+      const maxRank=Math.max(3,(folder.items||[]).length);
+      const options=`<option value="exclude" ${item.finalRank?'':'selected'}>除外 / not use</option>${Array.from({length:maxRank},(_,n)=>n+1).map(rank=>`<option value="${rank}" ${Number(item.finalRank)===rank?'selected':''}>${clubRankLabel(rank)}</option>`).join('')}`;
+      return `<div class="ref-manual-panel"><div class="card-title">Manual Ranking</div><div class="card-sub">AI順位を確認し、最終出力に使う順位だけを変更します。</div><div class="ref-edit-grid"><div class="field"><label>Club Name</label><input value="${esc(item.club)}" readonly></div><div class="field"><label>Original File</label><input value="${esc(item.orig)}" readonly></div><div class="field"><label>AI-selected Rank</label><input value="${esc(item.aiLabel||clubRankLabel(item.aiRank))}" readonly></div><div class="field"><label>Current Final Rank</label><select onchange="setClubFinalRank(${st.selected},this.value)">${options}</select></div></div><div class="ref-live-preview"><div class="label">Rename Preview</div><div class="value ref-preview-name">${esc(item.ren)}</div></div></div>`;
     }
     return `<div class="ref-manual-panel"><div class="card-title">ステータス修正 / Event Review</div><div class="card-sub">イベント別にBest Shot / Passing / NGを確認します。セレクト枚数はOutput Reviewで指定します。</div><div class="ref-live-preview"><div class="label">Current Output</div><div class="value">${esc(item.ren)}</div></div><div class="btn-row"><button class="btn btn-success" onclick="moveReferencePhoto('snap',${wfState('snap').selected},'Best Shot')">Best Shotへ</button><button class="btn btn-ghost" onclick="moveReferencePhoto('snap',${wfState('snap').selected},'Passing')">Passingへ</button><button class="btn btn-danger" onclick="moveReferencePhoto('snap',${wfState('snap').selected},'NG')">NGへ</button></div></div>`;
   }
@@ -2155,7 +2187,7 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
   function outputPreview(kind,current){
     let all=folders(kind).flatMap(f=>f.items.map(x=>({folder:f.name,...x})));
     if(kind==='snap'&&current!=='Excel Report')all=all.filter(x=>current==='BestShot'?x.status==='Best Shot':x.status===current);
-    if(kind==='club'&&current==='Marked Photos')all=all.filter(x=>x.status!=='NG');
+    if(kind==='club'&&current==='Marked Photos')all=all.filter(x=>x.status!=='Excluded'&&x.status!=='NG');
     if(kind==='club'&&current==='Clean Photos')all=all.filter(x=>x.status==='Best Shot'||x.status==='Passing');
     const snapTree='├─ all_events_summary.json<br>├─ all_events_summary.xlsx<br>└─ [event]/<br>　 ├─ final_selected/<br>　 ├─ other_passing/<br>　 ├─ ng_photos/<br>　 ├─ similarity_clusters/<br>　 └─ snap_pipeline_report.xlsx';
     return `<div class="ref-output-preview"><div class="card-title">出力フォルダプレビュー：${esc(current)}</div><div class="ref-mini">${hasBackend(kind)?'実バックエンド結果を表示中':'バックエンド結果なし：デモプレビューを表示中'}</div><div class="ref-icon-grid">${all.map(x=>`<div class="ref-mini-photo"><div class="pic">${previewMarkup(x)}</div><div class="nm">${esc(x.orig)}</div><div class="ref-mini">${esc(x.folder)} / <span class="badge ${statusCls(x.status)}">${esc(x.status)}</span></div><div class="rn">${esc(x.ren)}</div></div>`).join('')||'<div class="card-sub">表示する写真がありません。</div>'}</div><div class="ref-photo-meta" style="margin-top:12px"><strong>${kind==='club'?'Club_Output':'snap_outputs'}/</strong><br>${kind==='club'?'├─ ranked_photos/<br>├─ ranked_photos_marked/<br>└─ club_result.xlsx':snapTree}</div></div>`;
@@ -2172,7 +2204,7 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
   function downloadButtons(kind){
     if(kind==='club'){
       const r=window.appState.club.result;
-      if(r)return `<a class="btn btn-success" href="${esc(absUrl(r.excel_url))}" target="_blank">Excelをダウンロード</a><a class="btn btn-primary" href="${esc(absUrl(r.output_zip_url))}" target="_blank">出力ZIPをダウンロード</a>`;
+      if(r)return `<button class="btn btn-success" onclick="downloadAdjustedClub('excel')">Excelをダウンロード</button><button class="btn btn-primary" onclick="downloadAdjustedClub('zip')">出力ZIPをダウンロード</button>`;
       return `<button class="btn btn-success" onclick="downloadClubExcel()">Excelをダウンロード</button><button class="btn btn-primary" onclick="downloadClubFolder()">出力フォルダをダウンロード</button>`;
     }
     return `<button class="btn btn-success" onclick="downloadAllSnapResults()">セレクト${Number(window.appState.snap.bestShotCount||25)}枚で出力ZIPをダウンロード</button>`;
@@ -2185,6 +2217,60 @@ window.downloadTeacherExcel=downloadTeacherExcel;window.downloadTeacherOutputFol
   window.prevReferencePhoto=function(kind){const arr=currentItems(kind);if(!arr.length)return;const st=wfState(kind);st.selected=(st.selected+arr.length-1)%arr.length;renderReferenceWorkflow(kind,st.step);};
   window.nextReferencePhoto=function(kind){const arr=currentItems(kind);if(!arr.length)return;const st=wfState(kind);st.selected=(st.selected+1)%arr.length;renderReferenceWorkflow(kind,st.step);};
   window.moveReferencePhoto=function(kind,i,status){const item=currentItems(kind)[i];if(!item)return;item.status=status;item.icon=status==='Best Shot'?'🏆':status==='Passing'?'📘':'🚫';if(kind==='snap')item.ren=`${item.event||folders(kind)[wfState(kind).folder].name}/${status.replace(' ','')}/${item.orig}`;toast(`${item.orig} を ${status} に移動しました`);renderReferenceWorkflow(kind,wfState(kind).step);};
+  function applyClubRank(item,value){
+    const excluded=value==='exclude'||value===''||value==null;
+    const rank=excluded?null:Math.max(1,Number(value)||1);
+    const raw=item.raw||{};
+    raw.final_rank=rank;
+    raw.excluded=excluded;
+    raw.final_rank_label=clubRankLabel(rank);
+    raw.status=excluded?'Excluded':rank===1?'Best Shot':'Passing';
+    raw.final_renamed_file=excluded?'':clubRenameFor(item,rank);
+    raw.renamed_file=raw.final_renamed_file;
+  }
+  window.setClubFinalRank=function(i,value){
+    const item=currentItems('club')[i];
+    if(!item)return;
+    applyClubRank(item,value);
+    const label=value==='exclude'?'除外':clubRankLabel(Number(value));
+    toast(`${item.orig} の最終順位を ${label} に変更しました`);
+    renderReferenceWorkflow('club',wfState('club').step);
+  };
+  function clubRankAdjustments(){
+    return asArray(window.appState.club?.result?.items).map(row=>({club_name:row.club_name,original_file:row.original_file,final_rank:row.excluded?null:row.final_rank,excluded:!!row.excluded}));
+  }
+  async function syncClubRankAdjustments(){
+    const st=window.appState.club;
+    const jobId=st.result?.job_id;
+    if(!jobId)return;
+    const res=await fetch(`/api/club/${encodeURIComponent(jobId)}/adjust-ranks`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adjustments:clubRankAdjustments()})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(data?.detail||'クラブ写真の順位保存に失敗しました。');
+    st.result=data;
+  }
+  window.downloadAdjustedClub=async function(kind){
+    const st=window.appState.club;
+    if(st.running)return;
+    st.running=true;
+    st.error='';
+    try{
+      await syncClubRankAdjustments();
+      renderReferenceWorkflow('club',3);
+      const url=kind==='excel'?st.result?.excel_url:st.result?.output_zip_url;
+      const a=document.createElement('a');
+      a.href=absUrl(url);
+      a.target='_blank';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }catch(e){
+      st.error=e?.message||'クラブ写真の出力更新に失敗しました。';
+      toast(st.error);
+      renderReferenceWorkflow('club',3);
+    }finally{
+      st.running=false;
+    }
+  };
   window.setReferenceOutput=function(kind,name){wfState(kind).output=name;renderReferenceWorkflow(kind,3);};
   window.setReferenceExcel=function(kind,tab){wfState(kind).excel=tab;renderReferenceWorkflow(kind,3);};
   window.setSnapBestShotCount=function(value){const st=window.appState.snap;const max=Number(st.maxBestShotCount||200);const n=Math.max(1,Math.min(max,Number(value)||1));st.bestShotCount=n;const el=document.getElementById('snap-final-best-shot-count');if(el)el.value=n;};

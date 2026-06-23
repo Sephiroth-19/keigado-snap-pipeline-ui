@@ -385,5 +385,37 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
     logger.info("Club pipeline output root path=%s", club_out)
     generated_files = [str(p.relative_to(club_out)) for p in sorted(club_out.rglob("*")) if p.is_file()]
     logger.info("Club pipeline generated output files=%s", generated_files)
-    jsonp.write_text(json.dumps({"summary":{"club_count":len(by),"photo_count":len(results)},"items":[{"club_name":r.club_name,"original_file":r.path.name,"rank":r.rank,"renamed_file":r.renamed,"ng_flag":r.ng_flag,"ng_reason":r.ng_reason,"total_score":r.total_score,"evaluation":r.eval_data} for r in sorted(results,key=lambda x:(x.club_name,x.rank))]},ensure_ascii=False,indent=2),encoding="utf-8")
+    items = []
+    for r in sorted(results, key=lambda x: (x.club_name, x.rank)):
+        items.append(
+            {
+                "club_name": r.club_name,
+                "original_file": r.path.name,
+                "shooting_date": r.shooting_date,
+                "rank": r.rank,
+                "ai_rank": r.rank,
+                "final_rank": r.rank,
+                "rank_label": f"{RANK_TOKEN}{r.rank:0{RANK_PAD}d}",
+                "ai_rank_label": f"{RANK_TOKEN}{r.rank:0{RANK_PAD}d}",
+                "final_rank_label": f"{RANK_TOKEN}{r.rank:0{RANK_PAD}d}",
+                "renamed_file": r.renamed,
+                "final_renamed_file": r.renamed,
+                "ng_flag": r.ng_flag,
+                "excluded": False,
+                "ng_reason": r.ng_reason,
+                "person_count": r.person_count,
+                "eyes_closed_photo": r.eyes_closed_photo,
+                "closed_eye_face_count": r.closed_eye_face_count,
+                "total_score": r.total_score,
+                "evaluation": r.eval_data,
+                "clean_relative_path": (Path("clean_images") / r.club_name / r.path.name).as_posix(),
+                "marked_relative_path": (Path("marked_images") / r.club_name / r.path.name).as_posix(),
+                "ranked_relative_path": (Path("ranked_photos") / r.club_name / r.renamed).as_posix(),
+                "ranked_marked_relative_path": (Path("ranked_photos_marked") / r.club_name / r.renamed).as_posix(),
+            }
+        )
+    jsonp.write_text(
+        json.dumps({"summary": {"club_count": len(by), "photo_count": len(results)}, "items": items}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     return {"status":"completed","summary":{"club_count":len(by),"photo_count":len(results)},"excel_path":str(excel),"json_path":str(jsonp),"output_dir":str(club_out)}

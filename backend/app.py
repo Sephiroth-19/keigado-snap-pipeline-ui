@@ -36,7 +36,7 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from backend.teacher_jobs import router as teacher_router
 from openpyxl import Workbook, load_workbook
-from backend.excel_labels import SNAP_SHEET_LABELS, excel_label
+from backend.excel_labels import CLUB_SHEET_LABELS, SNAP_SHEET_LABELS, excel_label, translate_display_value
 from backend.preview_images import image_media_type, list_preview_images, safe_resolve_preview_path
 
 from backend.snap_pipeline import SnapPipeline
@@ -139,6 +139,252 @@ def _find_individual_output_file(output_dir: Path, filename: str) -> Path:
             continue
         return resolved
     raise HTTPException(status_code=404, detail="Preview file not found")
+
+
+def _club_job_root(job_id: str) -> Path:
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", job_id or ""):
+        raise HTTPException(status_code=400, detail="Invalid job_id")
+    root = (APP_STATE_DIR / "club_jobs").resolve()
+    job_root = (root / job_id).resolve()
+    try:
+        job_root.relative_to(root)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid job_id") from exc
+    return job_root
+
+
+def _club_output_dir(job_id: str) -> Path:
+    return _club_job_root(job_id) / "output" / "Club_Output"
+
+
+def _club_result_json(job_id: str) -> Path:
+    return _club_output_dir(job_id) / "club_result.json"
+
+
+def _club_rank_label(rank: int | None) -> str:
+    return f"本{rank:02d}" if rank else "除外"
+
+
+def _parse_club_final_rank(value: Any, excluded: bool = False) -> int | None:
+    if excluded:
+        return None
+    if value is None:
+        return None
+    raw = str(value).strip()
+    if raw == "" or raw.lower() in {"exclude", "excluded", "not_use", "not use", "none", "ng"} or raw in {"除外", "未使用"}:
+        return None
+    raw = raw.replace("本", "")
+    if not re.fullmatch(r"[1-9]\d{0,2}", raw):
+        raise HTTPException(status_code=400, detail="final_rank must be 本1, 本2, 本3, or exclude.")
+    return int(raw)
+
+
+def _club_output_name(item: dict[str, Any], final_rank: int) -> str:
+    original = Path(str(item.get("original_file") or "photo.jpg"))
+    club_name = str(item.get("club_name") or "Club")
+    shooting_date = str(item.get("shooting_date") or "00000000")
+    return f"{club_name}_{shooting_date}_{original.stem}_本{final_rank:02d}{original.suffix.lower() or '.jpg'}"
+
+
+def _load_club_result(job_id: str) -> dict[str, Any]:
+    path = _club_result_json(job_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Club result not found.")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _save_club_result(job_id: str, data: dict[str, Any]) -> None:
+    _club_result_json(job_id).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _public_club_result(job_id: str, data: dict[str, Any]) -> dict[str, Any]:
+    public = json.loads(json.dumps(data, ensure_ascii=False))
+    for idx, item in enumerate(public.get("items") or [], 1):
+        clean_rel = item.get("clean_relative_path")
+        marked_rel = item.get("marked_relative_path")
+        item.setdefault("item_id", f"{item.get('club_name', '')}::{item.get('original_file', '')}::{idx}")
+        if clean_rel:
+            item["preview_url"] = f"/api/club/{job_id}/preview-file?path={quote(str(clean_rel), safe='')}"
+            item["thumbnail_url"] = item["preview_url"]
+        if marked_rel:
+            item["marked_preview_url"] = f"/api/club/{job_id}/preview-file?path={quote(str(marked_rel), safe='')}"
+    public["job_id"] = job_id
+    public["excel_url"] = f"/api/club/{job_id}/excel"
+    public["output_zip_url"] = f"/api/club/{job_id}/download"
+    return public
+
+
+def _write_club_excel_from_manifest(club_output_dir: Path, data: dict[str, Any]) -> None:
+    items = list(data.get("items") or [])
+    included = [x for x in items if not x.get("excluded") and x.get("final_rank")]
+    club_names = {str(x.get("club_name") or "") for x in items}
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = CLUB_SHEET_LABELS["Summary"]
+    ws.append(
+        [
+            excel_label("club_count"),
+            excel_label("photo_count"),
+            excel_label("closed_eye_photo_count"),
+            excel_label("closed_eye_face_count"),
+            excel_label("ranked_output_count"),
+        ]
+    )
+    ws.append(
+        [
+            len(club_names),
+            len(items),
+            sum(1 for x in items if x.get("eyes_closed_photo")),
+            sum(int(x.get("closed_eye_face_count") or 0) for x in items),
+            len(included),
+        ]
+    )
+
+    ews = wb.create_sheet(CLUB_SHEET_LABELS["Eye Closure Summary"])
+    ews.append([excel_label("club"), excel_label("file_name"), excel_label("person_count"), excel_label("closed_eye_faces"), excel_label("eyes_closed_photo")])
+    for item in items:
+        ews.append(
+            [
+                item.get("club_name"),
+                item.get("original_file"),
+                item.get("person_count"),
+                item.get("closed_eye_face_count"),
+                translate_display_value(item.get("eyes_closed_photo")),
+            ]
+        )
+
+    fws = wb.create_sheet(CLUB_SHEET_LABELS["Face Detail"])
+    fws.append([excel_label("club"), excel_label("file_name"), excel_label("face_index"), excel_label("bbox"), excel_label("left_eye_ratio"), excel_label("right_eye_ratio"), excel_label("eye_closed")])
+
+    rws = wb.create_sheet(CLUB_SHEET_LABELS["Best Shot Ranking"])
+    rws.append(
+        [
+            excel_label("club"),
+            "AI順位",
+            "最終順位",
+            excel_label("file_name"),
+            excel_label("formality"),
+            excel_label("beauty_score"),
+            excel_label("expression_score"),
+            excel_label("emotion_score"),
+            excel_label("people_count_score"),
+            excel_label("gesture_expression_penalty"),
+            excel_label("is_ng"),
+            excel_label("ng_reason"),
+            excel_label("short_comment"),
+            excel_label("total_score"),
+        ]
+    )
+    for item in sorted(items, key=lambda x: (str(x.get("club_name") or ""), int(x.get("final_rank") or 9999), str(x.get("original_file") or ""))):
+        ev = item.get("evaluation") or {}
+        rws.append(
+            [
+                item.get("club_name"),
+                item.get("ai_rank") or item.get("rank"),
+                item.get("final_rank_label") or _club_rank_label(item.get("final_rank")),
+                item.get("original_file"),
+                ev.get("formality_score"),
+                ev.get("beauty_score"),
+                ev.get("expression_score"),
+                ev.get("emotion_score"),
+                ev.get("people_count_score"),
+                ev.get("gesture_expression_penalty"),
+                translate_display_value(item.get("ng_flag")),
+                translate_display_value(item.get("ng_reason")),
+                translate_display_value(ev.get("short_comment")),
+                item.get("total_score"),
+            ]
+        )
+
+    nws = wb.create_sheet(CLUB_SHEET_LABELS["Rename Output"])
+    nws.append([excel_label("club"), excel_label("original_file"), excel_label("renamed_file"), excel_label("shooting_date"), "AI順位", "最終順位", "出力対象"])
+    for item in sorted(items, key=lambda x: (str(x.get("club_name") or ""), int(x.get("final_rank") or 9999), str(x.get("original_file") or ""))):
+        nws.append(
+            [
+                item.get("club_name"),
+                item.get("original_file"),
+                item.get("final_renamed_file") or "",
+                item.get("shooting_date"),
+                item.get("ai_rank") or item.get("rank"),
+                item.get("final_rank_label") or _club_rank_label(item.get("final_rank")),
+                "いいえ" if item.get("excluded") else "はい",
+            ]
+        )
+
+    ngs = wb.create_sheet("NG写真・要確認")
+    ngs.append([excel_label("club"), excel_label("file_name"), excel_label("ng_flag"), excel_label("reason")])
+    for item in items:
+        if item.get("ng_flag") or item.get("excluded"):
+            reason = item.get("ng_reason") or ("manual exclude" if item.get("excluded") else "")
+            ngs.append([item.get("club_name"), item.get("original_file"), translate_display_value(item.get("ng_flag")), translate_display_value(reason)])
+    wb.save(club_output_dir / "club_result.xlsx")
+
+
+def _zip_club_output(job_id: str) -> Path:
+    job_root = _club_job_root(job_id)
+    club_output_dir = _club_output_dir(job_id)
+    output_zip = job_root / "club_output.zip"
+    if output_zip.exists():
+        output_zip.unlink()
+    with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zf:
+        allowed = {"ranked_photos", "ranked_photos_marked", "club_result.xlsx"}
+        for p in club_output_dir.rglob("*"):
+            if not p.is_file():
+                continue
+            rel = p.relative_to(club_output_dir)
+            if rel.parts and rel.parts[0] in allowed:
+                zf.write(p, p.relative_to(club_output_dir.parent))
+    return output_zip
+
+
+def _rebuild_club_outputs(job_id: str, data: dict[str, Any]) -> None:
+    club_output_dir = _club_output_dir(job_id)
+    ranked = club_output_dir / "ranked_photos"
+    ranked_marked = club_output_dir / "ranked_photos_marked"
+    for folder in (ranked, ranked_marked):
+        if folder.exists():
+            shutil.rmtree(folder)
+        folder.mkdir(parents=True, exist_ok=True)
+
+    for item in data.get("items") or []:
+        final_rank = item.get("final_rank")
+        if item.get("excluded") or not final_rank:
+            item["excluded"] = True
+            item["final_rank"] = None
+            item["final_rank_label"] = _club_rank_label(None)
+            item["status"] = "Excluded"
+            item["final_renamed_file"] = ""
+            item["ranked_relative_path"] = ""
+            item["ranked_marked_relative_path"] = ""
+            continue
+
+        final_rank = int(final_rank)
+        club_name = str(item.get("club_name") or "Club")
+        renamed = _club_output_name(item, final_rank)
+        clean_rel = item.get("clean_relative_path") or (Path("clean_images") / club_name / str(item.get("original_file") or "")).as_posix()
+        marked_rel = item.get("marked_relative_path") or (Path("marked_images") / club_name / str(item.get("original_file") or "")).as_posix()
+        clean_src = safe_resolve_preview_path(club_output_dir, str(clean_rel))
+        marked_src = safe_resolve_preview_path(club_output_dir, str(marked_rel))
+        clean_dst = ranked / club_name / renamed
+        marked_dst = ranked_marked / club_name / renamed
+        clean_dst.parent.mkdir(parents=True, exist_ok=True)
+        marked_dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(clean_src, clean_dst)
+        shutil.copy2(marked_src, marked_dst)
+
+        item["excluded"] = False
+        item["final_rank"] = final_rank
+        item["final_rank_label"] = _club_rank_label(final_rank)
+        item["status"] = "Best Shot" if final_rank == 1 else "Passing"
+        item["final_renamed_file"] = renamed
+        item["renamed_file"] = renamed
+        item["ranked_relative_path"] = clean_dst.relative_to(club_output_dir).as_posix()
+        item["ranked_marked_relative_path"] = marked_dst.relative_to(club_output_dir).as_posix()
+
+    _write_club_excel_from_manifest(club_output_dir, data)
+    _save_club_result(job_id, data)
+    _zip_club_output(job_id)
 
 
 def _add_individual_preview_urls(manifest: dict[str, Any], job_id: str) -> dict[str, Any]:
@@ -699,27 +945,49 @@ async def run_club(folder_zip: UploadFile = File(...)) -> dict[str, Any]:
         logger.exception("Club pipeline failed validation for upload=%s", zip_path)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    output_zip = job_root / "club_output.zip"
     logger.info("Club output root path=%s", result.get("output_dir"))
-    with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zf:
-        club_output_dir = Path(result["output_dir"])
-        allowed = {"ranked_photos", "ranked_photos_marked", "club_result.xlsx"}
-        for p in club_output_dir.rglob("*"):
-            if not p.is_file():
-                continue
-            rel = p.relative_to(club_output_dir)
-            if rel.parts and rel.parts[0] in allowed:
-                zf.write(p, p.relative_to(club_output_dir.parent))
+    output_zip = _zip_club_output(job_id)
     with zipfile.ZipFile(output_zip) as zf:
         logger.info("Club final zip contents=%s", zf.namelist())
 
-    return {
-        "job_id": job_id,
-        "status": result["status"],
-        "summary": result["summary"],
-        "excel_url": f"/api/club/{job_id}/excel",
-        "output_zip_url": f"/api/club/{job_id}/download",
-    }
+    data = _load_club_result(job_id)
+    data["status"] = result["status"]
+    data["summary"] = result["summary"]
+    return _public_club_result(job_id, data)
+
+
+@app.post("/api/club/{job_id}/adjust-ranks")
+def adjust_club_ranks(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    data = _load_club_result(job_id)
+    adjustments = payload.get("adjustments")
+    if not isinstance(adjustments, list):
+        raise HTTPException(status_code=400, detail="adjustments must be a list.")
+
+    by_key: dict[tuple[str, str], dict[str, Any]] = {}
+    for item in data.get("items") or []:
+        by_key[(str(item.get("club_name") or ""), str(item.get("original_file") or ""))] = item
+
+    for adjustment in adjustments:
+        if not isinstance(adjustment, dict):
+            continue
+        key = (str(adjustment.get("club_name") or ""), str(adjustment.get("original_file") or ""))
+        item = by_key.get(key)
+        if item is None:
+            raise HTTPException(status_code=400, detail=f"Unknown club photo: {key[0]} / {key[1]}")
+        final_rank = _parse_club_final_rank(adjustment.get("final_rank"), bool(adjustment.get("excluded")))
+        item["final_rank"] = final_rank
+        item["excluded"] = final_rank is None
+
+    _rebuild_club_outputs(job_id, data)
+    refreshed = _load_club_result(job_id)
+    refreshed["status"] = "completed"
+    return _public_club_result(job_id, refreshed)
+
+
+@app.get("/api/club/{job_id}/preview-file")
+def preview_club_file(job_id: str, path: str) -> FileResponse:
+    image_path = safe_resolve_preview_path(_club_output_dir(job_id), path)
+    return FileResponse(image_path, media_type=image_media_type(image_path), filename=image_path.name)
 
 
 @app.get("/api/club/{job_id}/excel")

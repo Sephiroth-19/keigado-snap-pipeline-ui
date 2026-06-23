@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import mimetypes
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
+
+from fastapi import HTTPException
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff", ".heic", ".heif"}
 FINAL_CATEGORY_DIRS = {
@@ -28,6 +31,40 @@ BUCKET_ALIASES = {
     "similarity_clusters": "similarity",
     "similarity": "similarity",
 }
+
+
+def image_media_type(path: Path) -> str:
+    guessed, _ = mimetypes.guess_type(path.name)
+    return guessed or "application/octet-stream"
+
+
+def safe_resolve_preview_path(output_root: Path, relative_path: str) -> Path:
+    root = output_root.resolve()
+    target = (root / relative_path).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Preview file not found.") from exc
+    if not target.is_file() or target.suffix.lower() not in IMAGE_EXTENSIONS:
+        raise HTTPException(status_code=404, detail="Preview file not found.")
+    return target
+
+
+def list_preview_images(output_root: Path, url_base: str, workflow_type: str) -> list[dict[str, Any]]:
+    if not output_root.exists():
+        return []
+    images: list[dict[str, Any]] = []
+    for path in sorted(p for p in output_root.rglob("*") if _is_image(p)):
+        rel = path.relative_to(output_root).as_posix()
+        images.append(
+            {
+                "workflow_type": workflow_type,
+                "relative_path": rel,
+                "url": f"{url_base}?path={quote(rel)}",
+                "name": path.name,
+            }
+        )
+    return images
 
 
 def _display_cluster_name(folder_name: str) -> str:
