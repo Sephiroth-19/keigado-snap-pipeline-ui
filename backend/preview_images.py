@@ -9,6 +9,17 @@ from urllib.parse import quote
 from fastapi import HTTPException
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff", ".heic", ".heif"}
+IMAGE_MEDIA_TYPES = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".bmp": "image/bmp",
+    ".tif": "image/tiff",
+    ".tiff": "image/tiff",
+    ".heic": "image/heic",
+    ".heif": "image/heif",
+}
 FINAL_CATEGORY_DIRS = {
     "final_selected": ("BestShot", "best"),
     "bestshot": ("BestShot", "best"),
@@ -134,7 +145,15 @@ def _matches_event(event_data: dict[str, Any], event_id: str | None, event_name:
     return True
 
 
-def _image_payload(path: Path, output_root: Path, category: str, category_key: str, bucket: str, **extra: Any) -> dict[str, Any]:
+def _image_payload(
+    path: Path,
+    output_root: Path,
+    category: str,
+    category_key: str,
+    bucket: str,
+    preview_base: str = "/api/snap/preview-file",
+    **extra: Any,
+) -> dict[str, Any]:
     rel = path.relative_to(output_root).as_posix()
     payload: dict[str, Any] = {
         "workflow_type": "Snap Photo",
@@ -142,7 +161,7 @@ def _image_payload(path: Path, output_root: Path, category: str, category_key: s
         "category_key": category_key,
         "bucket": bucket,
         "relative_path": rel,
-        "url": f"/api/snap/preview-file?path={quote(rel)}",
+        "url": f"{preview_base}?path={quote(rel)}",
         "name": path.name,
     }
     payload.update({k: v for k, v in extra.items() if v not in (None, "")})
@@ -153,17 +172,68 @@ def _is_image(path: Path) -> bool:
     return path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
 
 
+def image_media_type(path: Path) -> str:
+    return IMAGE_MEDIA_TYPES.get(path.suffix.lower(), "application/octet-stream")
+
+
+def safe_resolve_preview_path(output_root: Path, relative_path: str) -> Path:
+    if not relative_path:
+        raise HTTPException(status_code=400, detail="path is required")
+
+    candidate = Path(relative_path)
+    if candidate.is_absolute() or ".." in candidate.parts:
+        raise HTTPException(status_code=400, detail="invalid preview path")
+
+    resolved_root = output_root.resolve()
+    resolved_path = (output_root / candidate).resolve()
+
+    if not resolved_path.is_relative_to(resolved_root):
+        raise HTTPException(status_code=400, detail="invalid preview path")
+    if not resolved_path.exists() or not resolved_path.is_file():
+        raise HTTPException(status_code=404, detail="preview file not found")
+    if not _is_image(resolved_path):
+        raise HTTPException(status_code=400, detail="preview file is not an image")
+
+    return resolved_path
+
+
+def list_preview_images(output_root: Path, preview_endpoint: str, category: str) -> list[dict[str, Any]]:
+    if not output_root.exists():
+        return []
+
+    category_key = category.strip().lower().replace(" ", "_")
+    images: list[dict[str, Any]] = []
+    for path in sorted(p for p in output_root.rglob("*") if _is_image(p)):
+        rel = path.relative_to(output_root).as_posix()
+        images.append(
+            {
+                "workflow_type": category,
+                "category": category,
+                "category_key": category_key,
+                "relative_path": rel,
+                "url": f"{preview_endpoint}?path={quote(rel)}",
+                "name": path.name,
+            }
+        )
+    return images
+
+
 def collect_snap_preview_images(
     output_root: Path,
     mode: str = "final",
     event_id: str | None = None,
     event_name: str | None = None,
     bucket: str | None = None,
+    preview_base: str = "/api/snap/preview-file",
 ) -> list[dict[str, Any]]:
-    """Collect read-only Snap preview image metadata from runtime/output."""
+    """Collect read-only Snap preview image metadata from the snap output dir,
+    optionally filtered by event (event_id / event_name) and bucket."""
     if not output_root.exists():
         return []
 
+    from functools import partial
+
+    payload = partial(_image_payload, preview_base=preview_base)
     normalized_mode = (mode or "final").lower()
     bucket_key = BUCKET_ALIASES.get((bucket or "").lower())
     include_final = normalized_mode in {"final", "all"} or bucket_key in {"best", "passing", "ng"}
@@ -187,7 +257,7 @@ def collect_snap_preview_images(
             if not _matches_event(event_data, event_id, event_name):
                 continue
             for path in sorted(p for p in folder.rglob("*") if _is_image(p)):
-                images.append(_image_payload(path, output_root, category, category_key, key, **event_data))
+                images.append(payload(path, output_root, category, category_key, key, **event_data))
 
     if include_similarity:
         for sim_dir in sorted(p for p in output_root.rglob("similarity_clusters") if p.is_dir()):
@@ -199,7 +269,7 @@ def collect_snap_preview_images(
                 rel_parts = path.relative_to(sim_dir).parts
                 cluster_folder = rel_parts[0] if len(rel_parts) > 1 else None
                 images.append(
-                    _image_payload(
+                    payload(
                         path,
                         output_root,
                         "Similarity Group",
@@ -218,6 +288,6 @@ def collect_snap_preview_images(
             if not _matches_event(event_data, event_id, event_name):
                 continue
             for path in sorted(p for p in candidates_dir.rglob("*") if _is_image(p)):
-                images.append(_image_payload(path, output_root, "Candidate", "candidates", "dedup_candidates", **event_data))
+                images.append(payload(path, output_root, "Candidate", "candidates", "dedup_candidates", **event_data))
 
     return images

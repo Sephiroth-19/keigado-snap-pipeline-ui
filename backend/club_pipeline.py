@@ -38,13 +38,103 @@ EYE_CLOSED_RATIO_THRESHOLD = float(os.getenv("CLUB_EYE_CLOSED_RATIO_THRESHOLD", 
 LEFT_EYE_LANDMARK_IDX = list(range(33, 43))
 RIGHT_EYE_LANDMARK_IDX = list(range(87, 97))
 
+# ── Constants shared with ai_detect.py ──────────────────────────────────────────────
+COLOR_CLOSED  = (0,   0, 210)   # BGR deep red   – eyes closed face box
+COLOR_OPEN    = (0, 180,  60)   # BGR green       – eyes open face box
+COLOR_NO_FACE = (0, 200, 220)   # BGR yellow-cyan – detected but unclear/occluded
+FACE_PADDING_PCT = 0.25         # % padding added around bbox before sending crop to GPT
+
+_GPT_EYE_PROMPT = """
+You are examining a CROPPED IMAGE of a single FACE. Determine if the eyes are closed.
+
+STEP 1 — has_clear_face: Can you see this person's eye region?
+  TRUE  → Eye area is visible (even if eyes are closed, angled, or looking down).
+  FALSE → Only back of head / extreme side profile / eyes fully blocked by hair, hands,
+          or mask / image too blurry or small to judge.
+
+STEP 2 — eyes_closed: Are the eyes closed?
+  TRUE  → The upper eyelid is resting DOWN covering the eye. No iris or pupil visible.
+  FALSE → ANY part of the dark iris or pupil is visible, even a small sliver.
+
+THE MOST COMMON MISTAKE — smiling squint:
+  Smiling raises the cheeks and narrows the eye opening. This is NOT closed eyes.
+  Key test: if you can see ANY dark iris/pupil crescent → eyes are OPEN (FALSE).
+
+RULES for East Asian faces:
+  - Naturally narrow or monolid eyes show only a thin iris line when open → FALSE.
+  - Smiling/laughing with crescent-shaped openings → still FALSE if iris is visible.
+  - Only TRUE if eyelid is fully covering the eye with NO iris visible at all.
+
+Return ONLY this JSON (no markdown, no extra text):
+{"has_clear_face": true|false, "eyes_closed": true|false, "confidence": "high"|"medium"|"low"}
+""".strip()
+
+
+def _client():
+    """Return an OpenAI client if the API key is set, else None."""
+    if OpenAI is None:
+        return None
+    key = os.getenv("OPENAI_API_KEY")
+    if not key:
+        return None
+    return OpenAI(api_key=key)
+
+
+def _ask_eye(openai_client, face_crop_bgr) -> tuple[bool, bool, str]:
+    """Send a face crop to GPT and return (has_clear_face, eyes_closed, confidence).
+
+    Falls back to (False, False, 'low') on any error so the caller can degrade gracefully.
+    The crop is expected to be a BGR numpy array (OpenCV format).
+    """
+    if openai_client is None:
+        return False, False, "low"
+    import base64, json as _json
+    h, w = face_crop_bgr.shape[:2]
+    if w < 30 or h < 30:
+        return False, False, "low"
+    try:
+        _, buf = cv2.imencode(".jpg", face_crop_bgr, [cv2.IMWRITE_JPEG_QUALITY, 90])
+        b64 = base64.b64encode(buf).decode("utf-8")
+        resp = openai_client.responses.create(
+            model=MODEL_VISION,
+            input=[{
+                "role": "user",
+                "content": [
+                    {"type": "input_text",  "text": _GPT_EYE_PROMPT},
+                    {"type": "input_image",
+                     "image_url": f"data:image/jpeg;base64,{b64}",
+                     "detail": "high"},
+                ],
+            }],
+            reasoning={"effort": "medium"},
+        )
+        text = (resp.output_text or "").strip()
+        if "```" in text:
+            parts = text.split("```")
+            text = parts[1] if len(parts) > 1 else parts[0]
+            if text.startswith("json"):
+                text = text[4:]
+        data = _json.loads(text.strip())
+        return (
+            bool(data.get("has_clear_face", False)),
+            bool(data.get("eyes_closed",    False)),
+            str(data.get("confidence",      "medium")),
+        )
+    except Exception as exc:
+        logger.debug("_ask_eye GPT error: %s", exc)
+        return False, False, "low"
+
+
 PHOTO_EVAL_PROMPT = """
 You are a professional photo editor selecting the best shot for a school club album.
 Return STRICT JSON only.
+JSON keys must stay English.
+ng_reason and short_comment values MUST be Japanese.
 
 Important pose rule:
 - Thumbs up is acceptable and must NOT be treated as NG.
 - NG hand/pose examples: middle finger, obscene/improper gestures, sexual/improper posing.
+- ng_reason and short_comment values MUST be Japanese.
 
 JSON schema:
 {
@@ -187,7 +277,27 @@ def _landmark_points_for_log(landmarks: np.ndarray, indices: list[int]) -> list[
     return [(int(round(x)), int(round(y))) for x, y in landmarks[indices]]
 
 
-def _analyze_faces(image_bgr: np.ndarray, face_app: Any | None):
+def _gpt_eye_fallback(openai_client, image_bgr, bbox) -> bool | None:
+    """Ask GPT whether the eyes are closed for a single face crop.
+
+    Used when InsightFace 106-point landmarks are unavailable (otherwise every face
+    degrades to the "unknown / yellow box" state). Mirrors ai_detect's crop+padding so
+    the model sees enough context. Returns True/False, or None when GPT can't judge.
+    """
+    if openai_client is None:
+        return None
+    h, w = image_bgr.shape[:2]
+    x1, y1, x2, y2 = bbox
+    pw = int((x2 - x1) * FACE_PADDING_PCT)
+    ph = int((y2 - y1) * FACE_PADDING_PCT)
+    crop = image_bgr[max(0, y1 - ph):min(h, y2 + ph), max(0, x1 - pw):min(w, x2 + pw)]
+    if crop.size == 0:
+        return None
+    has_face, eyes_closed, _conf = _ask_eye(openai_client, crop)
+    return bool(eyes_closed) if has_face else None
+
+
+def _analyze_faces(image_bgr: np.ndarray, face_app: Any | None, openai_client: Any | None = None):
     img_h, img_w = image_bgr.shape[:2]
     vis = image_bgr.copy(); details=[]
     face_label_scale = max(0.8, img_w / 1400)
@@ -234,6 +344,14 @@ def _analyze_faces(image_bgr: np.ndarray, face_app: Any | None):
                     lr,
                     rr,
                     EYE_CLOSED_RATIO_THRESHOLD,
+                    closed,
+                )
+            if closed is None and openai_client is not None:
+                closed = _gpt_eye_fallback(openai_client, image_bgr, (x1, y1, x2, y2))
+                logger.debug(
+                    "Club eye-close GPT fallback face_index=%s bbox=%s closed=%s",
+                    i,
+                    (x1, y1, x2, y2),
                     closed,
                 )
             details.append(FaceDetail(i,(x1,y1,x2,y2),lr,rr,closed))
@@ -327,7 +445,7 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
             if img is None:
                 logger.warning("Skipping unreadable club image: %s", p)
                 continue
-            pc,cc,fd,vis=_analyze_faces(img,face_app)
+            pc,cc,fd,vis=_analyze_faces(img,face_app,client)
             logger.debug(
                 "Club eye-close per-image file=%s face_count=%s closed_face_count=%s closed_photo=%s threshold=%s",
                 p,
@@ -385,8 +503,39 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
     logger.info("Club pipeline output root path=%s", club_out)
     generated_files = [str(p.relative_to(club_out)) for p in sorted(club_out.rglob("*")) if p.is_file()]
     logger.info("Club pipeline generated output files=%s", generated_files)
+    # Per-club and per-photo detail surfaced in the job summary so the Review/Output UI
+    # (clubReviewBody / clubRenameBody) can render real folders/thumbnails. The landmark
+    # eye-detection above already produced everything; reshape it for the frontend.
+    summary_rows: list[dict[str, Any]] = []
+    rename_rows: list[dict[str, Any]] = []
+    for club, rows in by.items():
+        ranked = [r for r in rows if not r.ng_flag]
+        best = min(rows, key=lambda x: x.rank) if rows else None
+        summary_rows.append({
+            "group_index": list(by).index(club) + 1,
+            "club": club,
+            "input_count": len(rows),
+            "ranked_count": len(ranked),
+            "ng_count": len(rows) - len(ranked),
+            "copied_count": len(rows),
+            "best_file_name": best.renamed if best else "",
+            "best_reason": (best.eval_data.get("short_comment") if best else "") or "",
+        })
+        for r in sorted(rows, key=lambda x: x.rank):
+            rename_rows.append({
+                "club": club,
+                "rank": r.rank,
+                "original_file_name": r.path.name,
+                "new_file_name": r.renamed,
+                "total_score": r.total_score,
+                "is_ng": bool(r.ng_flag),
+                "ng_reason": r.ng_reason or "",
+                "short_comment": (r.eval_data.get("short_comment") or ""),
+            })
+
     items = []
     for r in sorted(results, key=lambda x: (x.club_name, x.rank)):
+        rank_label = f"{RANK_TOKEN}{r.rank:0{RANK_PAD}d}"
         items.append(
             {
                 "club_name": r.club_name,
@@ -395,9 +544,9 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
                 "rank": r.rank,
                 "ai_rank": r.rank,
                 "final_rank": r.rank,
-                "rank_label": f"{RANK_TOKEN}{r.rank:0{RANK_PAD}d}",
-                "ai_rank_label": f"{RANK_TOKEN}{r.rank:0{RANK_PAD}d}",
-                "final_rank_label": f"{RANK_TOKEN}{r.rank:0{RANK_PAD}d}",
+                "rank_label": rank_label,
+                "ai_rank_label": rank_label,
+                "final_rank_label": rank_label,
                 "renamed_file": r.renamed,
                 "final_renamed_file": r.renamed,
                 "ng_flag": r.ng_flag,
@@ -408,14 +557,25 @@ def run_club_pipeline(input_zip_path: str, output_dir: str) -> dict[str, Any]:
                 "closed_eye_face_count": r.closed_eye_face_count,
                 "total_score": r.total_score,
                 "evaluation": r.eval_data,
+                "status": "NG" if r.ng_flag else ("Best Shot" if r.rank == 1 else "Passing"),
                 "clean_relative_path": (Path("clean_images") / r.club_name / r.path.name).as_posix(),
                 "marked_relative_path": (Path("marked_images") / r.club_name / r.path.name).as_posix(),
                 "ranked_relative_path": (Path("ranked_photos") / r.club_name / r.renamed).as_posix(),
                 "ranked_marked_relative_path": (Path("ranked_photos_marked") / r.club_name / r.renamed).as_posix(),
             }
         )
-    jsonp.write_text(
-        json.dumps({"summary": {"club_count": len(by), "photo_count": len(results)}, "items": items}, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    return {"status":"completed","summary":{"club_count":len(by),"photo_count":len(results)},"excel_path":str(excel),"json_path":str(jsonp),"output_dir":str(club_out)}
+
+    # club_count/photo_count are the original key names; total_clubs/total_images/
+    # eyes_closed_count are what the frontend Export screen (clubSummaryBox) reads.
+    summary = {
+        "club_count": len(by),
+        "photo_count": len(results),
+        "total_clubs": len(by),
+        "total_images": len(results),
+        "eyes_closed_count": sum(r.closed_eye_face_count for r in results),
+        "ng_count": sum(1 for r in results if r.ng_flag),
+        "summary_rows": summary_rows,
+        "rename_rows": rename_rows,
+    }
+    jsonp.write_text(json.dumps({"summary": summary, "items": items}, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"status":"completed","summary":summary,"excel_path":str(excel),"json_path":str(jsonp),"output_dir":str(club_out)}

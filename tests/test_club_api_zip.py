@@ -1,13 +1,16 @@
 import pytest
 pytest.importorskip("mediapipe")
-from pathlib import Path
 import io
 import zipfile
 
 from fastapi.testclient import TestClient
 from PIL import Image
+from sqlalchemy import delete
 
+from backend import auth, worker
 from backend.app import app
+from backend.db import init_db, session_scope
+from backend.models import Job
 
 
 def _zip_bytes() -> bytes:
@@ -29,12 +32,39 @@ def _rank_adjust_zip_bytes() -> bytes:
     return bio.getvalue()
 
 
-def test_club_run_and_download_zip_contains_club_output():
+def _authenticated_client() -> TestClient:
+    init_db()
+    auth.seed_owner()
+    with session_scope() as s:
+        s.execute(delete(Job))  # isolate this test's queue
+
     client = TestClient(app)
+    # All /api/* routes now require a bearer token; log in as the seeded owner and set it
+    # as the default header so every request below (run/status/download) is authenticated.
+    login = client.post(
+        "/api/auth/login",
+        json={"username": auth.OWNER_USERNAME, "password": auth.OWNER_PASSWORD},
+    )
+    assert login.status_code == 200, login.text
+    client.headers.update({"Authorization": "Bearer " + login.json()["access_token"]})
+    return client
+
+
+def test_club_run_enqueues_then_worker_produces_zip():
+    client = _authenticated_client()
     resp = client.post("/api/club/run", files={"folder_zip": ("club.zip", _zip_bytes(), "application/zip")})
     assert resp.status_code == 200
     data = resp.json()
-    dl = client.get(data["output_zip_url"])
+    assert data["status"] == "queued"
+
+    # Before the worker runs, the job is queued and no zip exists yet.
+    assert client.get(data["status_url"]).json()["status"] == "queued"
+
+    # Run the worker once to drain the single queued job.
+    assert worker._process_one() is True
+    assert client.get(data["status_url"]).json()["status"] == "completed"
+
+    dl = client.get(data["download_url"])
     assert dl.status_code == 200
     with zipfile.ZipFile(io.BytesIO(dl.content), "r") as zf:
         names = zf.namelist()
@@ -47,10 +77,17 @@ def test_club_run_and_download_zip_contains_club_output():
 
 
 def test_club_rank_adjustment_rebuilds_download_zip():
-    client = TestClient(app)
+    client = _authenticated_client()
     resp = client.post("/api/club/run", files={"folder_zip": ("club.zip", _rank_adjust_zip_bytes(), "application/zip")})
     assert resp.status_code == 200
     data = resp.json()
+    assert data["status"] == "queued"
+    assert worker._process_one() is True
+    assert client.get(data["status_url"]).json()["status"] == "completed"
+
+    result = client.get(data["result_url"])
+    assert result.status_code == 200
+    data = result.json()
     assert all(item.get("preview_url") for item in data["items"])
 
     first, second = data["items"]
